@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {CELL,SIZE,worldPoint,gridPoint,walkable,groundHeight} from './level.js';
 import {createNavigator} from './navigation.js';
+import {createProximityLighting} from './proximity-lighting.js';
 
 function texture(){
  const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
@@ -28,7 +29,10 @@ export function createWorld(run){
   const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.DoubleSide}));m.position.set(x,y,z);m.rotation.y=rotation;scene.add(m);rayMeshes.push(m);return m;
  }
  function fixture(x,y,z,strength=15){
-  box(.9,.04,.17,x,y,z,white);const light=new THREE.PointLight(0xdddcd4,strength,9,1.4);light.position.set(x,y-.12,z);scene.add(light);lamps.push({light,base:strength,phase:lamps.length*1.7});
+  box(1.05,.09,.25,x,y+.06,z,dark);
+  const tube=box(.9,.04,.17,x,y,z,white.clone());
+  const light=new THREE.PointLight(0xdddcd4,strength,9,1.4);light.position.set(x,y-.12,z);scene.add(light);
+  lamps.push({light,tube,base:strength,position:{x,z,height:groundHeight({x,z})}});
  }
  const walls=[];
  for(let z=0;z<SIZE;z++)for(let x=0;x<SIZE;x++)if(!run.layout.grid[z][x])walls.push(worldPoint({x,z}));
@@ -90,6 +94,14 @@ export function createWorld(run){
   const handle=box(.035,.2,.035,.45,1.4,.57,metal,closet);handle.userData.interactId=`closet-${index}`;
   collider(x,z,1.4,1.1);const data={id:`closet-${index}`,type:'closet',mesh:door,hide:{x,z:z+.17},exit:{x,z:z+1.35}};targets.set(data.id,data);closets.push(data);
  });
+ // Spread ceiling fixtures through the corridors as well as the storage rooms.
+ for(let z=1;z<SIZE-1;z++)for(let x=1;x<SIZE-1;x++){
+  if(!run.layout.grid[z][x])continue;
+  const p=worldPoint({x,z});
+  if(run.layout.rooms.some(room=>{const r=worldPoint(room);return Math.hypot(p.x-r.x,p.z-r.z)<4.5;}))continue;
+  if(lamps.some(lamp=>Math.hypot(p.x-lamp.position.x,p.z-lamp.position.z)<7))continue;
+  fixture(p.x,4.15,p.z,18);
+ }
  const clueRoom=worldPoint(run.layout.rooms[run.clueRoom]);
  box(1.6,.08,.72,clueRoom.x,.9,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x-.65,.45,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x+.65,.45,clueRoom.z+2.3,wood);collider(clueRoom.x,clueRoom.z+2.3,1.6,.72);
  box(.84,.37,.04,clueRoom.x,1.25,clueRoom.z+2.42,wood);box(.045,.35,.045,clueRoom.x,1.08,clueRoom.z+2.4,wood);
@@ -101,6 +113,8 @@ export function createWorld(run){
  const pipeMaterial=new THREE.MeshStandardMaterial({color:0x292c2d,roughness:.9,metalness:.3});
  for(const room of run.layout.rooms){const p=worldPoint(room);const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,6.8,8),pipeMaterial);pipe.rotation.z=Math.PI/2;pipe.position.set(p.x,3.95,p.z+.65);scene.add(pipe);}
  const fill=new THREE.PointLight(0xc8cbd0,7,5,1.7);scene.add(fill);
+ const lighting=createProximityLighting(lamps.map(lamp=>lamp.position));
+ const backgroundColor=scene.background.clone(),fogColor=scene.fog.color.clone();
  let doorProgress=0;
  function domain(x,z,radius){
   if(z<=-25-radius-.1&&z>=-33+radius+.1&&x>=-8.6+radius+.1&&x<=3.4-radius-.1)return true;
@@ -125,7 +139,7 @@ export function createWorld(run){
  }
  const enemyCanMove=(x,z)=>canMove(x,z,.6,1.1);
  const navigator=createNavigator(enemyCanMove);
- function update(delta,time,player,threat,hold=0){
+ function update(delta,time,player,threat,hold=0,monster){
   for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,Math.min(1,delta*12));view.key.visible=d.key&&!d.taken&&d.opened;}
   boardHitbox.visible=!run.boardsOpen;
   boards.forEach((b,i)=>{b.visible=!run.boardsOpen;b.position.z=-25-(hold>0?.1*Math.sin(hold*20+i):0);});
@@ -133,9 +147,17 @@ export function createWorld(run){
   doorProgress=THREE.MathUtils.lerp(doorProgress,run.exitOpen?1:0,Math.min(1,delta*2));
   elevatorDoors[0].position.x=-3.1-doorProgress*.96;elevatorDoors[1].position.x=-2.1+doorProgress*.96;
   fill.position.set(player.x,groundHeight(player)+1.7,player.z);
-  const powerDip=time>20&&time%67>62&&time%67<63.3;
-  ambient.intensity=powerDip?.28:.65;dust.position.y=Math.sin(time*.16)*.06;
-  for(const {light,base,phase} of lamps){const flutter=.035*Math.sin(time*.8+phase)+Math.max(0,Math.sin(time*1.7+phase)-.92)*.6;const dangerDip=threat>.45?.35*Math.max(0,Math.sin(time*6.5+phase)):0;light.intensity=base*(1-flutter-dangerDip)*(powerDip?.38:1);}
+  const power=lighting.update(delta,{monster:monster?.position,player:{...player,height:groundHeight(player)},hunting:monster?.hunting,active:!!monster?.active});
+  ambient.intensity=.65*(1-power.warning*.9)*power.visibility;
+  fill.intensity=7*(1-power.warning*.96)*power.visibility;
+  scene.background.copy(backgroundColor).multiplyScalar(power.visibility);
+  scene.fog.color.copy(fogColor).multiplyScalar(power.visibility);
+  dust.position.y=Math.sin(time*.16)*.06;
+  lamps.forEach(({light,tube,base},index)=>{
+   const intensity=power.fixtures[index].intensity;
+   light.intensity=base*intensity;
+   tube.material.color.copy(white.color).multiplyScalar(intensity);
+  });
  }
- return {scene,targets,rayMeshes,canMove,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,closets,drawerViews,cluePosition:{x:clueRoom.x,z:clueRoom.z+2.45},get doorProgress(){return doorProgress;}};
+ return {scene,targets,rayMeshes,canMove,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:clueRoom.x,z:clueRoom.z+2.45},get doorProgress(){return doorProgress;}};
 }

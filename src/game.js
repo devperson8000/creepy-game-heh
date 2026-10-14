@@ -25,7 +25,7 @@ export function startGame(container,{seed}={}){
  let pendingNoise=[],noiseUntil=0;const footsteps={distance:0};
  function emitNoise(noise){if(!noise)return;monsterAudio.playNoise(noise.type);player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noiseUntil=performance.now()+1000;if(run.boardsOpen)pendingNoise.push(noise);}
  function resume(){ui.hideScreen();input.capture();void monsterAudio.resume();}
- function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);pendingNoise=[];footsteps.distance=0;noiseUntil=0;threat=0;hold=0;latched=false;}
+ function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);world.lighting.reset();pendingNoise=[];footsteps.distance=0;noiseUntil=0;threat=0;hold=0;latched=false;}
  function showScreen(kind){monsterAudio.pause();ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
  // Pause content uses the same action wiring as the initial and outcome screens.
  const soundButton=ui.el('sound-toggle');soundButton.hidden=!monsterAudio.configured;
@@ -103,7 +103,12 @@ export function startGame(container,{seed}={}){
   monsterAudio.update(soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
   const breathingFov=66+Math.sin(time*1.4)*threat*.45;
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
-  world.update(frameDelta,time,player,threat,hold);document.documentElement.style.setProperty('--danger',String(threat*.38));
+  world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:run.boardsOpen});
+  // Basic eye, sign and clue materials also obey a local blackout, so they
+  // cannot illuminate the room after its power dies. HUD controls stay visible.
+  renderer.toneMappingExposure=.95*world.lighting.visibility;
+  document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
+  document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);renderDirty=false;}
   lastOverlay=ui.overlay;
  });
