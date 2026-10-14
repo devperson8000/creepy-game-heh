@@ -1,6 +1,6 @@
 import {gridPoint,worldPoint,pathBetween,lineOfSight,walkable} from './level.js';
 import {sweepMove} from './navigation.js';
-export const MONSTER_SPEED={patrol:1.8,investigate:2.65,chase:4.4};
+export const MONSTER_SPEED={patrol:1.8,investigate:2.65,chase:4.15};
 export const SIGHT_RANGE=16;
 export function createEnemy(layout){
  const spawn=worldPoint(layout.rooms[3]);
@@ -12,7 +12,7 @@ function heardNoise(enemy,layout,noises){
   if(!Number.isFinite(noise.radius)||noise.radius<=0||noise.height>=1.5||!walkable(layout,gridPoint(noise)))continue;
   const distance=Math.hypot(noise.x-enemy.position.x,noise.z-enemy.position.z);
   // Walls soften noise, but do not magically silence a nearby drawer or sprint.
-  const range=noise.radius*(lineOfSight(layout,enemy.position,noise)?1:.65);
+  const range=noise.radius*.92*(lineOfSight(layout,enemy.position,noise)?1:.65);
   const strength=1-distance/range;
   if(strength>=0&&strength>=bestStrength){best=noise;bestStrength=strength;}
  }
@@ -42,7 +42,7 @@ export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],naviga
   else enemy.mode='investigate';
  }else if(enemy.mode==='chase'){
   enemy.lostFor+=delta;
-  if(enemy.lostFor>8){enemy.mode='search';enemy.searchRemaining=4.5;enemy.path=[];}
+  if(enemy.lostFor>7){enemy.mode='search';enemy.searchRemaining=4.5;enemy.path=[];}
  }
  if(enemy.mode==='search'){
   enemy.yaw+=delta*.95;enemy.searchRemaining-=delta;

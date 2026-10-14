@@ -45,3 +45,17 @@ test('chasing is faster than the player sprint',()=>{
  tickEnemy(enemy,layout,{x:start.x,z:start.z+2.6,height:0,hidden:false},.1);
  assert.ok(Math.hypot(enemy.position.x-start.x,enemy.position.z-start.z)>.37);
 });
+
+test('breaking sight for just over seven seconds ends pursuit',()=>{
+ const layout=createLayout(42),enemy=createEnemy(layout),p={x:enemy.position.x,z:enemy.position.z+2.6,height:0,hidden:false};enemy.yaw=0;
+ tickEnemy(enemy,layout,p,.025);
+ const origin={...enemy.position};enemy.lastSeen={x:origin.x+10,z:origin.z};
+ for(let i=0;i<72;i++)tickEnemy(enemy,layout,{...p,hidden:true},.1,true,[],{findPath:()=>[]});
+ assert.equal(enemy.mode,'search');
+});
+
+test('sounds just at the old hearing limit no longer reveal the player',()=>{
+ const layout=createLayout(42),enemy=createEnemy(layout),origin={...enemy.position},noise={x:origin.x,z:origin.z+2.6,height:0,radius:2.7};
+ tickEnemy(enemy,layout,{...origin,height:0,hidden:true},.025,true,[noise]);
+ assert.equal(enemy.mode,'patrol');
+});

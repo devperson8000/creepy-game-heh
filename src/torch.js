@@ -10,10 +10,15 @@ export function createTorch(scene,camera){
   mesh.castShadow=true;
   if(!mesh.material.isMeshBasicMaterial)return;
   const original=mesh.material;
-  if(!reactive.has(original))reactive.set(original,new THREE.MeshStandardMaterial({color:original.color,map:original.map,side:original.side,roughness:.78,metalness:.03,emissive:original.color,emissiveMap:original.map,emissiveIntensity:.35}));
+  if(!reactive.has(original)){
+   const properties={color:original.color,map:original.map,side:original.side,roughness:.78,metalness:.03,emissive:original.color,emissiveMap:original.map,emissiveIntensity:.35};
+   // Keep the creature black and matte: round specular spots previously made
+   // its torso and joints appear swollen under the torch.
+   reactive.set(original,original.userData.creatureBody?new THREE.MeshPhysicalMaterial({...properties,roughness:1,metalness:0,specularIntensity:0}):new THREE.MeshStandardMaterial(properties));
+  }
   mesh.material=reactive.get(original);
  });
- const beam=new THREE.SpotLight(0xe4e9dc,140,24,.37,.7,1.2);
+ const beam=new THREE.SpotLight(0xe4e9dc,140,24,.58,1,1.5);
  beam.position.set(0,-.035,-.025);beam.castShadow=true;
  beam.shadow.mapSize.set(1024,1024);beam.shadow.camera.near=.05;beam.shadow.camera.far=24;beam.shadow.bias=-.00015;beam.shadow.normalBias=.015;
  const aim=new THREE.Object3D();aim.position.set(0,0,-20);camera.add(beam,aim);beam.target=aim;

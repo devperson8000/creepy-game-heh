@@ -41,8 +41,9 @@ function horn(side,material) {
 }
 export function createCreature() {
  const root=new THREE.Group(),black=new THREE.MeshBasicMaterial({color:0x010102});
+ black.userData.creatureBody=true;
  const torso=new THREE.Group();torso.position.y=1.42;root.add(torso);
- torso.add(shape([[-.24,0,0],[-.18,.14,.12],[-.07,.29,.18],[.28,.32,.2],[.85,.44,.23],[1.06,.48,.22],[1.25,.35,.19],[1.4,.13,.12]],black));
+ torso.add(shape([[-.24,0,0],[-.18,.14,.09],[-.07,.29,.15],[.28,.32,.18],[.85,.44,.21],[1.06,.46,.21],[1.25,.35,.18],[1.4,.13,.12]],black));
  const head=new THREE.Group();head.position.y=1.39;torso.add(head);
  head.add(shape([[0,.115,.105],[.16,.16,.13],[.42,.235,.17],[.62,.27,.175],[.73,.22,.15],[.78,.04,.03]],black));
  head.add(horn(-1,black),horn(1,black));
@@ -54,13 +55,13 @@ export function createCreature() {
  }
  const arms=[],elbows=[],legs=[],knees=[],ankles=[];
  for(const side of [-1,1]) {
-  const arm=new THREE.Group();arm.position.set(side*.435,1.04,0);torso.add(arm);
-  arm.add(shape([[-.94,.074,.08],[-.72,.087,.1],[-.32,.115,.14],[.03,.13,.15],[.13,.065,.07],[.16,0,0]],black));
+  const arm=new THREE.Group();arm.position.set(side*.39,1.04,0);torso.add(arm);
+  arm.add(shape([[-.94,.069,.075],[-.72,.08,.09],[-.32,.10,.12],[.03,.11,.13],[.13,.055,.065],[.16,0,0]],black));
   const elbow=new THREE.Group();elbow.position.y=-.9;arm.add(elbow);
-  elbow.add(shape([[-1.03,0,0],[-.99,.047,.046],[-.86,.067,.06],[-.52,.065,.07],[-.1,.074,.08],[.035,.068,.075]],black));
+  elbow.add(shape([[-1.03,0,0],[-.99,.047,.046],[-.86,.06,.06],[-.52,.063,.068],[-.1,.068,.073],[.035,.063,.068]],black));
   arm.rotation.z=side*.06;arms.push(arm);elbows.push(elbow);
-  const leg=new THREE.Group();leg.position.set(side*.19,1.43,0);root.add(leg);
-  leg.add(shape([[-.77,.095,.11],[-.6,.12,.13],[-.24,.155,.16],[.015,.17,.17],[.13,.11,.12],[.17,0,0]],black));
+  const leg=new THREE.Group();leg.position.set(side*.18,1.43,0);root.add(leg);
+  leg.add(shape([[-.77,.09,.105],[-.6,.11,.12],[-.24,.135,.14],[.015,.14,.145],[.13,.09,.10],[.17,0,0]],black));
   const knee=new THREE.Group();knee.position.y=-.72;leg.add(knee);
   knee.add(shape([[-.72,.07,.075],[-.62,.076,.08],[-.27,.095,.11],[-.06,.095,.11],[.04,.08,.09]],black));
   const ankle=new THREE.Group();ankle.position.y=-.7;knee.add(ankle);
