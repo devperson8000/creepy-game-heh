@@ -1,6 +1,29 @@
-# Creepy Game — The Watcher
+# MONOCHROME — browser escape game
 
-A browser scene of a smooth black horned humanoid with idle and running animations. Built with Three.js and Vite. The creature is reconstructed from a reference image, with approximated unseen surfaces; it is not the original Roblox or Sketchfab asset.
+A first-person monochrome horror escape game built with Three.js and Vite. Uses the creature developed in this repository and the documented escape loop from [monochromegame.wiki](https://monochromegame.wiki/walkthrough/).
+
+## Play
+
+Open the boarded **DO NOT ENTER** doorway in the elevator lobby. Descend the return stairs, search dresser drawers for **four keys**, and read the **four-digit note** in the basement. Hide in closets when the moving creature approaches. Return upstairs, bank the keys at the four-lock panel, enter the number at the separate keypad, then open the elevator and walk inside.
+
+Key locations, basement corridors, and the four-digit number vary between runs. Banked keys and an accepted code survive a retry. Unbanked keys return to their original drawers when you are caught. The clue is recorded in the HUD after you read it. Leaving a searched drawer open helps track progress.
+
+- **WASD / arrow keys:** move.
+- **Mouse:** look; click the scene to capture it.
+- **Shift:** run.
+- **Hold E:** interact, search, collect, bank keys, or hide/leave a closet.
+- **Escape:** pause or close the keypad.
+- On touch devices, drag to look, use the arrow pad to move, and hold the interaction button.
+
+The original creature animation viewer remains available through **Creature study** on the title screen, or `?mode=study`. There, the button or **R** toggles running in place.
+
+**Monster sound is intentionally absent**, pending the supplied sound file. Monster distance and visibility are calculated separately in the enemy system for the future audio integration.
+
+## Reference boundaries
+
+The wiki documents the boarded doorway, upstairs elevator hub, stairs, basement furniture searches, closets, four keys, a run-specific four-digit clue, and two separate elevator lock systems. See [route map](https://monochromegame.wiki/route-map/), [keys](https://monochromegame.wiki/keys-and-code/), and [code](https://monochromegame.wiki/code/). These pages were read on October 14, 2026.
+
+The wiki explicitly does not confirm an exact basement floor plan, fixed key spawns, current-build control bindings, or detailed monster AI. This browser version supplies its own connected maze, collision, patrol/chase behavior, visual danger cues, controls, menus, and retry system around the documented route. It does not claim to reproduce unverified Roblox internals or Part 2. All scene assets are locally generated; no external asset service or account is required.
 
 ## Development
 
@@ -9,22 +32,13 @@ Node.js 22.12+ or 24 recommended.
 ```sh
 npm ci
 npm run dev
-```
-
-In a restricted cloud workspace, use `npm ci --cache /tmp/creepy-npm-cache` if the default npm cache is not writable. Use the existing checkout; no extra worktree is needed.
-
-```sh
 npm test
 npm run build
 npm run preview
 ```
 
-The scene requires a browser with WebGL. All runtime assets are bundled locally; no external model service, account, or secret is needed.
-
-## Controls
-
-Click the scene to capture the mouse. Use **WASD** or the arrow keys to walk, the **mouse** to look, and **Shift** to move faster. **Escape** releases the mouse. Click **See him run** or press **R** to toggle running in place; press R again to return to idle. The crosshair is a small white dot. On touch devices, drag the scene to look and use the arrow buttons to walk.
+In a restricted cloud workspace, use `npm ci --cache /tmp/creepy-npm-cache` if the default npm cache is not writable. Use the existing checkout; no extra worktree is needed. A WebGL-capable browser is required.
 
 ## Vercel
 
-Import `devperson8000/creepy-game-heh` from GitHub into Vercel. Select the **Vite** preset, use `npm run build`, and set output to `dist`. Set production branch to `main`. Subsequent pushes to main trigger deployments through the GitHub integration.
+Import `devperson8000/creepy-game-heh` from GitHub into Vercel. Select the **Vite** preset, build with `npm run build`, output **dist**, production branch **main**. The included `vercel.json` supplies the build settings. Subsequent pushes trigger deployment once the GitHub integration is connected. No backend or secrets are needed.

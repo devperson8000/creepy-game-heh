@@ -1,0 +1,94 @@
+import * as THREE from 'three';
+import {createRun,searchDrawer,takeKey,bankKeys,enterCode,readClue,catchPlayer,retryRun,openExit} from './game-state.js';
+import {createWorld} from './world.js';
+import {createCreature,applyIdle,applyRunning} from './creature.js';
+import {idlePose} from './idle.js';
+import {createEnemy,tickEnemy} from './enemy.js';
+import {groundHeight,moveInWorld} from './level.js';
+import {createGameUI} from './game-ui.js';
+import {gameInput} from './game-input.js';
+
+export function startGame(container,{seed}={}){
+ seed??=crypto.getRandomValues(new Uint32Array(1))[0];
+ const run=createRun(seed),world=createWorld(run),ui=createGameUI();
+ const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
+ container.appendChild(renderer.domElement);
+ const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();world.scene.add(creature.root);
+ creature.root.traverse(m=>{if(m.isMesh)world.rayMeshes.push(m);});
+ const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
+ let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
+ function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
+ const input=gameInput(camera,renderer.domElement,ui,pause);
+ function resume(){ui.hideScreen();input.capture();}
+ function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);threat=0;hold=0;latched=false;}
+ function showScreen(kind){ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
+ // Pause content uses the same action wiring as the initial and outcome screens.
+ ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
+ function closeKeypad(){ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
+ function submitCode(){if(enterCode(run,buffer)){ui.el('keypad-feedback').textContent='Code accepted. Complete the four key locks to open the elevator.';ui.toast('Code accepted.');closeKeypad();}else{ui.el('keypad-feedback').textContent='Access denied. Read the four digits from this run.';buffer='';ui.el('code-display').textContent='— — — —';}}
+ function digit(value){if(value==='✓'){submitCode();return;}if(value==='←')buffer=buffer.slice(0,-1);else if(buffer.length<4)buffer+=value;ui.el('code-display').textContent=buffer.padEnd(4,'—').split('').join(' ');}
+ ui.root.querySelectorAll('[data-digit]').forEach(b=>b.addEventListener('click',()=>digit(b.dataset.digit)));
+ ui.el('close-keypad').addEventListener('click',closeKeypad);
+ document.addEventListener('keydown',e=>{if(ui.overlay!=='keypad')return;if(/^\d$/.test(e.key)){e.preventDefault();digit(e.key);}else if(e.key==='Backspace'){e.preventDefault();digit('←');}else if(e.key==='Enter'){e.preventDefault();submitCode();}});
+ function openKeypad(){buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.el('keypad-feedback').textContent='';ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
+ function targetInfo(t){
+  if(!t)return null;let label='',duration=.35;
+  if(t.type==='boards'){if(run.boardsOpen)return null;label='Pry away the boards';duration=1.8;}
+  if(t.type==='drawer'){const d=run.drawers[t.drawerId];label=d.opened?(d.key&&!d.taken?'Take the key':'Close searched drawer'):'Search drawer';duration=d.opened?.15:.45;}
+  if(t.type==='closet'){label='Hide in closet';duration=.25;}
+  if(t.type==='clue'){label='Read the four-digit clue';duration=.2;}
+  if(t.type==='locks'){label=run.carried.size?`Insert ${run.carried.size} ${run.carried.size===1?'key':'keys'}`:`Key panel · ${run.banked.size} / 4 filled`;duration=.6;}
+  if(t.type==='keypad'){label=run.codeAccepted?'Keypad · code accepted':'Enter elevator code';duration=.15;}
+  if(t.type==='elevator'){label=run.exitOpen?'Step inside the elevator':run.banked.size===4&&run.codeAccepted?'Open elevator':'Elevator locked · four keys + code';duration=.6;}
+  return {...t,label,duration};
+ }
+ function currentTarget(){
+  if(run.hidden)return {id:'leave',type:'leave',label:'Leave the closet',duration:.2};
+  camera.updateMatrixWorld();raycaster.setFromCamera(center,camera);raycaster.far=2.5;
+  const visible=world.rayMeshes.filter(mesh=>{for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
+  const hit=raycaster.intersectObjects(visible,false)[0];return hit?targetInfo(world.targets.get(hit.object.userData.interactId)):null;
+ }
+ function perform(t){
+  if(t.type==='boards'){run.boardsOpen=true;ui.toast('The way downstairs is open. Remember the return stairs.');}
+  if(t.type==='drawer'){const d=run.drawers[t.drawerId];if(d.opened&&d.key&&!d.taken){takeKey(run,d.id);ui.toast('Key found. Bank it at the elevator panel.');}else{searchDrawer(run,d.id);if(d.opened&&!d.key)ui.toast('Empty drawer. Keep searching.');}}
+  if(t.type==='clue'){readClue(run);ui.toast(`Four-digit clue recorded: ${run.code}`);}
+  if(t.type==='locks'){const count=bankKeys(run);ui.toast(count?`${count} ${count===1?'key':'keys'} banked. ${run.banked.size} / 4 locks complete.`:'No unbanked keys. Search the basement drawers.');}
+  if(t.type==='keypad'){if(!run.codeAccepted)openKeypad();else ui.toast('The number lock is already complete.');}
+  if(t.type==='elevator'){if(openExit(run))ui.toast('Both locks released. Step inside.');else ui.toast('The elevator needs all four keys and the correct code.');}
+  if(t.type==='closet'){
+   run.hidden=true;hiddenCloset=t;hideWitnessed=lastResult.visible&&lastResult.distance<7;player.x=t.hide.x;player.z=t.hide.z;t.mesh.visible=false;input.setView(Math.PI);if(hideWitnessed)ui.toast('It saw you enter.');else ui.toast('Stay quiet. E to leave when it passes.');
+  }
+  if(t.type==='leave'&&hiddenCloset){hiddenCloset.mesh.visible=true;player.x=hiddenCloset.exit.x;player.z=hiddenCloset.exit.z;hiddenCloset=null;run.hidden=false;hideWitnessed=false;}
+ }
+ let renderDirty=true,lastOverlay;
+ function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();}resize();window.addEventListener('resize',resize);
+ showScreen('menu');let previous=performance.now(),time=0;
+ renderer.setAnimationLoop(()=>{
+  const now=performance.now(),frameDelta=Math.min((now-previous)/1000,.2);previous=now;
+  if(!ui.overlay&&run.phase==='playing'){
+   time+=frameDelta;run.elapsed+=frameDelta;
+   // Small physics steps preserve wall collision and fair pursuit at lower frame rates.
+   for(let remaining=frameDelta;remaining>0;remaining-=.025){
+    const step=Math.min(.025,remaining);
+    if(!run.hidden){const next=moveInWorld(player,input.movement,input.yaw,step,world.canMove,input.sprint?3.7:2.5);player.x=next.x;player.z=next.z;}
+    player.height=groundHeight(player);
+    lastResult=tickEnemy(enemy,run.layout,{...player,hidden:run.hidden&&!hideWitnessed},step,run.boardsOpen);
+    if(lastResult.caught||(run.hidden&&hideWitnessed&&lastResult.distance<1.8)){catchPlayer(run);showScreen('dead');break;}
+   }
+   input.updateView();camera.position.set(player.x,player.height+1.65,player.z);
+   threat=THREE.MathUtils.lerp(threat,player.height<1.5?Math.max(0,1-lastResult.distance/12):0,frameDelta*3);
+   const target=run.phase==='playing'?currentTarget():null;
+   if(!input.interact){hold=0;holdId=null;latched=false;}
+   else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+frameDelta/target.duration);if(hold>=1){perform(target);latched=true;hold=0;}}
+   else if(!target){hold=0;holdId=null;}
+   ui.update(run,player,target,hold);
+   if(run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
+  }else{camera.position.set(player.x,player.height+1.65,player.z);input.updateView();ui.update(run,player,null,0);}
+  applyIdle(creature,idlePose(time));if(enemy.path.length)applyRunning(creature,time*(enemy.mode==='chase'?1:.58),enemy.mode==='chase'?1:.5);
+  creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
+  world.update(frameDelta,time,player,threat,hold);document.documentElement.style.setProperty('--danger',String(threat*.38));
+  if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);renderDirty=false;}
+  lastOverlay=ui.overlay;
+ });
+ return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input};
+}
