@@ -17,7 +17,13 @@ Key locations, basement corridors, and the four-digit number vary between runs. 
 
 The original creature animation viewer remains available through **Creature study** on the title screen, or `?mode=study`. There, the button or **R** toggles running in place.
 
-**Monster sound is intentionally absent**, pending the supplied sound file. Monster distance and visibility are calculated separately in the enemy system for the future audio integration.
+## Monster sound
+
+The full audio from the user-uploaded `roblox monochrome sound effect --- Prank.mp4` is extracted to `public/audio/monster.mp3` (about two minutes) and loops during gameplay. No video is bundled. The supplied sound comes from the [referenced Short](https://www.youtube.com/shorts/3YKcnvUfKlY).
+
+Sound is completely silent at 18 units or farther, progressively louder inside that range, capped at 85% gain within 1.5 units, with smooth volume changes. It remains audible nearby while hiding and silences during menus, pause, death, and escape. Playback unlocks from the Enter/Continue gesture on desktop and mobile. Use **M** or the **Sound on/off** button to mute.
+
+The wiki mentions footsteps and light warnings but does not verify an exact attenuation radius; these distances implement the requested behavior.
 
 ## Reference boundaries
 

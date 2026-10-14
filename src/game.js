@@ -7,10 +7,12 @@ import {createEnemy,tickEnemy} from './enemy.js';
 import {groundHeight,moveInWorld} from './level.js';
 import {createGameUI} from './game-ui.js';
 import {gameInput} from './game-input.js';
+import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 
 export function startGame(container,{seed}={}){
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed),world=createWorld(run),ui=createGameUI();
+ const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.')});
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
  container.appendChild(renderer.domElement);
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();world.scene.add(creature.root);
@@ -19,18 +21,23 @@ export function startGame(container,{seed}={}){
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause);
- function resume(){ui.hideScreen();input.capture();}
+ function resume(){ui.hideScreen();input.capture();void monsterAudio.resume();}
  function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);threat=0;hold=0;latched=false;}
- function showScreen(kind){ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
+ function showScreen(kind){monsterAudio.pause();ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
  // Pause content uses the same action wiring as the initial and outcome screens.
+ const soundButton=ui.el('sound-toggle');soundButton.hidden=!monsterAudio.configured;
+ function toggleSound(){monsterAudio.setMuted(!monsterAudio.muted);soundButton.textContent=monsterAudio.muted?'Sound off':'Sound on';soundButton.setAttribute('aria-pressed',String(monsterAudio.muted));soundButton.setAttribute('aria-label',monsterAudio.muted?'Unmute monster sound':'Mute monster sound');}
+ soundButton.addEventListener('click',toggleSound);
+ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&!ui.overlay)toggleSound();});
+ window.addEventListener('pagehide',()=>monsterAudio.dispose(),{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
- function closeKeypad(){ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
+ function closeKeypad(){void monsterAudio.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
  function submitCode(){if(enterCode(run,buffer)){ui.el('keypad-feedback').textContent='Code accepted. Complete the four key locks to open the elevator.';ui.toast('Code accepted.');closeKeypad();}else{ui.el('keypad-feedback').textContent='Access denied. Read the four digits from this run.';buffer='';ui.el('code-display').textContent='— — — —';}}
  function digit(value){if(value==='✓'){submitCode();return;}if(value==='←')buffer=buffer.slice(0,-1);else if(buffer.length<4)buffer+=value;ui.el('code-display').textContent=buffer.padEnd(4,'—').split('').join(' ');}
  ui.root.querySelectorAll('[data-digit]').forEach(b=>b.addEventListener('click',()=>digit(b.dataset.digit)));
  ui.el('close-keypad').addEventListener('click',closeKeypad);
  document.addEventListener('keydown',e=>{if(ui.overlay!=='keypad')return;if(/^\d$/.test(e.key)){e.preventDefault();digit(e.key);}else if(e.key==='Backspace'){e.preventDefault();digit('←');}else if(e.key==='Enter'){e.preventDefault();submitCode();}});
- function openKeypad(){buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.el('keypad-feedback').textContent='';ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
+ function openKeypad(){monsterAudio.pause();buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.el('keypad-feedback').textContent='';ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
  function targetInfo(t){
   if(!t)return null;let label='',duration=.35;
   if(t.type==='boards'){if(run.boardsOpen)return null;label='Pry away the boards';duration=1.8;}
@@ -86,9 +93,11 @@ export function startGame(container,{seed}={}){
   }else{camera.position.set(player.x,player.height+1.65,player.z);input.updateView();ui.update(run,player,null,0);}
   applyIdle(creature,idlePose(time));if(enemy.path.length)applyRunning(creature,time*(enemy.mode==='chase'?1:.58),enemy.mode==='chase'?1:.5);
   creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
+  const soundDistance=run.boardsOpen?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height):Infinity;
+  monsterAudio.update(soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
   world.update(frameDelta,time,player,threat,hold);document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);renderDirty=false;}
   lastOverlay=ui.overlay;
  });
- return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input};
+ return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio};
 }

@@ -1,9 +1,9 @@
 export function createGameUI(){
  const root=document.createElement('div');root.id='game-ui';root.innerHTML=`
- <div class="game-top"><div class="wordmark">MONOCHROME<small id="floor-name">ELEVATOR LOBBY</small><span id="current-objective"></span></div><button id="pause-game" aria-label="Pause game">Ⅱ</button></div>
+ <div class="game-top"><div class="wordmark">MONOCHROME<small id="floor-name">ELEVATOR LOBBY</small><span id="current-objective"></span></div><div class="game-top-actions"><button id="sound-toggle" aria-label="Mute monster sound" aria-pressed="false" hidden>Sound on</button><button id="pause-game" aria-label="Pause game">Ⅱ</button></div></div>
  <div class="game-inventory"><small>EXIT LOCKS</small><div id="key-lights" aria-label="Banked keys"></div><p id="carried-keys"></p><p id="clue-note"></p></div>
  <div id="interaction" hidden><div><kbd>E</kbd><span id="interaction-label"></span></div><div class="hold-track"><i id="hold-fill"></i></div></div>
- <div class="game-controls-note">WASD move · Shift run<br>E interact · Esc pause</div>
+ <div class="game-controls-note">WASD move · Shift run<br>E interact · M mute · Esc pause</div>
  <div id="toast" role="status"></div><div id="hide-mask" hidden></div>
  <div class="game-touch"><div class="direction-pad"><button data-walk="KeyW" aria-label="Forward">↑</button><div><button data-walk="KeyA" aria-label="Left">←</button><button data-walk="KeyS" aria-label="Backward">↓</button><button data-walk="KeyD" aria-label="Right">→</button></div></div><button id="touch-interact">Hold to interact</button></div>
  <div id="game-screen" class="game-screen"><div class="screen-card" id="screen-content"></div></div>
