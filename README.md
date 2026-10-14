@@ -17,11 +17,17 @@ Key locations, basement corridors, and the four-digit number vary between runs. 
 
 The original creature animation viewer remains available through **Creature study** on the title screen, or `?mode=study`. There, the button or **R** toggles running in place.
 
+## Difficulty and atmosphere
+
+The creature sees farther, investigates nearby footsteps and noisy interactions, and pursues faster than your sprint. Walking has a shorter hearing range than sprinting; drawers and closet doors make noise. Walls soften sounds. Noise draws the creature to the sound’s last location, not a hidden player’s current position. Break sight and hide before it sees you enter. Standing still is quiet, and the HUD reports your recent noise level. Muting playback does not disable its hearing.
+
+Both actors collide with walls and furniture. The creature uses a finer obstacle-aware route and swept collision checks, with extra wall clearance for its wide head. The basement has worn surfaces, ceiling pipes, drifting dust, unsteady lights, occasional short power dips, and local footstep/interaction sounds.
+
 ## Monster sound
 
 The full audio from the user-uploaded `roblox monochrome sound effect --- Prank.mp4` is extracted to `public/audio/monster.mp3` (about two minutes) and loops during gameplay. No video is bundled. The supplied sound comes from the [referenced Short](https://www.youtube.com/shorts/3YKcnvUfKlY).
 
-Sound is completely silent at 18 units or farther, progressively louder inside that range, capped at 85% gain within 1.5 units, with smooth volume changes. It remains audible nearby while hiding and silences during menus, pause, death, and escape. Playback unlocks from the Enter/Continue gesture on desktop and mobile. Use **M** or the **Sound on/off** button to mute.
+Sound is completely silent at 32 units or farther, progressively louder inside that range, capped at 85% gain within 1.5 units, with a gentle power curve and smooth volume changes. It remains audible nearby while hiding and silences during menus, pause, death, and escape. Playback unlocks from the Enter/Continue gesture on desktop and mobile. Use **M** or the **Sound on/off** button to mute.
 
 The wiki mentions footsteps and light warnings but does not verify an exact attenuation radius; these distances implement the requested behavior.
 
