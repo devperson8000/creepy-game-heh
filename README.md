@@ -1,6 +1,6 @@
 # Creepy Game — The Watcher
 
-A browser scene of a black humanoid standing, swaying, and looking around. Built with Three.js and Vite. The creature is reconstructed from a reference image, with approximated unseen surfaces; it is not the original Roblox or Sketchfab asset.
+A browser scene of a smooth black horned humanoid with idle and running animations. Built with Three.js and Vite. The creature is reconstructed from a reference image, with approximated unseen surfaces; it is not the original Roblox or Sketchfab asset.
 
 ## Development
 
@@ -20,6 +20,10 @@ npm run preview
 ```
 
 The scene requires a browser with WebGL. All runtime assets are bundled locally; no external model service, account, or secret is needed.
+
+## Controls
+
+Click the scene to capture the mouse. Use **WASD** or the arrow keys to walk, the **mouse** to look, and **Shift** to move faster. **Escape** releases the mouse. Click **See him run** or press **R** to toggle running in place; press R again to return to idle. The crosshair is a small white dot. On touch devices, drag the scene to look and use the arrow buttons to walk.
 
 ## Vercel
 

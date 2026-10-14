@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import {createCreature,applyIdle} from './creature.js';
+import {createCreature,applyIdle,applyRunning} from './creature.js';
 import {idlePose} from './idle.js';
+import {firstPerson} from './controls.js';
 export function startScene(container) {
  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});
  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
@@ -26,14 +27,23 @@ export function startScene(container) {
  function resize(){
   const w=container.clientWidth,h=container.clientHeight;
   renderer.setSize(w,h);camera.aspect=w/h;
-  const distance=Math.max(6.3,0.9/(Math.tan(THREE.MathUtils.degToRad(43/2))*camera.aspect));
-  camera.position.set(0,1.95,distance);camera.lookAt(0,1.86,0);camera.updateProjectionMatrix();
+  camera.updateProjectionMatrix();
  }
+ camera.position.set(0,1.95,6.3);
  resize();window.addEventListener('resize',resize);
+ const move=firstPerson(camera,renderer.domElement);
+ const button=document.querySelector('#run-toggle');
+ let running=false,blend=0,previous=performance.now();
+ function toggleRun(){running=!running;button.textContent=running?'Stop running':'See him run';button.setAttribute('aria-pressed',String(running));}
+ button.addEventListener('click',toggleRun);
+ document.addEventListener('keydown',event=>{if(event.code==='KeyR'&&!event.repeat&&!event.target.closest('button,input,textarea'))toggleRun();});
  const start=performance.now();
  renderer.setAnimationLoop(()=>{
-  const t=(performance.now()-start)/1000;
+  const now=performance.now(),delta=Math.min((now-previous)/1000,.05);previous=now;
+  const t=(now-start)/1000;
+  move(delta);blend+=(Number(running)-blend)*(1-Math.exp(-delta*7));
   applyIdle(creature,idlePose(t));
+  if(blend>.001)applyRunning(creature,t,blend);
   renderer.render(scene,camera);
  });
  return {renderer,scene,camera,creature};
