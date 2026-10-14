@@ -9,6 +9,7 @@ import {createGameUI} from './game-ui.js';
 import {gameInput} from './game-input.js';
 import {footstepNoise,interactionNoise} from './player-noise.js';
 import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
+import {createTorch} from './torch.js';
 
 export function startGame(container,{seed}={}){
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
@@ -18,6 +19,8 @@ export function startGame(container,{seed}={}){
  container.appendChild(renderer.domElement);
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ const torch=createTorch(world.scene,camera);
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
@@ -31,6 +34,10 @@ export function startGame(container,{seed}={}){
  const soundButton=ui.el('sound-toggle');soundButton.hidden=!monsterAudio.configured;
  function toggleSound(){monsterAudio.setMuted(!monsterAudio.muted);soundButton.textContent=monsterAudio.muted?'Sound off':'Sound on';soundButton.setAttribute('aria-pressed',String(monsterAudio.muted));soundButton.setAttribute('aria-label',monsterAudio.muted?'Unmute game sound':'Mute game sound');}
  soundButton.addEventListener('click',toggleSound);
+ const torchButton=ui.el('torch-toggle');
+ function toggleTorch(){if(ui.overlay||run.phase!=='playing')return;torch.toggle();torchButton.textContent=torch.on?'Torch on':'Torch off';torchButton.setAttribute('aria-pressed',String(torch.on));torchButton.setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
+ torchButton.addEventListener('click',toggleTorch);
+ document.addEventListener('keydown',event=>{if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}});
  document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&!ui.overlay)toggleSound();});
  window.addEventListener('pagehide',()=>monsterAudio.dispose(),{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
@@ -104,13 +111,12 @@ export function startGame(container,{seed}={}){
   const breathingFov=66+Math.sin(time*1.4)*threat*.45;
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:run.boardsOpen});
-  // Basic eye, sign and clue materials also obey a local blackout, so they
-  // cannot illuminate the room after its power dies. HUD controls stay visible.
-  renderer.toneMappingExposure=.95*world.lighting.visibility;
+  torch.update({ceilingPower:world.lighting.visibility,time,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
+  renderer.toneMappingExposure=torch.exposure;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));
-  if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);renderDirty=false;}
+  if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);torch.render(renderer);renderDirty=false;}
   lastOverlay=ui.overlay;
  });
- return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio};
+ return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch};
 }

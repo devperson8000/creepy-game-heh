@@ -11,6 +11,7 @@ Key locations, basement corridors, and the four-digit number vary between runs. 
 - **WASD / arrow keys:** move.
 - **Mouse:** look; click the scene to capture it.
 - **Shift:** run.
+- **F:** switch the handheld torch on/off; the torch button also works on touch devices.
 - **Hold E:** interact, search, collect, bank keys, or hide/leave a closet.
 - **Escape:** pause or close the keypad.
 - On touch devices, drag to look, use the arrow pad to move, and hold the interaction button.
@@ -24,6 +25,8 @@ The creature sees farther, investigates nearby footsteps and noisy interactions,
 Both actors collide with walls and furniture. The creature uses a finer obstacle-aware route and swept collision checks, with extra wall clearance for its wide head. The basement has worn surfaces, ceiling pipes, drifting dust, and local footstep/interaction sounds.
 
 Ceiling fixtures in rooms and corridors act as a proximity warning. Beyond 16 units they stay steady at full brightness. As the creature approaches, each fixture independently dims and produces randomly timed electrical glitches and bursts. Within 4.5 units, or during a local hunt, the nearby lights die completely. The player's immediate area also blacks out during a hunt; ambient light, camera fill, luminous surfaces, and fog cannot reveal the room. HUD controls remain usable. Power returns smoothly when the creature leaves or the hunt ends, with fresh warning patterns on each approach. Upstairs stays unaffected by a basement hunt. Lighting freezes while paused.
+
+The player holds a torch that starts on and follows the camera. Its focused, soft-edged beam reaches 24 units and casts wall/furniture/creature shadows. It runs independently of ceiling power, so it can reveal the creature during a blackout; switching it off restores darkness. Physical signs, keys, and the creature reflect its light. The hand and torch bob gently while moving and are drawn separately to prevent clipping through room geometry. There is no battery limit. F ignores held-key repeats and does not toggle while paused or entering a code.
 
 ## Monster sound
 

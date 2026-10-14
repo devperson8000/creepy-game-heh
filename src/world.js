@@ -31,6 +31,7 @@ export function createWorld(run){
  function fixture(x,y,z,strength=15){
   box(1.05,.09,.25,x,y+.06,z,dark);
   const tube=box(.9,.04,.17,x,y,z,white.clone());
+  tube.userData.ceilingLight=true;
   const light=new THREE.PointLight(0xdddcd4,strength,9,1.4);light.position.set(x,y-.12,z);scene.add(light);
   lamps.push({light,tube,base:strength,position:{x,z,height:groundHeight({x,z})}});
  }
