@@ -5,6 +5,7 @@ export function createGameUI(){
  <div id="interaction" hidden><div><kbd>E</kbd><span id="interaction-label"></span></div><div class="hold-track"><i id="hold-fill"></i></div></div>
  <div class="game-controls-note">WASD move · Shift run<br>E interact · F torch · M mute · Esc pause</div>
  <div id="toast" role="status"></div><div id="hide-mask" hidden></div>
+ <div id="jumpscare-border" aria-hidden="true" hidden></div>
  <div class="game-touch"><div class="direction-pad"><button data-walk="KeyW" aria-label="Forward">↑</button><div><button data-walk="KeyA" aria-label="Left">←</button><button data-walk="KeyS" aria-label="Backward">↓</button><button data-walk="KeyD" aria-label="Right">→</button></div></div><button id="touch-interact">Hold to interact</button></div>
  <div id="game-screen" class="game-screen"><div class="screen-card" id="screen-content"></div></div>
  <div id="keypad-dialog" class="game-screen" hidden><section class="keypad-card" role="dialog" aria-modal="true" aria-labelledby="keypad-title"><small>ELEVATOR / SECURITY</small><h2 id="keypad-title">Enter access code</h2><p>Use the four digits you found downstairs.</p><output id="code-display" aria-live="polite">— — — —</output><div id="number-pad">${['1','2','3','4','5','6','7','8','9','←','0','✓'].map(n=>`<button data-digit="${n}" aria-label="${n==='←'?'Delete':n==='✓'?'Submit code':n}">${n}</button>`).join('')}</div><p id="keypad-feedback" role="status"></p><button class="text-button" id="close-keypad">Back to the room</button></section></div>`;

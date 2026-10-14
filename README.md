@@ -28,6 +28,8 @@ Ceiling fixtures in rooms and corridors act as a proximity warning. Beyond 16 un
 
 The player holds a torch that starts on and follows the camera. Its focused, soft-edged beam reaches 24 units and casts wall/furniture/creature shadows. It runs independently of ceiling power, so it can reveal the creature during a blackout; switching it off restores darkness. Physical signs, keys, and the creature reflect its light. The hand and torch bob gently while moving and are drawn separately to prevent clipping through room geometry. There is no battery limit. F ignores held-key repeats and does not toggle while paused or entering a code.
 
+Getting caught plays a 2.25-second jumpscare before the retry screen: the creature's actual head lunges into the camera, leaving a black silhouette and huge white eyes against near-black, with a blood-red border fading toward the center and then away. Gameplay and controls freeze during the scare; both eyes stay framed on portrait devices. A short, peak-limited scream plays once, independently of the proximity loop, and respects mute. It preloads on the Enter gesture. The scream is an edited excerpt of [Horror Scream1 by Vinrax](https://opengameart.org/content/horror-scream1), released under CC0; see [audio credits](public/audio/CREDITS.md).
+
 ## Monster sound
 
 The full audio from the user-uploaded `roblox monochrome sound effect --- Prank.mp4` is extracted to `public/audio/monster.mp3` (about two minutes) and loops during gameplay. No video is bundled. The supplied sound comes from the [referenced Short](https://www.youtube.com/shorts/3YKcnvUfKlY).

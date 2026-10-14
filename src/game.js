@@ -10,17 +10,19 @@ import {gameInput} from './game-input.js';
 import {footstepNoise,interactionNoise} from './player-noise.js';
 import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
+import {createJumpscare} from './jumpscare.js';
 
 export function startGame(container,{seed}={}){
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed),world=createWorld(run),ui=createGameUI();
- const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.')});
+ const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
  container.appendChild(renderer.domElement);
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  const torch=createTorch(world.scene,camera);
+ const jumpscare=createJumpscare();
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
@@ -30,6 +32,12 @@ export function startGame(container,{seed}={}){
  function resume(){ui.hideScreen();input.capture();void monsterAudio.resume();}
  function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);world.lighting.reset();pendingNoise=[];footsteps.distance=0;noiseUntil=0;threat=0;hold=0;latched=false;}
  function showScreen(kind){monsterAudio.pause();ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
+ function capturePlayer(){
+  if(run.phase!=='playing')return;
+  catchPlayer(run);ui.overlay='jumpscare';ui.el('game-screen').hidden=true;ui.el('jumpscare-border').hidden=false;
+  document.body.classList.add('jumpscare-active');input.clear();document.exitPointerLock?.();pendingNoise=[];
+  jumpscare.resize(camera.aspect);jumpscare.start();monsterAudio.playJumpscare();
+ }
  // Pause content uses the same action wiring as the initial and outcome screens.
  const soundButton=ui.el('sound-toggle');soundButton.hidden=!monsterAudio.configured;
  function toggleSound(){monsterAudio.setMuted(!monsterAudio.muted);soundButton.textContent=monsterAudio.muted?'Sound off':'Sound on';soundButton.setAttribute('aria-pressed',String(monsterAudio.muted));soundButton.setAttribute('aria-label',monsterAudio.muted?'Unmute game sound':'Mute game sound');}
@@ -38,7 +46,7 @@ export function startGame(container,{seed}={}){
  function toggleTorch(){if(ui.overlay||run.phase!=='playing')return;torch.toggle();torchButton.textContent=torch.on?'Torch on':'Torch off';torchButton.setAttribute('aria-pressed',String(torch.on));torchButton.setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
  torchButton.addEventListener('click',toggleTorch);
  document.addEventListener('keydown',event=>{if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}});
- document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&!ui.overlay)toggleSound();});
+ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'))toggleSound();});
  window.addEventListener('pagehide',()=>monsterAudio.dispose(),{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
  function closeKeypad(){void monsterAudio.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
@@ -84,6 +92,10 @@ export function startGame(container,{seed}={}){
  showScreen('menu');let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),frameDelta=Math.min((now-previous)/1000,.2);previous=now;
+  if(jumpscare.active){
+   jumpscare.update(frameDelta);
+   if(!jumpscare.active){ui.el('jumpscare-border').hidden=true;document.body.classList.remove('jumpscare-active');showScreen('dead');}
+  }
   if(!ui.overlay&&run.phase==='playing'){
    time+=frameDelta;run.elapsed+=frameDelta;
    // Small physics steps preserve wall collision and fair pursuit at lower frame rates.
@@ -92,7 +104,7 @@ export function startGame(container,{seed}={}){
     if(!run.hidden){const next=moveInWorld(player,input.movement,input.yaw,step,world.canMove,input.sprint?3.7:2.5);const moved=Math.hypot(next.x-player.x,next.z-player.z);player.x=next.x;player.z=next.z;emitNoise(footstepNoise(footsteps,moved,input.sprint,{x:player.x,z:player.z,height:groundHeight(player)}));}
     player.height=groundHeight(player);
     lastResult=tickEnemy(enemy,run.layout,{...player,hidden:run.hidden&&!hideWitnessed},step,run.boardsOpen,pendingNoise,world.enemyNavigation);pendingNoise=[];
-    if(lastResult.caught||(run.hidden&&hideWitnessed&&lastResult.distance<1.8)){catchPlayer(run);showScreen('dead');break;}
+    if(lastResult.caught||(run.hidden&&hideWitnessed&&lastResult.distance<1.8)){capturePlayer();break;}
    }
    input.updateView();camera.position.set(player.x,player.height+1.65,player.z);
    threat=THREE.MathUtils.lerp(threat,player.height<1.5?Math.max(0,1-lastResult.distance/12):0,frameDelta*3);
@@ -102,7 +114,7 @@ export function startGame(container,{seed}={}){
    else if(!target){hold=0;holdId=null;}
    if(performance.now()>noiseUntil)player.noise='Quiet';
    ui.update(run,player,target,hold);
-   if(run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
+   if(run.phase==='playing'&&run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
   }else{camera.position.set(player.x,player.height+1.65,player.z);input.updateView();ui.update(run,player,null,0);}
   applyIdle(creature,idlePose(time));if(enemy.path.length)applyRunning(creature,time*(enemy.mode==='chase'?1.2:enemy.mode==='investigate'?.8:.65),enemy.mode==='chase'?1:.6);
   creature.root.position.y+=groundHeight(enemy.position);creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
@@ -115,8 +127,9 @@ export function startGame(container,{seed}={}){
   renderer.toneMappingExposure=torch.exposure;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));
-  if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);torch.render(renderer);renderDirty=false;}
+  if(jumpscare.active){renderer.toneMappingExposure=1;jumpscare.render(renderer);ui.el('jumpscare-border').style.opacity=String(jumpscare.borderOpacity);}
+  else if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);torch.render(renderer);renderDirty=false;}
   lastOverlay=ui.overlay;
  });
- return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch};
+ return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch,jumpscare};
 }
