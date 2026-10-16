@@ -10,7 +10,7 @@ import {gameInput} from './game-input.js';
 import {footstepNoise,interactionNoise} from './player-noise.js';
 import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
-import {createJumpscare} from './jumpscare.js';
+import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 
 export function startGame(container,{seed}={}){
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
@@ -22,7 +22,8 @@ export function startGame(container,{seed}={}){
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  const torch=createTorch(world.scene,camera);
- const jumpscare=createJumpscare();
+ const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
+ const jumpscare=createJumpscare({mouthTexture});
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}

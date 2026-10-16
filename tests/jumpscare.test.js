@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createJumpscare,JUMPSCARE_DURATION} from '../src/jumpscare.js';
+import {createCreature} from '../src/creature.js';
 
 test('a capture starts one scare and finishes before retry is shown',()=>{
  const scare=createJumpscare();assert.equal(scare.start(),true);assert.equal(scare.start(),false);
@@ -26,4 +27,28 @@ test('both eyes remain inside the view on desktop and portrait phones',()=>{
   scare.scene.updateMatrixWorld(true);scare.camera.updateMatrixWorld(true);
   for(const eye of scare.eyes){const p=eye.getWorldPosition(new THREE.Vector3()).project(scare.camera);assert.ok(Math.abs(p.x)<.85&&Math.abs(p.y)<.85);}
  }
+});
+
+test('the complete head silhouette fits the camera, including chin and horn tips',()=>{
+ for(const aspect of [640/480,390/844,1920/1080]){
+  const scare=createJumpscare();scare.resize(aspect);scare.start();scare.update(.2);
+  scare.scene.updateMatrixWorld(true);scare.camera.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(scare.face);
+  for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
+   const p=new THREE.Vector3(x,y,z).project(scare.camera);
+   assert.ok(Math.abs(p.x)<.95&&Math.abs(p.y)<.95&&p.z<1,`Head cropped at ${aspect}: ${p.toArray()}`);
+  }
+ }
+});
+
+test('the attached mouth belongs to the jumpscare and never to the roaming creature',()=>{
+ const texture=new THREE.DataTexture(new Uint8Array([255,0,0,255]),1,1),scare=createJumpscare({mouthTexture:texture});
+ scare.start();scare.update(.1);
+ assert.ok(scare.mouth?.visible);assert.equal(scare.mouth.parent,scare.face);assert.equal(scare.mouth.material.map,texture);
+ const roaming=createCreature();let mouths=0;roaming.root.traverse(mesh=>{if(mesh.userData.jumpscareMouth)mouths++;});assert.equal(mouths,0);
+});
+
+test('an unloaded mouth image never produces a white rectangle',()=>{
+ const scare=createJumpscare({mouthTexture:new THREE.Texture()});scare.start();scare.update(.1);
+ assert.equal(scare.mouth.visible,false);
 });
