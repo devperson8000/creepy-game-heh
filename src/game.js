@@ -28,7 +28,7 @@ export function startGame(container,{seed}={}){
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause);
- let pendingNoise=[],noiseUntil=0,scareSoundPlayed=false;const footsteps={distance:0};
+ let pendingNoise=[],noiseUntil=0;const footsteps={distance:0};
  function emitNoise(noise){if(!noise)return;monsterAudio.playNoise(noise.type);player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noiseUntil=performance.now()+1000;if(run.boardsOpen)pendingNoise.push(noise);}
  function resume(){ui.hideScreen();input.capture();void monsterAudio.resume();}
  function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);world.lighting.reset();pendingNoise=[];footsteps.distance=0;noiseUntil=0;threat=0;hold=0;latched=false;}
@@ -37,7 +37,7 @@ export function startGame(container,{seed}={}){
   if(run.phase!=='playing')return;
   catchPlayer(run);ui.overlay='jumpscare';ui.el('game-screen').hidden=true;ui.el('jumpscare-border').hidden=false;
   document.body.classList.add('jumpscare-active');input.clear();document.exitPointerLock?.();pendingNoise=[];
-  jumpscare.resize(camera.aspect);jumpscare.start();scareSoundPlayed=false;
+  jumpscare.resize(camera.aspect);jumpscare.start();monsterAudio.playJumpscare();
  }
  // Pause content uses the same action wiring as the initial and outcome screens.
  const soundButton=ui.el('sound-toggle');soundButton.hidden=!monsterAudio.configured;
@@ -95,7 +95,6 @@ export function startGame(container,{seed}={}){
   const now=performance.now(),frameDelta=Math.min((now-previous)/1000,.2);previous=now;
   if(jumpscare.active){
    jumpscare.update(frameDelta);
-   if(jumpscare.active&&!scareSoundPlayed&&jumpscare.elapsed>=.55){monsterAudio.playJumpscare();scareSoundPlayed=true;}
    if(!jumpscare.active){ui.el('jumpscare-border').hidden=true;document.body.classList.remove('jumpscare-active');showScreen('dead');}
   }
   if(!ui.overlay&&run.phase==='playing'){
