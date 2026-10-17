@@ -21,9 +21,9 @@ export function createJumpscare({mouthTexture} = {}) {
    depthWrite: false,
    depthTest: false,
    uniforms: {uTime: {value: 0}, uAttack: {value: 0}},
-   vertexShader: \`varying vec2 vUv;
-    void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}\`,
-   fragmentShader: \`varying vec2 vUv;
+   vertexShader: `varying vec2 vUv;
+    void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+   fragmentShader: `varying vec2 vUv;
     uniform float uTime;
     uniform float uAttack;
     void main(){
@@ -37,7 +37,7 @@ export function createJumpscare({mouthTexture} = {}) {
       col*=1.-center*.73;
       col+=noise*.003;
       gl_FragColor=vec4(max(col,vec3(0.)),1.);
-    }\`
+    }`
   })
  );
  backdrop.position.z = -5;
