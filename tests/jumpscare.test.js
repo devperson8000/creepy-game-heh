@@ -16,7 +16,7 @@ test('a capture starts one scare and finishes before retry is shown',()=>{
 test('blood fades and white eyes disappear into black at the end',()=>{
  const scare=createJumpscare();scare.start();scare.update(.1);
  const early=scare.borderOpacity;assert.ok(early>.8);
- for(let i=0;i<20;i++)scare.update(.1);
+ for(let i=0;i<27;i++)scare.update(.1);
  assert.ok(scare.borderOpacity<early*.3);
  assert.ok(scare.eyes.every(eye=>eye.material.color.r<.5));
 });
@@ -44,6 +44,8 @@ test('the complete head silhouette fits the camera, including chin and horn tips
 test('the attached mouth belongs to the jumpscare and never to the roaming creature',()=>{
  const texture=new THREE.DataTexture(new Uint8Array([255,0,0,255]),1,1),scare=createJumpscare({mouthTexture:texture});
  scare.start();scare.update(.1);
+ assert.equal(scare.mouth?.visible,false,'mouth stays hidden for the eye reveal');
+ for(let i=0;i<10;i++)scare.update(.1);
  assert.ok(scare.mouth?.visible);assert.equal(scare.mouth.parent,scare.face);assert.equal(scare.mouth.material.map,texture);
  const roaming=createCreature();let mouths=0;roaming.root.traverse(mesh=>{if(mesh.userData.jumpscareMouth)mouths++;});assert.equal(mouths,0);
 });
@@ -51,4 +53,19 @@ test('the attached mouth belongs to the jumpscare and never to the roaming creat
 test('an unloaded mouth image never produces a white rectangle',()=>{
  const scare=createJumpscare({mouthTexture:new THREE.Texture()});scare.start();scare.update(.1);
  assert.equal(scare.mouth.visible,false);
+});
+
+test('the black-eyed reveal precedes the close-range lunge and visible mouth',()=>{
+ const texture=new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1);
+ const scare=createJumpscare({mouthTexture:texture});
+ scare.resize(16/9);scare.start();scare.update(.2);
+ const startingDistance=scare.camera.position.z;
+ assert.equal(scare.mouth.visible,false);
+ scare.update(.65);
+ assert.ok(scare.camera.position.z<startingDistance,'creature moves toward the viewer');
+ assert.ok(scare.eyes.some(eye=>eye.material.color.r>.9));
+ assert.equal(scare.mouth.visible,true);
+ scare.update(.13);
+ assert.ok(scare.impactOpacity>.2,'a single soft red impact accompanies the lunge');
+ assert.ok(scare.glitch>=0&&scare.glitch<=1);
 });
