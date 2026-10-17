@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import {createCreature} from './creature.js';
 
-// Use the actual roaming creature's head and a single dramatic attack,
-// rather than rapid flashes or a separate monster image.
-export const JUMPSCARE_DURATION = 2.65;
+// The eyes appear on the very first capture frame; the face then strikes
+// within a fraction of a second, without a delayed intro or flashing strobe.
+export const JUMPSCARE_DURATION = 1.85;
 export const JUMPSCARE_MOUTH_URL = '/images/jumpscare-mouth.png';
 const clamp01 = value => THREE.MathUtils.clamp(value, 0, 1);
 const ease = (value, start, end) => THREE.MathUtils.smoothstep(value, start, end);
@@ -73,22 +73,21 @@ export function createJumpscare({mouthTexture} = {}) {
  mouth.visible = false;
  face.add(mouth);
 
- // Fit the complete horned silhouette while its eyes first become visible,
- // including on portrait screens; the later push-in intentionally crops it.
+ // The first frame fits the horns even on portrait screens; the near-instant
+ // subsequent push-in deliberately crops the silhouette for impact.
  const bounds = new THREE.Box3().setFromObject(face);
  const center = bounds.getCenter(new THREE.Vector3());
  const size = bounds.getSize(new THREE.Vector3());
  let active = false, elapsed = 0, borderOpacity = 0, impactOpacity = 0, glitch = 0;
 
  function pose(){
-  const awaken = ease(elapsed, .14, .48);
-  const rush = ease(elapsed, .53, .98);
-  const shock = Math.exp(-Math.max(0, elapsed-.93)*5.3) * rush;
-  const withdraw = ease(elapsed, 1.88, JUMPSCARE_DURATION);
+  const rush = ease(elapsed, 0, .24);
+  const shock = Math.exp(-Math.max(0, elapsed-.20)*7.5) * rush;
+  const withdraw = ease(elapsed, 1.15, JUMPSCARE_DURATION);
   const darkness = 1-withdraw;
-  const open = ease(elapsed, .78, 1.06);
+  const open = ease(elapsed, .035, .17);
 
-  eyes.forEach(eye => eye.material.color.setScalar(awaken * darkness));
+  eyes.forEach(eye => eye.material.color.setScalar(darkness));
   darkSurfaces.forEach(mesh => mesh.material.color.setRGB(
    (.008 + .026*rush + .007*Math.sin(elapsed*4))*darkness,
    (.004 + .004*rush)*darkness,
@@ -98,7 +97,7 @@ export function createJumpscare({mouthTexture} = {}) {
   backdrop.material.uniforms.uAttack.value = rush*darkness;
 
   const textureReady = !!mouthTexture?.image?.width && !!mouthTexture?.image?.height;
-  mouth.visible = active && textureReady && elapsed >= .75 && withdraw < .98;
+  mouth.visible = active && textureReady && elapsed >= .04 && withdraw < .98;
   mouth.scale.set(1+.25*open, .18+1.0*open, 1);
   mouth.material.opacity = clamp01(open*2) * darkness;
   mouth.material.color.setScalar(darkness);
@@ -124,7 +123,7 @@ export function createJumpscare({mouthTexture} = {}) {
   camera.lookAt(center.x, center.y-.035*rush, 0);
 
   borderOpacity = clamp01((.83+.15*rush) * darkness);
-  impactOpacity = clamp01(Math.exp(-Math.pow((elapsed-.96)/.13,2))*.58);
+  impactOpacity = clamp01(Math.exp(-Math.pow((elapsed-.22)/.085,2))*.58);
   glitch = clamp01(shock*.55);
  }
  function start(){
