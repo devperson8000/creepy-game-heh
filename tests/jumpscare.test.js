@@ -31,7 +31,7 @@ test('both eyes remain inside the view on desktop and portrait phones',()=>{
 
 test('the complete head silhouette fits the camera, including chin and horn tips',()=>{
  for(const aspect of [640/480,390/844,1920/1080]){
-  const scare=createJumpscare();scare.resize(aspect);scare.start();scare.update(.2);
+  const scare=createJumpscare();scare.resize(aspect);scare.start();scare.update(.01);
   scare.scene.updateMatrixWorld(true);scare.camera.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(scare.face);
   for(const x of [bounds.min.x,bounds.max.x])for(const y of [bounds.min.y,bounds.max.y])for(const z of [bounds.min.z,bounds.max.z]){
@@ -43,9 +43,9 @@ test('the complete head silhouette fits the camera, including chin and horn tips
 
 test('the attached mouth belongs to the jumpscare and never to the roaming creature',()=>{
  const texture=new THREE.DataTexture(new Uint8Array([255,0,0,255]),1,1),scare=createJumpscare({mouthTexture:texture});
- scare.start();scare.update(.1);
- assert.equal(scare.mouth?.visible,false,'mouth stays hidden for the eye reveal');
- for(let i=0;i<10;i++)scare.update(.1);
+ scare.start();
+ assert.equal(scare.mouth?.visible,false,'eyes show before the mouth moves');
+ scare.update(.1);
  assert.ok(scare.mouth?.visible);assert.equal(scare.mouth.parent,scare.face);assert.equal(scare.mouth.material.map,texture);
  const roaming=createCreature();let mouths=0;roaming.root.traverse(mesh=>{if(mesh.userData.jumpscareMouth)mouths++;});assert.equal(mouths,0);
 });
@@ -55,17 +55,18 @@ test('an unloaded mouth image never produces a white rectangle',()=>{
  assert.equal(scare.mouth.visible,false);
 });
 
-test('the black-eyed reveal precedes the close-range lunge and visible mouth',()=>{
+test('the eyes appear instantly and the mouth and camera lunge follow within 200ms',()=>{
  const texture=new THREE.DataTexture(new Uint8Array([255,255,255,255]),1,1);
  const scare=createJumpscare({mouthTexture:texture});
- scare.resize(16/9);scare.start();scare.update(.2);
+ scare.resize(16/9);
+ assert.equal(scare.start(),true);
  const startingDistance=scare.camera.position.z;
+ assert.ok(scare.eyes.every(eye=>eye.material.color.r>.9),'eyes must be bright on first capture frame');
  assert.equal(scare.mouth.visible,false);
- scare.update(.65);
- assert.ok(scare.camera.position.z<startingDistance,'creature moves toward the viewer');
- assert.ok(scare.eyes.some(eye=>eye.material.color.r>.9));
+ scare.update(.1);
+ assert.ok(scare.camera.position.z<startingDistance,'creature is already lunging at 100ms');
  assert.equal(scare.mouth.visible,true);
- scare.update(.13);
- assert.ok(scare.impactOpacity>.2,'a single soft red impact accompanies the lunge');
+ scare.update(.1);
+ assert.ok(scare.impactOpacity>.2,'red impact peaks around 200ms');
  assert.ok(scare.glitch>=0&&scare.glitch<=1);
 });
