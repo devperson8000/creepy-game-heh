@@ -6,3 +6,31 @@ canvas{touch-action:none}#crosshair{position:fixed;top:50%;left:50%;width:4px;he
 .game-top button#torch-toggle{width:auto;font:10px system-ui;padding:0 11px}.game-top button#torch-toggle[aria-pressed="false"]{color:#858b82}@media(max-width:600px){.game-top-actions{gap:5px}.game-top button#torch-toggle,.game-top button#sound-toggle{padding:0 7px}.wordmark{font-size:10px;letter-spacing:.15em}#current-objective{max-width:150px}}
 #player-noise{color:#a3a79e}#player-noise.noisy{color:#eeeee0}
 #jumpscare-border{position:fixed;inset:0;z-index:19;pointer-events:none;background:radial-gradient(ellipse at center,transparent 25%,rgba(75,0,3,.18) 46%,rgba(130,0,8,.6) 72%,rgba(112,0,5,.94) 100%);box-shadow:inset 0 0 100px #500005}.jumpscare-active .grain,.jumpscare-active .vignette,.jumpscare-active #toast{visibility:hidden}
+
+/* Creature capture: red shadows frame its eyes without rapid strobes. */
+#jumpscare-border {
+ background:
+  linear-gradient(180deg,rgba(80,2,13,.36),transparent 34%,transparent 60%,rgba(100,2,15,.56)),
+  radial-gradient(ellipse at 50% 56%,transparent 23%,rgba(37,0,6,.3) 62%,rgba(90,0,14,.78) 100%);
+ box-shadow:inset 0 0 110px rgba(72,0,10,.68);
+ overflow:hidden;
+}
+#jumpscare-border::before,#jumpscare-border::after {
+ content:"";position:absolute;inset:0;pointer-events:none;
+}
+#jumpscare-border::before {
+ background:repeating-linear-gradient(0deg,transparent 0px,transparent 3px,rgba(26,0,4,.19) 4px);
+ opacity:.55;
+}
+#jumpscare-border::after {
+ background:radial-gradient(ellipse at center,rgba(140,16,20,.58),rgba(75,0,13,.2) 42%,transparent 70%);
+ opacity:var(--scare-impact,0);
+}
+.jumpscare-active #scene canvas {
+ filter:contrast(1.19) saturate(.82);
+ transform:translateX(var(--scare-glitch,0px));
+}
+@media (prefers-reduced-motion:reduce) {
+ .jumpscare-active #scene canvas{transform:none;}
+ #jumpscare-border::after{opacity:0;}
+}
