@@ -1,0 +1,105 @@
+{
+  "three": "180",
+  "clips": [
+    {
+      "name": "Clapping",
+      "duration": 1.3333333730697632,
+      "tracks": 93
+    },
+    {
+      "name": "Death",
+      "duration": 1.6666666269302368,
+      "tracks": 93
+    },
+    {
+      "name": "Idle",
+      "duration": 3.3333332538604736,
+      "tracks": 93
+    },
+    {
+      "name": "Jump",
+      "duration": 0.8333333134651184,
+      "tracks": 93
+    },
+    {
+      "name": "Punch",
+      "duration": 0.7333333492279053,
+      "tracks": 93
+    },
+    {
+      "name": "Roll",
+      "duration": 1,
+      "tracks": 93
+    },
+    {
+      "name": "Run",
+      "duration": 0.699999988079071,
+      "tracks": 93
+    },
+    {
+      "name": "RunningJump",
+      "duration": 1,
+      "tracks": 93
+    },
+    {
+      "name": "Sitting",
+      "duration": 6.666666507720947,
+      "tracks": 93
+    },
+    {
+      "name": "Standing",
+      "duration": 0.6666666865348816,
+      "tracks": 93
+    },
+    {
+      "name": "SwordSlash",
+      "duration": 0.8333333134651184,
+      "tracks": 93
+    },
+    {
+      "name": "Walk",
+      "duration": 0.8333333134651184,
+      "tracks": 93
+    }
+  ],
+  "skinnedMeshes": 5,
+  "bones": 31,
+  "triangles": 8404,
+  "externalImages": 0,
+  "movement": {
+    "Clapping": 1.2421227526119814,
+    "Death": 1.5915699005126953,
+    "Idle": 0.06996537518947887,
+    "Jump": 1.208018198865226,
+    "Punch": 0.5044715892785104,
+    "Roll": 2.3212104559339313,
+    "Run": 2.3639363034379,
+    "RunningJump": 3.2334160000645804,
+    "Sitting": 0.8078708648681641,
+    "Standing": 0.6941025044864011,
+    "SwordSlash": 0.5016620066890892,
+    "Walk": 1.9677960680970652
+  },
+  "bounds": {
+    "Clapping": 1.7395748485012443,
+    "Death": 1.9172371784773423,
+    "Idle": 1.7507197864104445,
+    "Jump": 1.8174229277488618,
+    "Punch": 1.6768028261087538,
+    "Roll": 1.6632158819925589,
+    "Run": 1.6160068770205713,
+    "RunningJump": 1.5868435344157763,
+    "Sitting": 1.7388630167010068,
+    "Standing": 1.7389362022117456,
+    "SwordSlash": 1.664903986494313,
+    "Walk": 1.7076424897911133
+  },
+  "browserErrors": [],
+  "model": {
+    "path": "public/models/survivor.glb",
+    "bytes": 678776,
+    "sha256": "e6e8dae043fd2d6db027af6eda27a3611e5da56c7d9ceab77842b60cc3b16e72",
+    "selfContained": true
+  },
+  "method": "Chromium WebGL, Three.js r180 GLTFLoader + AnimationMixer; each clip sampled at 0%, 25%, 50%, 75%, 99% for finite skinned bounds; bone movement measured at 37%."
+}
