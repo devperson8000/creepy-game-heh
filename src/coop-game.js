@@ -1,3 +1,5 @@
+import {createFinaleClock} from './finale-state.js';
+import {createFinalePlayer} from './finale-player.js';
 import {gamePreferences,createRenderQuality} from './preferences.js';
 import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
@@ -55,6 +57,8 @@ export function startCoopGame(container,{client,session}){
  const avatars=new Map(),noiseSequences=new Map(),poseBuffers=new Map(),enemyBuffer=createPoseBuffer({adaptive:true});let avatarAsset;
  const prediction=createMovementPrediction(state.players.get(localId),world.canMove);
  let peerProofAt=0,proofSnapshotClock=0;
+ const finaleClock=createFinaleClock({now:()=>performance.now()/1000});
+ let finalePlayer=null,finaleFinishedAt=null,finaleError=null,finaleStarted=false;
  const peerFingerprints=new Map();let ownerFingerprint=null,acceptedFingerprint=null;
  // Public voice signalling cannot authenticate game authority. Bind DTLS certificates
  // through authenticated member actions and owner-only database snapshots first.
@@ -70,7 +74,7 @@ export function startCoopGame(container,{client,session}){
  const rosterRows=new Map();
  function local(){return state.players.get(localId);}
  function viewRun(watched=local()){const own=local();return {...run,carried:own?.carried??new Set(),hidden:!!watched?.hidden,teamKeyCount:run.banked.size+[...state.players.values()].reduce((n,p)=>n+p.carried.size,0)};}
- async function leave(){if(leaving)return;leaving=true;await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
+ async function leave(){if(leaving)return;leaving=true;finalePlayer?.dispose();finalePlayer=null;await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
  function resume(){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
  function screen(kind){
   if(kind==='lost')arrival.dispose();
@@ -191,7 +195,52 @@ export function startCoopGame(container,{client,session}){
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{client.send('leave');client.close();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ window.addEventListener('pagehide',()=>{finalePlayer?.dispose();client.send('leave');client.close();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ function broadcastSnapshot(wallDelta){
+  if(!isHost||disconnected)return;
+  snapshotClock+=wallDelta;proofSnapshotClock+=wallDelta;
+  if(snapshotClock<.05)return;
+  snapshotClock%=.05;
+  const snapshot=simulation.snapshot();
+  snapshot.peerAcknowledged=Object.fromEntries(peerFingerprints);
+  snapshot.peerProofs=Object.fromEntries([...state.players.keys()].filter(id=>id!==localId).map(id=>[id,client.voice?.localFingerprint?.(id)]));
+  recordPoses();let fallback=false;
+  for(const id of state.players.keys())if(id!==localId&&(!peerReady(id)||!client.voice?.sendGameplay(id,'snapshot',{snapshot})))fallback=true;
+  if(fallback||proofSnapshotClock>=1){if(client.send('snapshot',{snapshot}))proofSnapshotClock=0;}
+  for(const notice of snapshot.notices)if(notice.id>lastNotice){
+   if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);
+  }
+ }
+ function showFinale(now){
+  if(!run.finale)return false;
+  finaleClock.sync(run.finale);
+  if(!finaleStarted){
+   finaleStarted=true;arrival.dispose();input.clear();document.exitPointerLock?.();
+   ui.el('keypad-dialog').hidden=true;ui.el('jumpscare-border').hidden=true;document.body.classList.remove('jumpscare-active');
+   ui.hideScreen();audio.pause();ambience.pause();torch.beam.intensity=0;
+  }
+  if(!finalePlayer&&!finaleError&&avatarAsset){
+   try{
+    finalePlayer=createFinalePlayer({container,renderer,asset:avatarAsset,cast:run.finale.cast,runnerId:run.finale.runnerId,buttonId:run.finale.buttonId,preview:false});
+    void finalePlayer.audio.resume();
+   }catch(error){finaleError=error;console.warn('Finale scene could not initialize',error);}
+  }
+  if(finaleError||(!avatarAsset&&run.phase==='won')){
+   if(outcome!=='won'){outcome='won';screen('won');}return true;
+  }
+  if(finalePlayer){
+   const elapsed=run.phase==='won'?52:finaleClock.sample();
+   if(!document.hidden)finalePlayer.sample(elapsed);
+   if(elapsed>=52){
+    if(finaleFinishedAt===null)finaleFinishedAt=now;
+    if(now-finaleFinishedAt>1600){
+     finalePlayer.dispose();finalePlayer=null;
+     if(outcome!=='won'){outcome='won';screen('won');}
+    }
+   }
+  }
+  return true;
+ }
  screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
  function frame(){
   const now=performance.now(),wallDelta=Math.min(1,(now-previous)/1000),delta=Math.min(.2,wallDelta);previous=now;time+=delta;
@@ -212,6 +261,7 @@ export function startCoopGame(container,{client,session}){
    }
   }
   own=local();
+  if(run.finale){showFinale(now);broadcastSnapshot(wallDelta);return;}
   if(own.status!==lastStatus){
    if(lastStatus==='alive'&&(own.status==='downed'||own.status==='dead'))startScare();
    if(own.status==='alive'){spectateId=null;if(scaredOrWatching()){ui.hideScreen();void audio.resume();void ambience.resume();}if(torch.on!==own.torch)torch.toggle();}
@@ -264,23 +314,12 @@ export function startCoopGame(container,{client,session}){
   if(!document.hidden&&jumpscare.active){renderer.toneMappingExposure=1;jumpscare.render(renderer);const border=ui.el('jumpscare-border');border.style.opacity=String(jumpscare.borderOpacity);border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);}
   else if(!document.hidden&&(!ui.overlay||arrival.active||renderDirty||lastOverlay!==ui.overlay)){renderer.render(world.scene,camera);renderDirty=false;if(own.status==='alive'&&(!arrival.active||arrival.elapsed>9.5))torch.render(renderer);}
   lastOverlay=ui.overlay;
-  if(isHost&&!disconnected){
-   snapshotClock+=wallDelta;proofSnapshotClock+=wallDelta;
-   if(snapshotClock>=.05){
-    snapshotClock%=.05;const snapshot=simulation.snapshot();
-    snapshot.peerAcknowledged=Object.fromEntries(peerFingerprints);
-    snapshot.peerProofs=Object.fromEntries([...state.players.keys()].filter(id=>id!==localId).map(id=>[id,client.voice?.localFingerprint?.(id)]));
-    recordPoses();let fallback=false;
-    for(const id of state.players.keys())if(id!==localId&&(!peerReady(id)||!client.voice?.sendGameplay(id,'snapshot',{snapshot})))fallback=true;
-    if(fallback||proofSnapshotClock>=1){if(client.send('snapshot',{snapshot}))proofSnapshotClock=0;}
-    for(const notice of snapshot.notices)if(notice.id>lastNotice){if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);}
-   }
-  }
+  broadcastSnapshot(wallDelta);
  }
  renderer.setAnimationLoop(frame);
  // A second tab must remain playable while the owner's canvas is hidden.
  const backgroundTimer=setInterval(()=>{if(document.hidden)frame();},100);
  window.addEventListener('pagehide',()=>clearInterval(backgroundTimer),{once:true});
  function scaredOrWatching(){return scareStatus||ui.overlay==='pause'||local()?.status==='alive';}
- return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival};
+ return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival,get finale(){return finalePlayer;},get finaleError(){return finaleError;}};
 }

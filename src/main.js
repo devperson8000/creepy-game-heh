@@ -35,11 +35,14 @@ try {
  }
  else {
   document.body.classList.add('overlay-open');
+  function beginPreview(castSize=2){
+   startFinalePreview(document.querySelector('#scene'),{castSize,onExit:options=>options?.castSize?beginPreview(options.castSize):makeMenu()});
+  }
   function makeMenu(options={}){
    return createLobbyMenu({
     ...options,
     createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});return client;},
-    onTestFinale:()=>{startFinalePreview(document.querySelector('#scene'),{onExit:options=>{makeMenu();if(options?.castSize){document.querySelector('#lobby-test-finale')?.click();}}});},
+    onTestFinale:()=>beginPreview(),
     onSingleplayer:()=>{try{window.monochrome=startGame(document.querySelector('#scene'),{autostart:true});}catch(error){failed(error);}},
     onMultiplayer:({client,session})=>{try{window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}}
    });
