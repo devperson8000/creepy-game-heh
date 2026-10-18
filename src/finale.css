@@ -1,0 +1,14 @@
+.finale-preview-shell{position:fixed;inset:0;z-index:60;background:#050909;overflow:hidden}.finale-preview-shell>canvas{display:block;width:100%;height:100%}
+.finale-overlay{position:fixed;inset:0;z-index:60;pointer-events:none;display:flex;align-items:center;justify-content:center;font-family:system-ui,sans-serif;color:#e6f0e8}
+.finale-preview-shell .finale-overlay{position:absolute;z-index:1}
+.finale-fade{position:absolute;inset:0;background:#010302;pointer-events:none}
+.finale-title{z-index:1;max-width:90vw;text-align:center;font-size:clamp(40px,8vw,105px);letter-spacing:.1em;text-shadow:0 0 45px #d8eed4bb;margin:0;animation:finale-reveal .8s ease-out}
+.finale-hud{position:absolute;top:24px;left:26px;right:26px;display:flex;justify-content:space-between;color:#aab7aa;font:10px/1.5 monospace;letter-spacing:.13em;text-shadow:0 1px 4px black}
+.finale-tools{position:absolute;bottom:max(20px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:12px;pointer-events:auto;background:#070e0bd9;padding:12px;border:1px solid #6d806d66;border-radius:4px;max-width:95vw}
+.finale-tools button,.finale-tools select,.finale-loading button{padding:10px 14px;border:1px solid #788d7b;color:#edf5ec;background:#16201b;border-radius:3px;cursor:pointer;font:12px system-ui}
+.finale-tools label{font-size:12px;color:#bac6b9;display:flex;align-items:center;gap:8px}
+.finale-tools button:focus-visible,.finale-tools select:focus-visible{outline:2px solid white;outline-offset:3px}
+.finale-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;flex-direction:column;font:15px system-ui;color:#d3ded1}
+@keyframes finale-reveal{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:550px){.finale-hud{top:12px;left:12px;right:12px;font-size:8px}.finale-tools{width:96%;gap:8px;padding:10px}.finale-tools button{flex:1}}
+@media(prefers-reduced-motion:reduce){.finale-title{animation:none}}
