@@ -1,3 +1,5 @@
+import './finale.css';
+import {startFinalePreview} from './finale-player.js';
 import {gamePreferences} from './preferences.js';
 import './style.css';
 import './lobby-menu.css';
@@ -30,6 +32,7 @@ try {
   function makeMenu(options={}){
    return createLobbyMenu({
     ...options,
+    onTestFinale:()=>{void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{window.monochromeFinale=null;makeMenu();}}).then(value=>{window.monochromeFinale=value;});},
     createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});return client;},
     onSingleplayer:()=>{try{window.monochrome=startGame(document.querySelector('#scene'),{autostart:true});}catch(error){failed(error);}},
     onMultiplayer:({client,session})=>{try{window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}}
@@ -38,6 +41,7 @@ try {
   const testSession=readTestSession(location.search);
   document.body.classList.toggle('two-tab-mode',!!testSession);
   if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
+  else if(new URLSearchParams(location.search).get('mode')==='finale'){void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{history.replaceState({},'',location.pathname);makeMenu();}}).then(value=>{window.monochromeFinale=value;});}
   else makeMenu();
  }
 }

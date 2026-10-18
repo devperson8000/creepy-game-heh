@@ -15,7 +15,7 @@ function storedName() {
 }
 
 /** Owns its connection until a started session is handed to onMultiplayer. */
-export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () => {}, createClient, initialPlayerName, onClient} = {}) {
+export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () => {}, onTestFinale = () => {}, createClient, initialPlayerName, onClient} = {}) {
  const root = element('main', 'lobby-menu');
  root.id = 'lobby-menu';
  root.setAttribute('aria-label', 'Monochrome game menu');
@@ -106,7 +106,8 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
   const study = element('a', 'lobby-study', 'Creature study');
   study.href = '?mode=study';
   const test=element('a','lobby-study','Two-tab co-op test');test.href='?mode=coop-test';
-  options.append(solo, multiplayer, study,test);
+  const finale=button('Test finale animation','lobby-test-finale',()=>{dispose();onTestFinale();});finale.className='lobby-study';
+  options.append(solo, multiplayer, study,test,finale);
   content.append(intro, options);
  }
 
