@@ -222,6 +222,31 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   beam.intensity=lit?72:0;glow.intensity=lit?.65:0;lensMaterial.color.setHex(lit?0xdfe8d6:0x313832);
  }
 
+ function sampleCinematic({clip='Idle',time=0,position=[0,0,0],yaw=0,action='none',progress=0,handTarget=null}={}){
+  if(disposed)return;
+  mixer.stopAllAction();
+  const animation=actions.get(clip.toLowerCase())??actions.get('idle');
+  if(animation){animation.reset().setEffectiveWeight(1).play();mixer.setTime(Math.max(0,finite(time))%animation.getClip().duration);}
+  root.visible=true;root.position.fromArray(position);root.rotation.set(0,yaw+Math.PI,0);model.rotation.set(0,0,0);
+  speakingIcon.visible=false;torch.visible=false;beam.intensity=0;glow.intensity=0;
+  const label=root.getObjectByName('player-name');if(label)label.visible=false;
+  const p=THREE.MathUtils.clamp(progress,0,1);
+  if(action==='dive')root.rotation.x=-Math.sin(p*Math.PI)*1.35;
+  if(action==='brace'&&chest)chest.rotation.x+=.14;
+  root.updateMatrixWorld(true);
+  if(handTarget&&hand&&forearm&&upperArm){
+   upperArm.getWorldPosition(shoulderPosition);hand.getWorldPosition(wristGoal);wristGoal.lerp(new THREE.Vector3().fromArray(handTarget),p);
+   direction.subVectors(wristGoal,shoulderPosition);
+   const distance=THREE.MathUtils.clamp(direction.length(),Math.abs(upperLength-lowerLength)+.001,upperLength+lowerLength-.001);direction.normalize();
+   wristGoal.copy(shoulderPosition).addScaledVector(direction,distance);
+   pole.set(-.4,-.8,-.2).transformDirection(root.matrixWorld);pole.addScaledVector(direction,-pole.dot(direction)).normalize();
+   const along=(upperLength*upperLength-lowerLength*lowerLength+distance*distance)/(2*distance);
+   elbowGoal.copy(shoulderPosition).addScaledVector(direction,along).addScaledVector(pole,Math.sqrt(Math.max(0,upperLength*upperLength-along*along)));
+   orientBone(upperArm,forearm,elbowGoal);orientBone(forearm,hand,wristGoal);
+  }
+  root.updateMatrixWorld(true);
+ }
+
  function dispose(){
   if(disposed)return;disposed=true;mixer.stopAllAction();mixer.uncacheRoot(model);root.removeFromParent();
   for(const skeleton of skeletons)skeleton.dispose();
@@ -229,5 +254,5 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   for(const surface of ownedMaterials)surface.dispose();
   for(const texture of ownedTextures)texture.dispose();
  }
- return {root,update,dispose};
+ return {root,update,sampleCinematic,dispose};
 }
