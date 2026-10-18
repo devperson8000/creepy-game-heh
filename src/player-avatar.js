@@ -222,6 +222,37 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   beam.intensity=lit?72:0;glow.intensity=lit?.65:0;lensMaterial.color.setHex(lit?0xdfe8d6:0x313832);
  }
 
+
+ /** Samples an absolute cinematic pose without changing the ordinary update API. */
+ function sampleCinematic({clip='idle',time=0,position={x:0,y:0,z:0},yaw=0,progress=0,handTarget=null}={}){
+  if(disposed)return;
+  const t=Math.max(0,finite(time));
+  root.position.set(finite(position.x),finite(position.y),finite(position.z));
+  root.rotation.set(0,finite(yaw)+Math.PI,0);root.visible=true;spawned=true;
+  speakingIcon.visible=false;for(const child of root.children)if(child.name==='player-name')child.visible=false;
+  torch.visible=false;beam.intensity=0;glow.intensity=0;
+  const moving=clip==='run'||clip==='stairs'||clip==='dive';
+  const chosen=actions.get(moving?'run':'idle')??actions.values().next().value;
+  mixer.stopAllAction();
+  if(chosen){chosen.reset().setEffectiveWeight(1).play();mixer.setTime(t);}
+  model.position.set(0,0,0);model.rotation.set(0,0,0);
+  if(clip==='dive'){model.rotation.x=-Math.sin(Math.PI*Math.min(1,Math.max(0,progress)))*.68;model.position.y=-.18*Math.sin(Math.PI*Math.min(1,Math.max(0,progress)));}
+  if(clip==='brace'){model.rotation.x=.09;model.rotation.z=Math.sin(t*3)*.035;}
+  if(clip==='button'&&handTarget&&upperArm&&forearm&&hand){
+   root.updateMatrixWorld(true);
+   upperArm.getWorldPosition(shoulderPosition);
+   wristGoal.set(finite(handTarget.x),finite(handTarget.y),finite(handTarget.z));
+   direction.subVectors(wristGoal,shoulderPosition);
+   const reach=THREE.MathUtils.clamp(direction.length(),Math.abs(upperLength-lowerLength)+.005,upperLength+lowerLength-.005);
+   direction.normalize();wristGoal.copy(shoulderPosition).addScaledVector(direction,reach);
+   pole.set(-.3,.2,-1).transformDirection(root.matrixWorld);
+   pole.addScaledVector(direction,-pole.dot(direction)).normalize();
+   const along=(upperLength*upperLength-lowerLength*lowerLength+reach*reach)/(2*reach);
+   elbowGoal.copy(shoulderPosition).addScaledVector(direction,along).addScaledVector(pole,Math.sqrt(Math.max(0,upperLength*upperLength-along*along)));
+   orientBone(upperArm,forearm,elbowGoal);orientBone(forearm,hand,wristGoal);
+  }
+  root.updateMatrixWorld(true);
+ }
  function dispose(){
   if(disposed)return;disposed=true;mixer.stopAllAction();mixer.uncacheRoot(model);root.removeFromParent();
   for(const skeleton of skeletons)skeleton.dispose();
@@ -229,5 +260,5 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   for(const surface of ownedMaterials)surface.dispose();
   for(const texture of ownedTextures)texture.dispose();
  }
- return {root,update,dispose};
+ return {root,update,sampleCinematic,dispose};
 }
