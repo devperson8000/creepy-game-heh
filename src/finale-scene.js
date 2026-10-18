@@ -45,7 +45,8 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=fa
    const p=ease((t-19)/4);
    for(const [id,actor] of players){
     const active=actor===runner,press=actor===button;
-    actor.sample({clip:active?'dive':press?'button':'brace',time:t,progress:p,position:{x:active?-.15:press?1.15:-1,y:0,z:active?lerp(1.6,-2.3,p):press?-1.4:-3.3},yaw:active?0:Math.PI/2,handTarget:press?{x:1.82,y:1.42,z:-1.25}:null});
+    const pressing=press&&(!active||t>=21);
+    actor.sample({clip:pressing?'button':active?'dive':'brace',time:t,progress:p,position:{x:pressing?1.15:active?-.15:-1,y:0,z:pressing?-1.4:active?lerp(1.6,-2.3,p):-3.3},yaw:pressing?Math.PI/2:active?0:Math.PI,handTarget:pressing?{x:1.82,y:1.42,z:-1.25}:null});
    }
    creature.sample({time:t,mode:'chase',position:{x:.4,y:0,z:3.6-2.4*p},yaw:Math.PI});
    [x,y,z,tx,ty,tz]=t<20.5?[2,2.5,3,.0,1.3,-2]:[2.5,2.0,-.3,1.7,1.4,-1.25];

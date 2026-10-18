@@ -213,6 +213,7 @@ export function startCoopGame(container,{client,session}){
  }
  function showFinale(now){
   if(!run.finale)return false;
+  if(outcome==='won')return true;
   finaleClock.sync(run.finale);
   if(!finaleStarted){
    finaleStarted=true;arrival.dispose();input.clear();document.exitPointerLock?.();

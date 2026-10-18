@@ -10,7 +10,7 @@ export function createFinaleAudio({volume=.8,muted=false}={}){
   if(disposed)return false;
   if(!context){const Ctx=globalThis.AudioContext??globalThis.webkitAudioContext;if(Ctx){context=new Ctx();master=context.createGain();master.connect(context.destination);}}
   if(!track&&typeof globalThis.Audio==='function'){
-   track=new Audio('/audio/monster.mp3');track.preload='auto';track.loop=true;
+   track=new globalThis.Audio('/audio/monster.mp3');track.preload='auto';track.loop=true;
    track.addEventListener('error',()=>{track?.pause();});
   }
   setGain();return !!context;

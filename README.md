@@ -115,3 +115,19 @@ Where available, the existing WebRTC mesh carries gameplay over an unordered dat
 Pause now includes saved look sensitivity, brightness, game volume, visual quality, and reduced-motion preferences. Automatic quality adjusts render resolution under sustained slow frames. The arrival can be skipped with Space or its on-screen button. Reduced motion suppresses camera sway, warning strobes, and menu sightings. Gameplay has generated ballast hum and distant pipe knocks, synchronized with game mute/volume. Pause, keypad, HUD, retry and escape screens share the rounded menu styling, focus states, and phone layouts.
 
 Run `npm test`, `npm run build`, and `bash supabase/tests/run-postgres.sh` for unit/build/database checks. With a server running, `npm run test:browser:polish` checks solo arrival, settings, pause/resume and mobile screens; `npm run test:browser:movement` uses two real authenticated players and deliberately exercises database-fallback movement. `GAME_TEST_URL` selects the server. The new polish and movement scripts default to `/usr/bin/chromium` or accept `BROWSER_EXECUTABLE`. The full voice/two-tab test remains `npm run test:browser` and requires a working WebRTC route or configured TURN relay. Neither browser nor Internet/network conditions can guarantee a universal frame rate or zero latency.
+
+## Co-op finale verification (2026-10-19)
+
+The finale implementation lives in `coop-finale-design` and plays an authored 52-second
+Three.js cinematic using the original hazmat player model and procedural Monochrome creature.
+
+- Host triggers once after all four keys are banked and the accepted code has been entered, in either order.
+- The existing co-op snapshot transport publishes the original team size and fixed cinematic cast/roles.
+- The dedicated preview is available from **Test finale animation** or `?mode=finale`.
+- The sequence uses a stylized non-graphic creature defeat while preserving the chase, elevator, and team epilogue.
+- The workflow `.github/workflows/finale-check.yml` runs the Node unit tests, production build,
+  and a Chromium smoke test on every branch push.
+- Existing co-op peer and database fallback checks should additionally be performed in a
+  configured multiplayer environment; Vercel `READY` alone is not proof of these runtime scenarios.
+
+See `docs/assets/finale/README.md` for asset and animation provenance.
