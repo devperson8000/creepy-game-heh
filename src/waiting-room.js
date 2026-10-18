@@ -51,7 +51,7 @@ export function createWaitingRoom(container,{client,room,onTerminal=()=>{}}){
   if(asset)for(const member of current.members){
    if(member.id===client.id)continue;
    if(!avatars.has(member.id)){const a=createPlayerAvatar(asset,member);avatars.set(member.id,a);world.scene.add(a.root);}
-   avatars.get(member.id).update(poses.get(member.id)??{...world.spawn(member.slot),torch:true,status:'alive'},dt);
+   avatars.get(member.id).update({...poses.get(member.id)??{...world.spawn(member.slot),torch:true,status:'alive'},speaking:client.voice?.isSpeaking(member.id)},dt);
   }
   world.update(dt,clock,current);torch.update({time:clock,moving:own.moving});renderer.toneMappingExposure=.95;
   if(asset)hint.textContent=terminal?'Press Esc to return to the room':Math.hypot(own.x-world.terminalPosition.x,own.z-world.terminalPosition.z)<3?'E · Open lobby terminal':current.requests?.length?'New join request · Open terminal with Esc':'Decontamination complete · Prepare for descent';

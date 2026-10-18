@@ -14,7 +14,7 @@ function storedName() {
 }
 
 /** Owns its connection until a started session is handed to onMultiplayer. */
-export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () => {}, createClient} = {}) {
+export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () => {}, createClient, initialPlayerName, onClient} = {}) {
  const root = element('main', 'lobby-menu');
  root.id = 'lobby-menu';
  root.setAttribute('aria-label', 'Monochrome game menu');
@@ -35,7 +35,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
  root.append(atmosphere, header, content, notice, footer);
  document.body.append(root);
 
- let screen = 'mode', playerName = storedName(), lobbyName = '', client = null, unsubscribe = null;
+ let screen = 'mode', playerName = initialPlayerName ?? storedName(), lobbyName = '', client = null, unsubscribe = null;
  let network = 'idle', lobbies = [], room = null, pendingLobby = null, actionPending = false;
  let message = '', isError = false, disposed = false, generation = 0;
  let waiting=null,waitingId=null;
@@ -101,7 +101,8 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
   multiplayer.append(element('span', 'lobby-mode-number', '02 / SHARED DESCENT'), element('strong', '', 'Multiplayer'), element('span', 'lobby-mode-detail', '2–4 players · Private entry · Host approval'), element('span', 'lobby-mode-arrow'));
   const study = element('a', 'lobby-study', 'Creature study');
   study.href = '?mode=study';
-  options.append(solo, multiplayer, study);
+  const test=element('a','lobby-study','Two-tab co-op test');test.href='?mode=coop-test';
+  options.append(solo, multiplayer, study,test);
   content.append(intro, options);
  }
 
@@ -334,6 +335,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
     render(); return;
    }
    unsubscribe = client.subscribe(receive);
+   onClient?.(client);
    await client.connect();
    if (disposed || attempt !== generation) return;
    network = 'connected'; render();
@@ -368,5 +370,5 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
  }
 
  render();
- return {root, dispose};
+ return {root, dispose, openMultiplayer, get waitingRoom(){return waiting;}};
 }

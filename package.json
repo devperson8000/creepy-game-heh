@@ -1,1 +1,21 @@
-{"name":"creepy-game-heh","version":"0.1.0","private":true,"type":"module","scripts":{"dev":"vite --host 0.0.0.0","build":"vite build","preview":"vite preview --host 0.0.0.0","test":"node --test"},"dependencies":{"@supabase/supabase-js":"^2.118.0","three":"0.180.0"},"devDependencies":{"vite":"7.1.9"}}
+{
+  "name": "creepy-game-heh",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test",
+    "test:browser": "node scripts/check-two-tab-browser.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
+    "three": "0.180.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1",
+    "vite": "7.1.9"
+  }
+}

@@ -16,7 +16,7 @@ export function createArrival(){
  document.body.append(root);document.body.classList.add('arrival-active');
  let elapsed=0,active=true;const reduced=matchMedia('(prefers-reduced-motion:reduce)').matches;
  function update(delta,camera,player){
-  if(!active)return false;elapsed+=Math.max(0,Math.min(.1,delta));const p=arrivalFrame(elapsed);
+  if(!active)return false;elapsed+=Math.max(0,Math.min(1,delta));const p=arrivalFrame(elapsed);
   root.style.setProperty('--arrival-black',p.black);root.style.setProperty('--arrival-eyes',p.eyes);root.style.setProperty('--arrival-title',p.title);root.style.setProperty('--arrival-opening',p.openness);root.style.setProperty('--arrival-haze',String((1-p.openness)*.22));root.classList.toggle('is-glitching',p.glitch&&!reduced);
   camera.position.set(player.x+p.sway*(reduced?.2:1),player.height+p.eyeHeight,player.z);camera.rotation.set(p.pitch,player.yaw??Math.PI,p.roll*(reduced?.35:1),'YXZ');camera.fov=66+(1-p.openness)*4;camera.updateProjectionMatrix();
   if(p.done){dispose();return true;}return false;

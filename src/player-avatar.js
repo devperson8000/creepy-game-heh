@@ -46,6 +46,16 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
  const mesh=(geometry,surface,parent)=>{
   ownedGeometry.add(geometry);const result=new THREE.Mesh(geometry,surface);parent.add(result);return result;
  };
+ const speakingTexture=canvasTexture(128,128,c=>{
+  c.fillStyle='#102015';c.beginPath();c.arc(64,64,59,0,Math.PI*2);c.fill();
+  c.strokeStyle='#d6ffc3';c.lineWidth=7;c.lineCap='round';
+  c.beginPath();c.roundRect(52,25,24,47,12);c.stroke();
+  c.beginPath();c.moveTo(42,57);c.lineTo(42,65);c.arc(64,65,22,Math.PI,0,true);c.lineTo(86,57);c.stroke();
+  c.beginPath();c.moveTo(64,88);c.lineTo(64,103);c.moveTo(51,103);c.lineTo(77,103);c.stroke();
+ });
+ if(speakingTexture)ownedTextures.add(speakingTexture);
+ const speakingMaterial=new THREE.SpriteMaterial({map:speakingTexture,color:speakingTexture?0xffffff:0xc8ffb4,transparent:true,depthTest:true,depthWrite:false});ownedMaterials.add(speakingMaterial);
+ const speakingIcon=new THREE.Sprite(speakingMaterial);speakingIcon.name='player-speaking';speakingIcon.position.set(0,2.24,0);speakingIcon.scale.set(.32,.32,1);speakingIcon.visible=false;root.add(speakingIcon);
  const findBone=key=>{
   let found;model.traverse(object=>{if(object.isBone&&object.name.replace(/[._-]/g,'').toLowerCase()===key)found=object;});return found;
  };
@@ -193,6 +203,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
    root.rotation.y+=Math.atan2(Math.sin(yaw-root.rotation.y),Math.cos(yaw-root.rotation.y))*blend;
   }
   root.visible=!pose.hidden&&status!=='escaped';
+  speakingIcon.visible=!!pose.speaking&&root.visible;
   const moving=pose.moving??(Math.hypot(finite(pose.forward),finite(pose.right))>.05||finite(pose.speed)>.1);
   animate(fallen?'death':moving?(pose.sprint?'run':'walk'):'idle',fallen);
   // Restore the mixer pose before each evaluation so an additive holding pose

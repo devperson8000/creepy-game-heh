@@ -3,6 +3,10 @@ import './lobby-menu.css';
 import './coop-game.css';
 import './waiting-room.css';
 import './arrival.css';
+import './voice-chat.css';
+import './two-tab-test.css';
+import {createTwoTabTest,readTestSession} from './two-tab-test.js';
+import {createVoiceChat} from './voice-chat.js';
 import {startScene} from './scene.js';
 import {startGame} from './game.js';
 import {createLobbyMenu} from './lobby-menu.js';
@@ -20,11 +24,17 @@ try {
  if(study)startScene(document.querySelector('#scene'));
  else {
   document.body.classList.add('overlay-open');
-  const menu=createLobbyMenu({
-   createClient:()=>createLobbyClient(),
-   onSingleplayer:()=>{menu.dispose();try{window.monochrome=startGame(document.querySelector('#scene'),{autostart:true});}catch(error){failed(error);}},
-   onMultiplayer:({client,session})=>{try{window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}}
-  });
+  function makeMenu(options={}){
+   return createLobbyMenu({
+    ...options,
+    createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});return client;},
+    onSingleplayer:()=>{try{window.monochrome=startGame(document.querySelector('#scene'),{autostart:true});}catch(error){failed(error);}},
+    onMultiplayer:({client,session})=>{try{window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}}
+   });
+  }
+  const testSession=readTestSession(location.search);
+  if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
+  else makeMenu();
  }
 }
 catch(error) {

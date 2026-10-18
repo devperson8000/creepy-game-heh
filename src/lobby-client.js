@@ -18,6 +18,14 @@ export function createMultiplayerFetch(fetcher = globalThis.fetch) {
   };
 }
 
+export function validVoiceSignal(signal){
+  if(!signal||typeof signal!=='object')return false;
+  if(signal.type==='hello')return true;
+  if(signal.type==='state')return typeof signal.muted==='boolean';
+  if(signal.type==='offer'||signal.type==='answer')return typeof signal.sdp==='string'&&signal.sdp.length<32000;
+  if(signal.type==='candidate')return signal.candidate&&typeof signal.candidate.candidate==='string'&&signal.candidate.candidate.length<2048&&Number.isInteger(signal.candidate.sdpMLineIndex)&&signal.candidate.sdpMLineIndex>=0&&signal.candidate.sdpMLineIndex<8;
+  return false;
+}
 const commands = {
   create: p => ['game_create', { p_name: p.name, p_player_name: p.playerName }],
   join: p => ['game_request', { p_lobby_id: p.lobbyId, p_player_name: p.playerName }],
@@ -63,7 +71,7 @@ export function createLobbyClient(options = {}) {
   let db = options.client, id = null, connected = false, connecting = null, generation = 0;
   let closing = Promise.resolve();
   let channel = null, cancelSubscription = null, pollTimer = null, heartbeatTimer = null, room = null, roomJson = '', requestJson = '';
-  let roomSubscription = null;
+  let roomSubscription = null, voiceChannel = null, voiceRoom = null;
   let pendingRoom = null, startedRoom = null, refreshPromise = null, refreshAgain = false, commandQueue = Promise.resolve();
   const configured = Boolean(db || (url && key));
   const emit = event => { for (const listener of listeners) listener(event); };
@@ -77,7 +85,19 @@ export function createLobbyClient(options = {}) {
     roomSubscription = null;
     if (previous) { previous.cancel(); void db.removeChannel(previous.channel); }
   }
+  function subscribeVoice(nextRoom){
+    if(voiceRoom===nextRoom.id)return;
+    if(voiceChannel)void db.removeChannel(voiceChannel);
+    voiceRoom=nextRoom.id;
+    voiceChannel=db.channel(`voice:${nextRoom.id}`);
+    voiceChannel.on('broadcast',{event:'voice'},({payload:p})=>{
+      if(!room||room.id!==nextRoom.id||p?.to!==id||p.from===id||!room.members.some(m=>m.id===p.from)||!validVoiceSignal(p.signal))return;
+      emit({type:'voice',playerId:p.from,signal:p.signal});
+    }).subscribe(status=>{if(status==='SUBSCRIBED')emit({type:'voiceReady'});});
+  }
+  function removeVoice(){if(voiceChannel)void db.removeChannel(voiceChannel);voiceChannel=null;voiceRoom=null;}
   function subscribeToRoom(nextRoom) {
+    subscribeVoice(nextRoom);
     const waiting=nextRoom.status==='waiting';
     const table = waiting || nextRoom.ownerId === id ? 'game_members' : 'game_snapshots';
     const key = `${nextRoom.id}:${waiting?'waiting':table}`;
@@ -110,7 +130,7 @@ export function createLobbyClient(options = {}) {
     return subscription.ready;
   }
   function clearRoom(voluntary = false) {
-    removeRoomSubscription();
+    removeRoomSubscription();removeVoice();
     if (room && !voluntary) emit({ type: 'roomClosed', lobbyId: room.id, reason: 'host_left' });
     room = null; roomJson = ''; startedRoom = null; inputSequences.clear(); actionSequences.clear();
   }
@@ -196,7 +216,7 @@ export function createLobbyClient(options = {}) {
     backgroundRefresh();
   }
   function stop() {
-    removeRoomSubscription();
+    removeRoomSubscription();removeVoice();
     cancelSubscription?.(); cancelSubscription = null;
     clearInterval(pollTimer); clearInterval(heartbeatTimer);
     pollTimer = null; heartbeatTimer = null;
@@ -266,6 +286,11 @@ export function createLobbyClient(options = {}) {
     },
     send(type, payload = {}) {
       if (!connected) return false;
+      if(type==='voice'){
+        if(!voiceChannel||!room?.members.some(m=>m.id===payload.to&&m.id!==id)||!validVoiceSignal(payload.signal))return false;
+        void voiceChannel.send({type:'broadcast',event:'voice',payload:{from:id,to:payload.to,signal:payload.signal}}).catch(()=>{});
+        return true;
+      }
       if(type==='waitingPose'){
         const p=payload.pose;
         if(room?.status!=='waiting'||!roomSubscription||!p||!['x','z','yaw','pitch'].every(k=>Number.isFinite(p[k]))||Math.abs(p.x)>5.75||Math.abs(p.z)>6.75||Date.now()-(lastSent.get(type)||0)<100)return false;

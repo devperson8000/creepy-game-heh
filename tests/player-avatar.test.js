@@ -151,3 +151,12 @@ test('real hazmat grasp stays closed, anchored and aimed through locomotion and 
  let disposals=0;actorMesh.geometry.addEventListener('dispose',()=>disposals++);avatar.dispose();avatar.dispose();assert.equal(disposals,1);
  other.update({moving:true,torch:true},.05);other.dispose();
 });
+
+test('microphone icon floats above head only while speaking and disappears for hidden players',()=>{
+ const avatar=createPlayerAvatar(fixture(),{id:'speaker'});
+ const icon=avatar.root.getObjectByName('player-speaking');assert.ok(icon);assert.ok(icon.position.y>2);
+ avatar.update({speaking:false});assert.equal(icon.visible,false);
+ avatar.update({speaking:true});assert.equal(icon.visible,true);
+ avatar.update({speaking:true,hidden:true});assert.equal(icon.visible,false);
+ avatar.update({speaking:true,status:'escaped'});assert.equal(icon.visible,false);avatar.dispose();
+});

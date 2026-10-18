@@ -18,6 +18,20 @@ A small minority of rounds can contain one silent corner stalk after at least 90
 
 **Supabase setup is required for online play:** see [the setup instructions](supabase/README.md). Singleplayer works independently. Public client configuration is included; the target project must enable Anonymous Sign-Ins and run the supplied migration before the lobby service can connect.
 
+## Team voice chat
+
+The waiting room and multiplayer game include direct WebRTC voice for up to four players. Microphones start off. Click **Mic off** to enable your microphone and approve the browser permission, then click again to mute. Muting stops microphone capture. Voice stays connected during the opening and gameplay. A glowing microphone appears above a talking teammate's head, and the voice panel shows who is speaking. Speech detection uses actual local/received audio with a short pause hold; no voice is recorded. If browser autoplay blocks incoming audio, click **Enable voice audio**. Leaving closes the calls and releases the microphone.
+
+Supabase Realtime carries SDP/ICE signalling on a room-specific channel, while audio uses encrypted WebRTC connections. Clients filter signalling to accepted roster members and the intended recipient. The broadcast channel uses the project's existing public Realtime configuration; it is not a server-authenticated private signalling service. Lobby approvals and game actions continue to use their authenticated RPCs.
+
+Default ICE servers provide STUN discovery. For players behind restrictive NAT/firewalls, configure a TURN relay in Vercel's **VITE_WEBRTC_ICE_SERVERS** environment variable (JSON array of RTCIceServer objects), then redeploy. TURN credentials in this browser variable are public: use scoped, expiring credentials or a provider-supported browser credential; never use an administrative secret. Without a configured relay, some network pairs cannot connect. Microphone access needs HTTPS or localhost. Voice is team-wide and does not generate monster noise events.
+
+## Two-tab test
+
+Choose **Two-tab co-op test** on the title screen (or open `?mode=coop-test`), then press **Open two-player test** and allow the second tab to open. Both tabs use separate anonymous player identities in the same browser. The helper creates a real lobby, approves only its paired test player, and readies player two. Explore the waiting room, enable the mic in either tab, then press **Begin descent** in the host tab. Both tabs play the opening and enter the normal game with the real monster, animations, shared objectives and voice. Switch tabs to control each player; the host simulation keeps ticking while its tab is hidden. Keep both tabs open. Headphones and enabling only one mic at a time prevent feedback when testing on one computer. **Exit test** returns to the main menu and leaves the session.
+
+For the automated two-tab browser check, start `npm run dev`, install Chromium once with `npx playwright install chromium`, then run `npm run test:browser`. It opens two tabs in one browser context, checks automatic pairing, actual microphone audio/speaking indicators, mute/capture release, blocked-mic recovery, both opening sequences, hidden-host gameplay, and replicated movement/torch state. `GAME_TEST_URL` selects a development server (default `http://localhost:5173`); `BROWSER_EXECUTABLE` selects an existing Chromium. On environments that require a TCP relay, set `VOICE_TEST_ICE_SERVERS` to an RTCIceServer JSON array for the test. The runner generates its own synthetic microphone tone and does not request a physical microphone.
+
 ## Play
 
 Select Singleplayer or join a started multiplayer lobby. Open the boarded **DO NOT ENTER** doorway in the elevator lobby. Descend the return stairs, search dresser drawers for **four keys**, and read the **four-digit note** in the basement. Hide in closets when the moving creature approaches. Return upstairs, bank the keys at the four-lock panel, enter the number at the separate keypad, then open the elevator and walk inside.

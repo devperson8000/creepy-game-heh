@@ -270,3 +270,19 @@ test('waiting-room poses are bounded cosmetic broadcasts for accepted members on
   await client.connect();await tick();assert.equal(accepted,true);
   assert.ok(b.calls.some(([name])=>name==='game_create'));
  });
+
+test('voice signalling targets accepted members and survives waiting-to-game transitions',async t=>{
+ const b=backend(),client=createLobbyClient({client:b.client}),events=[];t.after(()=>client.close());client.subscribe(e=>events.push(e));
+ b.values.set('game_room',{data:{...room,members:[...room.members,{id:'peer',name:'Peer',slot:1}]}});await client.connect();
+ assert.equal(client.send('voice',{to:'outsider',signal:{type:'hello'}}),false);
+ assert.equal(client.send('voice',{to:'peer',signal:{type:'hello'}}),true);await tick();
+ const sent=b.calls.find(([type,p])=>type==='broadcast'&&p.event==='voice');assert.equal(sent?.[1].payload.from,client.id);
+ const receive=payload=>b.subscriptions.filter(h=>h.filter.event==='voice').forEach(h=>h.callback({payload}));
+ receive({from:'outsider',to:client.id,signal:{type:'hello'}});assert.equal(events.filter(e=>e.type==='voice').length,0);
+ receive({from:'peer',to:'another',signal:{type:'hello'}});assert.equal(events.filter(e=>e.type==='voice').length,0);
+ receive({from:'peer',to:client.id,signal:{type:'hello'}});assert.equal(events.filter(e=>e.type==='voice').length,1);
+ const count=b.subscriptions.filter(h=>h.filter.event==='voice').length;
+ b.values.set('game_room',{data:{...room,status:'running',seed:123,members:[...room.members,{id:'peer',slot:1}]}});client.send('ready',{ready:true});await tick();await tick();
+ assert.equal(b.subscriptions.filter(h=>h.filter.event==='voice').length,count);
+ assert.equal(client.send('voice',{to:'peer',signal:{type:'state',muted:true}}),true);
+});
