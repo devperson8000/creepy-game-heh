@@ -111,3 +111,43 @@ test('the selected curved GLB loads with its real 29-bone skin, embedded texture
  assert.ok(Number.isFinite(new THREE.Box3().setFromObject(avatar.root).max.y));
  avatar.dispose();
 });
+
+
+test('real hazmat grasp stays closed, anchored and aimed through locomotion and look pitch',async()=>{
+ const bytes=await readFile(new URL('../public/models/hazmat-survivor.glb',import.meta.url));
+ const loader=new GLTFLoader();loader.register(()=>({name:'CPUTextureDecoder',loadTexture:async()=>new THREE.Texture()}));
+ const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const source=asset.scene.getObjectByProperty('isSkinnedMesh',true),originalPositions=source.geometry.attributes.position.array.slice();
+ const avatar=createPlayerAvatar(asset,{}),other=createPlayerAvatar(asset,{});
+ const torch=avatar.root.getObjectByName('player-torch'),hand=torch.parent,forearm=hand.parent,upperArm=forearm.parent;
+ const spot=avatar.root.getObjectByName('player-beam'),localGrip=torch.position.clone(),localRotation=torch.quaternion.clone();
+ const position=object=>object.getWorldPosition(new THREE.Vector3());
+ avatar.root.updateMatrixWorld(true);
+ const upperLength=position(upperArm).distanceTo(position(forearm)),lowerLength=position(forearm).distanceTo(position(hand));
+ let minHeight=Infinity,maxHeight=-Infinity;
+ for(const movement of [{},{moving:true},{moving:true,sprint:true}]){
+  for(const pitch of [-1.1,0,1.1]){
+   for(let frame=0;frame<45;frame++){
+    avatar.update({...movement,pitch,yaw:.6,torch:true,x:2,z:3},1/60);avatar.root.updateMatrixWorld(true);
+    const wrist=position(hand),grip=position(torch),expectedGrip=hand.localToWorld(localGrip.clone());
+    assert.ok(grip.distanceTo(expectedGrip)<1e-6,'torch must remain physically attached to the palm');
+    assert.ok(torch.quaternion.angleTo(localRotation)<1e-6,'torch must not pivot independently inside the glove');
+    assert.ok(wrist.distanceTo(grip)>.08&&wrist.distanceTo(grip)<.13,'grip must lie inside the glove rather than at the wrist');
+    assert.ok(Math.abs(position(upperArm).distanceTo(position(forearm))-upperLength)<1e-5);
+    assert.ok(Math.abs(position(forearm).distanceTo(wrist)-lowerLength)<1e-5);
+    const localWrist=avatar.root.worldToLocal(wrist.clone());minHeight=Math.min(minHeight,localWrist.y);maxHeight=Math.max(maxHeight,localWrist.y);
+    assert.ok(localWrist.z>.18&&localWrist.z<.3,'wrist stays in front of the torso');
+    assert.ok(localWrist.x<-.2&&localWrist.x>-.3,'right hand stays beside the center of the chest');
+    const expectedAim=new THREE.Vector3(0,Math.sin(pitch),Math.cos(pitch)).applyQuaternion(avatar.root.quaternion);
+    const actualAim=position(spot.target).sub(position(spot)).normalize();assert.ok(actualAim.distanceTo(expectedAim)<1e-5,`aim error ${actualAim.distanceTo(expectedAim)} pitch ${pitch} frame ${frame} movement ${JSON.stringify(movement)}`);
+   }
+  }
+ }
+ assert.ok(maxHeight-minHeight<.05,'running keeps a small chest-driven arm bounce');
+ assert.equal(avatar.root.getObjectByName('player-torch-grasp').children.length,4);
+ const actorMesh=avatar.root.getObjectByProperty('isSkinnedMesh',true),otherMesh=other.root.getObjectByProperty('isSkinnedMesh',true);
+ assert.notEqual(actorMesh.geometry,source.geometry);assert.notEqual(actorMesh.geometry,otherMesh.geometry);
+ assert.deepEqual(source.geometry.attributes.position.array,originalPositions,'closing the glove must never deform the cached asset');
+ let disposals=0;actorMesh.geometry.addEventListener('dispose',()=>disposals++);avatar.dispose();avatar.dispose();assert.equal(disposals,1);
+ other.update({moving:true,torch:true},.05);other.dispose();
+});

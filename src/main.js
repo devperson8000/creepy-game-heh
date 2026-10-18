@@ -1,6 +1,8 @@
 import './style.css';
 import './lobby-menu.css';
 import './coop-game.css';
+import './waiting-room.css';
+import './arrival.css';
 import {startScene} from './scene.js';
 import {startGame} from './game.js';
 import {createLobbyMenu} from './lobby-menu.js';

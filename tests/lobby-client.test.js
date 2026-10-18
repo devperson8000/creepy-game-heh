@@ -7,7 +7,7 @@ function backend() {
   const client = {
     auth: { async signInAnonymously() { calls.push(['auth']); return { data: { user: { id: 'user-1' } } }; } },
     async rpc(name, args) { calls.push([name, args]); return values.get(name) || { data: null, error: null }; },
-    channel() { return { on(event, filter, callback) { handlers.push({ filter, callback }); return this; }, subscribe(callback) { queueMicrotask(() => callback('SUBSCRIBED')); return this; } }; },
+    channel() { return { async send(message){calls.push(['broadcast',message]);return 'ok';}, on(event, filter, callback) { handlers.push({ filter, callback }); return this; }, subscribe(callback) { queueMicrotask(() => callback('SUBSCRIBED')); return this; } }; },
     async removeChannel() {},
   };
   values.set('game_directory', { data: [] });
@@ -222,14 +222,14 @@ test('server channel closure produces an explicit realtime error while manual cl
 
 test('only the host subscribes to member input rows and guests subscribe to snapshots for their room', async t => {
   const hostBackend = backend();
-  hostBackend.values.set('game_room', { data: room });
+  hostBackend.values.set('game_room', { data: {...room,status:'running'} });
   const host = createLobbyClient({ client: hostBackend.client });
   t.after(() => host.close());
   await host.connect();
   assert.ok(hostBackend.subscriptions.some(s => s.filter.table === 'game_members' && s.filter.filter === `lobby_id=eq.${room.id}`));
   assert.equal(hostBackend.subscriptions.some(s => s.filter.table === 'game_snapshots'), false);
   const guestBackend = backend();
-  guestBackend.values.set('game_room', { data: { ...room, ownerId: 'different-owner' } });
+  guestBackend.values.set('game_room', { data: { ...room, status:'running', ownerId: 'different-owner' } });
   const guest = createLobbyClient({ client: guestBackend.client });
   t.after(() => guest.close());
   await guest.connect();
@@ -247,3 +247,26 @@ test('missing SQL is diagnosed before attempting subscriptions to missing tables
   assert.ok(events.some(event => event.type === 'error' && event.code === 'SETUP_REQUIRED'));
   await client.close();
 });
+
+test('waiting-room poses are bounded cosmetic broadcasts for accepted members only',async t=>{
+ const b=backend(),events=[];
+ b.values.set('game_room',{data:{...room,members:[...room.members,{id:'guest',name:'Guest',slot:1,ready:false}]}});
+ const c=createLobbyClient({client:b.client});t.after(()=>c.close());c.subscribe(e=>events.push(e));await c.connect();
+ assert.equal(c.send('waitingPose',{pose:{x:0,z:3,yaw:0,pitch:0,torch:true}}),true);
+ assert.ok(b.calls.some(([type,p])=>type==='broadcast'&&p.payload.id==='user-1'));
+ assert.equal(c.send('waitingPose',{pose:{x:99,z:0,yaw:0,pitch:0}}),false);
+ const callback=b.subscriptions.find(s=>s.filter.event==='pose').callback;
+ callback({payload:{id:'outsider',pose:{x:0,z:0,yaw:0,pitch:0}}});
+ assert.equal(events.some(e=>e.type==='waitingPose'),false);
+ callback({payload:{id:'guest',pose:{x:1,z:2,yaw:.2,pitch:.1,torch:true}}});
+ assert.equal(events.filter(e=>e.type==='waitingPose').length,1);
+ assert.equal(events.find(e=>e.type==='waitingPose').playerId,'guest');
+});
+
+ test('welcome exposes controls only after commands can be sent', async t => {
+  const b=backend(),client=createLobbyClient({client:b.client});t.after(()=>client.close());
+  let accepted=false;
+  client.subscribe(e=>{if(e.type==='welcome')accepted=client.send('create',{name:'Ready connection',playerName:'Host'});});
+  await client.connect();await tick();assert.equal(accepted,true);
+  assert.ok(b.calls.some(([name])=>name==='game_create'));
+ });

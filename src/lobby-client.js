@@ -78,15 +78,21 @@ export function createLobbyClient(options = {}) {
     if (previous) { previous.cancel(); void db.removeChannel(previous.channel); }
   }
   function subscribeToRoom(nextRoom) {
-    const table = nextRoom.ownerId === id ? 'game_members' : 'game_snapshots';
-    const key = `${nextRoom.id}:${table}`;
+    const waiting=nextRoom.status==='waiting';
+    const table = waiting || nextRoom.ownerId === id ? 'game_members' : 'game_snapshots';
+    const key = `${nextRoom.id}:${waiting?'waiting':table}`;
     if (roomSubscription?.key === key) return roomSubscription.ready;
     removeRoomSubscription();
     const currentGeneration = generation;
-    const nextChannel = db.channel(`room:${key}:${currentGeneration}`);
+    const nextChannel = db.channel(waiting?`waiting:${nextRoom.id}`:`room:${key}:${currentGeneration}`);
     const subscription = { key, channel: nextChannel, cancel: () => {}, ready: null };
     roomSubscription = subscription;
     nextChannel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `lobby_id=eq.${nextRoom.id}` }, change => onChange(table, change));
+    if(waiting)nextChannel.on('broadcast',{event:'pose'},({payload})=>{
+      const p=payload?.pose;
+      if(room?.status!=='waiting'||room.id!==nextRoom.id||payload.id===id||!room.members.some(m=>m.id===payload.id)||!p||!['x','z','yaw','pitch'].every(k=>Number.isFinite(p[k]))||Math.abs(p.x)>5.75||Math.abs(p.z)>6.75)return;
+      emit({type:'waitingPose',playerId:payload.id,pose:{x:p.x,z:p.z,yaw:p.yaw,pitch:Math.max(-1.3,Math.min(1.3,p.pitch)),torch:!!p.torch,moving:!!p.moving}});
+    });
     subscription.ready = new Promise((resolve, reject) => {
       let settled = false;
       const timer = setTimeout(() => { settled = true; reject(new Error('REALTIME_ERROR')); }, 15000);
@@ -242,10 +248,10 @@ export function createLobbyClient(options = {}) {
         });
         await realtimeReady;
         if (currentGeneration !== generation) return;
-        emit({ type: 'welcome', id });
         await refresh();
         if (currentGeneration !== generation) return;
         connected = true;
+        emit({ type: 'welcome', id });
         pollTimer = setInterval(backgroundRefresh, 5000);
         heartbeatTimer = setInterval(() => {
           rpc('game_heartbeat').then(backgroundRefresh).catch(error => emit(normalizeError(error)));
@@ -260,6 +266,13 @@ export function createLobbyClient(options = {}) {
     },
     send(type, payload = {}) {
       if (!connected) return false;
+      if(type==='waitingPose'){
+        const p=payload.pose;
+        if(room?.status!=='waiting'||!roomSubscription||!p||!['x','z','yaw','pitch'].every(k=>Number.isFinite(p[k]))||Math.abs(p.x)>5.75||Math.abs(p.z)>6.75||Date.now()-(lastSent.get(type)||0)<100)return false;
+        lastSent.set(type,Date.now());
+        void roomSubscription.channel.send({type:'broadcast',event:'pose',payload:{id,pose:{x:p.x,z:p.z,yaw:p.yaw,pitch:p.pitch,torch:!!p.torch,moving:!!p.moving}}}).catch(()=>{});
+        return true;
+      }
       if (!Object.hasOwn(commands, type)) { emit({ type: 'error', code: 'INVALID_MESSAGE', message: 'Unknown multiplayer command.' }); return false; }
       const realtime = ['input', 'action', 'snapshot'].includes(type);
       if (realtime) {

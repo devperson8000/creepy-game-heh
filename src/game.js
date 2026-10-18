@@ -11,8 +11,10 @@ import {footstepNoise,interactionNoise} from './player-noise.js';
 import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
+import {createArrival} from './arrival.js';
 
 export function startGame(container,{seed,autostart=false}={}){
+ const arrival=autostart?createArrival():null;
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed),world=createWorld(run),ui=createGameUI();
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
@@ -25,7 +27,7 @@ export function startGame(container,{seed,autostart=false}={}){
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
  const jumpscare=createJumpscare({mouthTexture});
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
- let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
+ let enemy=createEnemy(run.layout),player={x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause);
@@ -91,7 +93,7 @@ export function startGame(container,{seed,autostart=false}={}){
  }
  let renderDirty=true,lastOverlay;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();}resize();window.addEventListener('resize',resize);
- showScreen('menu');if(autostart)resume();let previous=performance.now(),time=0;
+ showScreen('menu');if(autostart){ui.hideScreen();ui.overlay='arrival';}let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),frameDelta=Math.min((now-previous)/1000,.2);previous=now;
   if(jumpscare.active){
@@ -130,6 +132,12 @@ export function startGame(container,{seed,autostart=false}={}){
   renderer.toneMappingExposure=torch.exposure;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));
+  if(arrival?.active){
+   torch.model.position.y-=.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
+   torch.beam.intensity=arrival.elapsed>6.7&&torch.on?140:0;
+   if(arrival.update(frameDelta,camera,{...player,yaw:input.yaw})){resume();torch.beam.intensity=torch.on?140:0;}
+   renderDirty=true;
+  }
   if(jumpscare.active){
    renderer.toneMappingExposure=1;
    jumpscare.render(renderer);
@@ -138,8 +146,8 @@ export function startGame(container,{seed,autostart=false}={}){
    border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));
    document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);
   }
-  else if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);torch.render(renderer);renderDirty=false;}
+  else if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);if(!arrival?.active||arrival.elapsed>9.5)torch.render(renderer);renderDirty=false;}
   lastOverlay=ui.overlay;
  });
- return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch,jumpscare};
+ return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch,jumpscare,arrival};
 }

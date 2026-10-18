@@ -49,7 +49,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
  const findBone=key=>{
   let found;model.traverse(object=>{if(object.isBone&&object.name.replace(/[._-]/g,'').toLowerCase()===key)found=object;});return found;
  };
- const chest=findBone('spine003'),hand=findBone('handr');
+ const chest=findBone('spine003'),hand=findBone('handr'),forearm=findBone('forearmr'),upperArm=findBone('upperarmr');
  root.updateMatrixWorld(true);
 
  // Calculate a rest-pose attachment once, then let the real skeleton animate it.
@@ -93,20 +93,85 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
  }
 
  const torch=new THREE.Group();torch.name='player-torch';
- (hand??model).add(torch);torch.position.set(hand?0:-.3,hand ? .045 : 1.1,.03);
+ (hand??model).add(torch);
+ // The source glove has a single hand bone. Curl its distal mitten in bind space
+ // once per actor; keep the shared cached geometry and all skin weights intact.
+ const gripRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2);
+ const gripPoint=new THREE.Vector3(-.043,.095,.038);
+ if(hand&&forearm&&upperArm){
+  model.traverse(object=>{
+   if(!object.isSkinnedMesh)return;
+   const handIndex=object.skeleton.bones.indexOf(hand);if(handIndex<0)return;
+   const geometry=object.geometry.clone();ownedGeometry.add(geometry);object.geometry=geometry;
+   const positions=geometry.attributes.position,indices=geometry.attributes.skinIndex,weights=geometry.attributes.skinWeight;
+   const toHand=new THREE.Matrix4().multiplyMatrices(hand.matrixWorld.clone().invert(),object.matrixWorld),fromHand=toHand.clone().invert();
+   const point=new THREE.Vector3(),curled=new THREE.Vector3();
+   for(let i=0;i<positions.count;i++){
+    let weight=0;for(let j=0;j<4;j++)if(indices.getComponent(i,j)===handIndex)weight+=weights.getComponent(i,j);
+    if(weight<.01)continue;
+    point.fromBufferAttribute(positions,i).applyMatrix4(toHand);curled.copy(point);
+    if(point.y>.08){
+     const bend=THREE.MathUtils.clamp((point.y-.08)/.14,0,1)*Math.PI*1.15;
+     curled.y=.08+.047*Math.sin(bend);curled.z=.043*(1-Math.cos(bend))+point.z*(1-.45*Math.min(bend,1));
+    }
+    point.lerp(curled,weight).applyMatrix4(fromHand);positions.setXYZ(i,point.x,point.y,point.z);
+   }
+   positions.needsUpdate=true;geometry.computeVertexNormals();geometry.computeBoundingSphere();
+  });
+ }
+ torch.position.copy(hand?gripPoint:new THREE.Vector3(-.3,1.1,.03));
+ torch.quaternion.copy(gripRotation);
  const grip=material({color:0x25292a,roughness:.85}),metal=material({color:0x5b625e,metalness:.65,roughness:.4});
  function cylinder(radiusTop,radiusBottom,length,z,surface){const part=mesh(new THREE.CylinderGeometry(radiusTop,radiusBottom,length,16),surface,torch);part.rotation.x=Math.PI/2;part.position.z=z;}
  cylinder(.032,.032,.19,0,grip);cylinder(.055,.034,.08,.12,metal);cylinder(.058,.058,.014,.165,metal);
+ if(hand&&forearm&&upperArm){
+  const glove=material({color:0x171c1c,roughness:.96});
+  const fingers=new THREE.Group();fingers.name='player-torch-grasp';torch.add(fingers);
+  for(let i=0;i<4;i++){
+   const finger=mesh(new THREE.TorusGeometry(.038,.009,8,16,Math.PI*1.6),glove,fingers);
+   finger.position.z=-.033+i*.022;finger.rotation.z=.25;
+  }
+ }
  const lensMaterial=new THREE.MeshBasicMaterial({color:0xcbd5c7});ownedMaterials.add(lensMaterial);
  const lens=mesh(new THREE.CircleGeometry(.048,16),lensMaterial,torch);lens.position.z=.174;
- const beam=new THREE.SpotLight(0xe4e9dc,0,12,.48,.8,1.5);beam.name='player-beam';beam.position.z=.18;beam.castShadow=false;
+ const beam=new THREE.SpotLight(0xe4e9dc,0,12,.48,.8,1.5);beam.name='player-beam';beam.position.set(0,0,.18);beam.castShadow=false;
  const target=new THREE.Object3D();target.position.z=12;torch.add(beam,target);beam.target=target;
  const glow=new THREE.PointLight(0xe4e9dc,0,2.5,2);glow.position.z=.2;torch.add(glow);
 
  const mixer=new THREE.AnimationMixer(model),actions=new Map();
  for(const clip of asset.animations??[]){const action=mixer.clipAction(clip);actions.set(clip.name.toLowerCase(),action);}
  let activeAction,spawned=false,disposed=false,lastFallen=false;
- const goal=new THREE.Vector3(),orientation=new THREE.Quaternion(),handRotation=new THREE.Quaternion(),pitchRotation=new THREE.Quaternion(),pitchAxis=new THREE.Vector3(1,0,0);
+ const goal=new THREE.Vector3(),orientation=new THREE.Quaternion(),pitchRotation=new THREE.Quaternion(),pitchAxis=new THREE.Vector3(1,0,0);
+ const inverseGrip=gripRotation.clone().invert(),roll=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI);
+ const parentRotation=new THREE.Quaternion(),rotation=new THREE.Quaternion(),from=new THREE.Vector3(),to=new THREE.Vector3();
+ const shoulderPosition=new THREE.Vector3(),wristGoal=new THREE.Vector3(),elbowGoal=new THREE.Vector3(),direction=new THREE.Vector3(),pole=new THREE.Vector3();
+ const animatedArm=[upperArm,forearm,hand].filter(Boolean).map(bone=>({bone,quaternion:bone.quaternion.clone()}));
+ const upperLength=upperArm&&forearm?upperArm.getWorldPosition(new THREE.Vector3()).distanceTo(forearm.getWorldPosition(new THREE.Vector3())):0;
+ const lowerLength=forearm&&hand?forearm.getWorldPosition(new THREE.Vector3()).distanceTo(hand.getWorldPosition(new THREE.Vector3())):0;
+ const chestRest=chest?root.worldToLocal(chest.getWorldPosition(new THREE.Vector3())):new THREE.Vector3(0,1.35,0);
+ function orientBone(bone,child,point){
+  bone.getWorldPosition(from);child.getWorldPosition(to);to.sub(from).normalize();from.subVectors(point,from).normalize();
+  rotation.setFromUnitVectors(to,from).multiply(bone.getWorldQuaternion(parentRotation));
+  bone.parent.getWorldQuaternion(parentRotation).invert();bone.quaternion.copy(parentRotation).multiply(rotation);bone.updateWorldMatrix(false,true);
+ }
+ function holdTorch(pitch){
+  root.getWorldQuaternion(orientation);pitchRotation.setFromAxisAngle(pitchAxis,-pitch);orientation.multiply(pitchRotation).multiply(roll);
+  if(hand&&forearm&&upperArm){
+   // Keep chest breathing, but reduce locomotion sway before solving the real
+   // shoulder/elbow chain. Both arm segment lengths remain unchanged.
+   if(chest)chest.getWorldPosition(wristGoal);else root.localToWorld(wristGoal.copy(chestRest));root.worldToLocal(wristGoal);wristGoal.sub(chestRest).multiplyScalar(.22).add(new THREE.Vector3(-.255,1.19,.225));root.localToWorld(wristGoal);
+   upperArm.getWorldPosition(shoulderPosition);direction.subVectors(wristGoal,shoulderPosition);
+   const distance=THREE.MathUtils.clamp(direction.length(),Math.abs(upperLength-lowerLength)+.001,upperLength+lowerLength-.001);direction.normalize();
+   wristGoal.copy(shoulderPosition).addScaledVector(direction,distance);
+   pole.set(-.35,-.3,-1).transformDirection(root.matrixWorld);pole.addScaledVector(direction,-pole.dot(direction)).normalize();
+   const along=(upperLength*upperLength-lowerLength*lowerLength+distance*distance)/(2*distance);
+   elbowGoal.copy(shoulderPosition).addScaledVector(direction,along).addScaledVector(pole,Math.sqrt(Math.max(0,upperLength*upperLength-along*along)));
+   orientBone(upperArm,forearm,elbowGoal);orientBone(forearm,hand,wristGoal);
+  }
+  if(hand){
+   hand.parent.getWorldQuaternion(parentRotation).invert();hand.quaternion.copy(parentRotation).multiply(orientation).multiply(inverseGrip);hand.updateWorldMatrix(false,true);
+  }else{torch.parent.getWorldQuaternion(parentRotation).invert();torch.quaternion.copy(parentRotation).multiply(orientation);}
+ }
  function animate(name,fallen){
   const next=actions.get(name)??actions.get('idle');if(!next)return;
   if(next===activeAction&&fallen===lastFallen)return;
@@ -130,10 +195,13 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   root.visible=!pose.hidden&&status!=='escaped';
   const moving=pose.moving??(Math.hypot(finite(pose.forward),finite(pose.right))>.05||finite(pose.speed)>.1);
   animate(fallen?'death':moving?(pose.sprint?'run':'walk'):'idle',fallen);
+  // Restore the mixer pose before each evaluation so an additive holding pose
+  // never accumulates on bones omitted by a clip (or during a crossfade).
+  for(const saved of animatedArm)saved.bone.quaternion.copy(saved.quaternion);
   mixer.update(dt);
+  for(const saved of animatedArm)saved.quaternion.copy(saved.bone.quaternion);
   root.updateMatrixWorld(true);
-  root.getWorldQuaternion(orientation);pitchRotation.setFromAxisAngle(pitchAxis,-THREE.MathUtils.clamp(finite(pose.pitch),-1.4,1.4));orientation.multiply(pitchRotation);
-  torch.parent.getWorldQuaternion(handRotation).invert();torch.quaternion.copy(handRotation).multiply(orientation);
+  if(!fallen)holdTorch(THREE.MathUtils.clamp(finite(pose.pitch),-1.4,1.4));
   const lit=Boolean(pose.torch)&&root.visible&&!fallen;
   beam.intensity=lit?72:0;glow.intensity=lit?.65:0;lensMaterial.color.setHex(lit?0xdfe8d6:0x313832);
  }

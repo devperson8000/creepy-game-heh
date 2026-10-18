@@ -7,7 +7,7 @@ const make=()=>coop.createCoopState(42,members);
 test('persistent lobby slots survive roster gaps without increasing map player count',()=>{
  const s=coop.createCoopState(42,[{id:'a',slot:0},{id:'b',slot:3}]);
  assert.deepEqual([...s.players.values()].map(p=>p.slot),[0,3]);
- assert.deepEqual([s.players.get('b').x,s.players.get('b').z],[-1.9500000000000002,-28.35]);
+ assert.deepEqual([s.players.get('b').x,s.players.get('b').z],[-2.6+.65,-30.8+.65]);
  assert.equal(s.run.layout.size,17);assert.equal(s.run.layout.rooms.length,6);
  assert.deepEqual(coop.serializeCoopState(s).players.map(p=>p.slot),[0,3]);
 });
@@ -76,7 +76,7 @@ test('closets have one occupant and leaving uses the registered exit',()=>{
  const s=make(),p=s.players.get('a'),targets=target(s,'closet','closet-1',{hide:{x:p.x,z:p.z+.3},exit:{x:p.x,z:p.z-1}});
  assert.equal(act(s,'a','closet',targets).ok,true);assert.equal(p.hidden,true);
  assert.equal(act(s,'b','closet',targets).ok,false);
- assert.equal(coop.coopInteract(s,'a',{type:'leave'},{targets}).ok,true);assert.equal(p.hidden,false);assert.equal(p.z,-30);
+ assert.equal(coop.coopInteract(s,'a',{type:'leave'},{targets}).ok,true);assert.equal(p.hidden,false);assert.equal(p.z,targets.get('closet-1').exit.z);
  assert.equal(act(s,'b','closet',targets).ok,true);coop.removeCoopPlayer(s,'b');assert.equal(s.closets.size,0);
 });
 test('snapshots are JSON safe and apply in place without losing shared references',()=>{
@@ -95,7 +95,7 @@ test('disconnect drops personal keys while preserving teammate inventory and ban
 test('a player caught inside a closet falls outside so rescue never revives them inside its collider',()=>{
  const s=make(),p=s.players.get('a'),targets=target(s,'closet','closet-1',{hide:{x:p.x,z:p.z+.3},exit:{x:p.x,z:p.z-1}});
  act(s,'a','closet',targets);p.hideWitnessed=true;coop.downPlayer(s,'a',2);
- assert.equal(p.z,-30);assert.equal(p.hidden,false);assert.equal(p.hideWitnessed,false);assert.equal(s.closets.size,0);
+ assert.equal(p.z,targets.get('closet-1').exit.z);assert.equal(p.hidden,false);assert.equal(p.hideWitnessed,false);assert.equal(s.closets.size,0);
 });
 test('revive rejects invalid positions rather than allowing distance checks to fail open',()=>{
  const s=make();coop.downPlayer(s,'a',1);s.players.get('b').x=NaN;

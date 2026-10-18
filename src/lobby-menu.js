@@ -1,3 +1,4 @@
+import {createWaitingRoom} from './waiting-room.js';
 const NAME_KEY = 'monochrome.playerName';
 
 function element(tag, className, text) {
@@ -37,6 +38,8 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
  let screen = 'mode', playerName = storedName(), lobbyName = '', client = null, unsubscribe = null;
  let network = 'idle', lobbies = [], room = null, pendingLobby = null, actionPending = false;
  let message = '', isError = false, disposed = false, generation = 0;
+ let waiting=null,waitingId=null;
+ function releaseWaiting(){waiting?.dispose();waiting=null;waitingId=null;root.classList.remove('in-waiting-room','terminal-open');}
 
  function button(label, id, run, {primary = false, disabled = false, small = false} = {}) {
   const node = element('button', `lobby-button${primary ? ' lobby-button-primary' : ''}${small ? ' lobby-button-small' : ''}`, label);
@@ -174,7 +177,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
    copy.append(element('h3', '', lobby.name), element('p', '', `Host: ${lobby.hostName || 'Unknown'} · ${lobby.count || 0}/4 players`));
    const full = lobby.count >= 4;
    const started = lobby.status && lobby.status !== 'waiting';
-   row.append(copy, button(full ? 'Full' : started ? 'In progress' : 'Request to join', null, () => {
+   row.append(copy, button(full ? 'Full' : started ? 'In progress' : 'Enter lobby', null, () => {
     if (!validName()) return;
     if (send('join', {lobbyId:lobby.id, playerName:playerName.trim()})) { pendingLobby = lobby.id; setNotice('Request sent. Waiting for the host.'); render(); }
    }, {small:true,disabled:full || Boolean(started) || actionPending}));
@@ -243,6 +246,11 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
 
  function render() {
   if (disposed) return;
+  const container=document.querySelector('#scene');
+  if(room?.status==='waiting'&&container){
+   if(waitingId!==room.id){releaseWaiting();waiting=createWaitingRoom(container,{client,room,onTerminal:open=>root.classList.toggle('terminal-open',open)});waitingId=room.id;}
+   waiting.setRoom(room);root.classList.add('in-waiting-room');
+  }else releaseWaiting();
   const active = root.contains(document.activeElement) ? document.activeElement : null;
   const focusedId = active?.id;
   const selection = active?.tagName === 'INPUT' ? [active.selectionStart, active.selectionEnd] : null;
@@ -353,6 +361,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
  function dispose({keepClient = false} = {}) {
   if (disposed) return;
   disposed = true;
+  releaseWaiting();
   if (keepClient) { generation++; unsubscribe?.(); unsubscribe = null; }
   else releaseClient();
   root.remove();

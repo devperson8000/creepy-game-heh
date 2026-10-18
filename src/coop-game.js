@@ -11,8 +11,10 @@ import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
+import {createArrival} from './arrival.js';
 
 export function startCoopGame(container,{client,session}){
+ const arrival=createArrival();
  const state=createCoopState(session.seed,session.players),run=state.run;
  state.ownerId=session.ownerId;
  const localId=client.id,isHost=localId===session.ownerId;
@@ -54,6 +56,7 @@ export function startCoopGame(container,{client,session}){
  async function leave(){if(leaving)return;leaving=true;await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
  function resume(){ui.hideScreen();input.capture();void audio.resume();}
  function screen(kind){
+  if(kind==='lost')arrival.dispose();
   audio.pause();input?.clear();document.exitPointerLock?.();ui.screen(kind==='menu'?'menu':kind==='won'?'won':kind==='dead'?'dead':'pause',viewRun());
   const card=ui.el('screen-content'),heading=card.querySelector('h1'),description=card.querySelector('p'),primary=ui.el('screen-primary');
   if(kind==='menu'){heading.textContent='STAY TOGETHER';description.textContent=`${session.players.length} survivors. Shared keys. One creature that sees and hears every one of you.`;primary.firstChild.textContent='Enter with your team';}
@@ -159,13 +162,13 @@ export function startCoopGame(container,{client,session}){
  }
  function resize(){renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);}resize();window.addEventListener('resize',resize);
  window.addEventListener('pagehide',()=>{client.send('leave');client.close();audio.dispose();unsubscribe();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
- screen('menu');ui.el('screen-primary').disabled=true;ui.el('screen-primary').firstChild.textContent='Loading hazmat suits…';let previous=performance.now(),time=0;
+ screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),delta=Math.min(.2,(now-previous)/1000);previous=now;time+=delta;
   let own=local();if(!own)return;
   const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||own.status!=='alive'};
   if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:10000)){disconnected=true;screen('lost');}
-  if(isHost){simulation.setInput(localId,command);if(!disconnected)simulation.advance(delta);enemyView=simulation.enemySnapshot();}
+  if(isHost){simulation.setInput(localId,command);if(!disconnected&&!arrival.active)simulation.advance(delta);enemyView=simulation.enemySnapshot();}
   else if(!disconnected){
    inputClock+=delta;if(inputClock>=.065){inputClock=0;client.send('input',{input:command});}
    if(!command.paused&&!own.hidden&&run.phase==='playing'){
@@ -211,10 +214,15 @@ export function startCoopGame(container,{client,session}){
   torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?140:0;
   renderer.toneMappingExposure=own.status==='alive'?torch.exposure:.95*(watched.torch?1:world.lighting.visibility);
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));document.documentElement.style.setProperty('--danger',String(threat*.38));
+  if(arrival.active){
+   torch.model.position.y-=.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
+   torch.beam.intensity=arrival.elapsed>6.7&&torch.on?140:0;
+   if((avatarAsset||arrival.elapsed<6.4)&&arrival.update(delta,camera,own)){ui.hideScreen();input.capture();void audio.resume();}
+  }
   if(jumpscare.active){renderer.toneMappingExposure=1;jumpscare.render(renderer);const border=ui.el('jumpscare-border');border.style.opacity=String(jumpscare.borderOpacity);border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);}
-  else{renderer.render(world.scene,camera);if(own.status==='alive')torch.render(renderer);}
+  else{renderer.render(world.scene,camera);if(own.status==='alive'&&(!arrival.active||arrival.elapsed>9.5))torch.render(renderer);}
   if(isHost&&!disconnected){snapshotClock+=delta;if(snapshotClock>=.13){snapshotClock=0;const snapshot=simulation.snapshot();client.send('snapshot',{snapshot});for(const notice of snapshot.notices)if(notice.id>lastNotice){if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);}}}
  });
  function scaredOrWatching(){return scareStatus||ui.overlay==='pause'||local()?.status==='alive';}
- return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session};
+ return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival};
 }
