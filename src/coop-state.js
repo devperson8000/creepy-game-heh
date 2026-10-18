@@ -18,7 +18,7 @@ export function createCoopState(seed,members){
   const slot=typeof member!=='string'&&member.slot!==undefined?member.slot:[0,1,2,3].find(value=>!slots.has(value));slots.add(slot);
   players.set(id,{id,name:typeof member==='string'?member:member.name??id,slot,x:-2.6+(slot%2)*.65,z:-30.8+Math.floor(slot/2)*.65,height:3.6,yaw:Math.PI,pitch:0,torch:true,status:'alive',hidden:false,closetId:null,carried:new Set(),downedUntil:null,invulnerableUntil:0});
  });
- return {seed,ownerId:players.keys().next().value,run:createRun(seed,{playerCount:members.length}),players,closets:new Map()};
+ return {seed,ownerId:players.keys().next().value,run:{...createRun(seed,{playerCount:members.length}),initialPlayerCount:members.length},players,closets:new Map()};
 }
 
 function releaseCloset(state,player){

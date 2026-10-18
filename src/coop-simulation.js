@@ -1,3 +1,4 @@
+import {beginFinale,advanceFinale} from './finale-state.js';
 import {createEnemy,tickEnemy,createAmbush,tickAmbush,SIGHT_RANGE} from './enemy.js';
 import {groundHeight,moveInWorld,lineOfSight} from './level.js';
 import {coopInteract,downPlayer,expireDowned,markEscaped,removeCoopPlayer,serializeCoopState} from './coop-state.js';
@@ -26,7 +27,7 @@ const instructions={boards:'The way downstairs is open.',key:'Key found. Return 
 const reasons={'wrong-code':'Access denied. Check the four-digit clue.','locked':'The elevator needs four banked keys and the code.','occupied':'Someone is already hiding here.','too-far':'Move closer.','blocked':'Something blocks the way.','unavailable':'That action is no longer available.'};
 
 /** The lobby owner runs one simulation; peers submit inputs, never positions or monster state. */
-export function createCoopSimulation(state,world,{ambushChance=.12}={}){
+export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.now()/1000}={}){
  const enemy=createEnemy(state.run.layout),ambush=createAmbush(state.seed,{chance:ambushChance});
  const remoteMovement=new Map(),remoteAt=new Map();
  const inputs=new Map(),footsteps=new Map(),noisyUntil=new Map(),notices=[];
@@ -34,7 +35,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12}={}){
  const navigation=world.enemyNavigation??{};
  function tell(playerId,message){notices.push({id:++noticeId,playerId,message});if(notices.length>24)notices.shift();}
  function setInput(id,input){
-  if(!state.players.has(id)||!input||!['forward','right','yaw','pitch'].every(k=>Number.isFinite(input[k])))return false;
+  if(state.run.phase!=='playing'||!state.players.has(id)||!input||!['forward','right','yaw','pitch'].every(k=>Number.isFinite(input[k])))return false;
   if(Array.isArray(input.commands)){
    if(!remoteMovement.has(id))remoteMovement.set(id,createRemoteMovement(state.players.get(id),world.canMove));
    if(!remoteMovement.get(id).receive(input))return false;
@@ -61,10 +62,13 @@ export function createCoopSimulation(state,world,{ambushChance=.12}={}){
    if(type==='closet')player.hideWitnessed=witnessed;
    emit(player,interactionNoise(type,player,{takingKey:wasTaken}));
    tell(id,instructions[result.type]??'Done.');
+   beginFinale(state,now());
   }else tell(id,reasons[result.reason]??'You cannot do that right now.');
   return result;
  }
  function advance(delta){
+  beginFinale(state,now());
+  if(state.run.phase==='finale'){advanceFinale(state,now());return;}
   if(state.run.phase!=='playing')return;
   for(let remaining=Math.min(.2,Math.max(0,delta));remaining>0;remaining-=.025){
    const step=Math.min(.025,remaining);state.run.elapsed+=step;
