@@ -85,18 +85,18 @@ export function startFinalePreview(container,{onExit=()=>{},castSize=2}={}){
  const audio=createFinaleAudio({volume:gamePreferences().volume});void audio.resume();
  let disposed=false,active=null;
  const exit=options=>{if(disposed)return;disposed=true;active?.dispose();audio.dispose();shell.remove();onExit(options);};
- const ready=loadPlayerAvatarAsset().then(asset=>{
+ function load(){return loadPlayerAvatarAsset().then(asset=>{
   if(disposed)return null;
-  loading.remove();
   const cast=demos([2,3,4].includes(castSize)?castSize:2);
-  try{active=createFinalePlayer({container:shell,asset,cast,runnerId:cast[0].id,buttonId:cast[1].id,preview:true,audio,onExit:exit});return active;}
+  try{active=createFinalePlayer({container:shell,asset,cast,runnerId:cast[0].id,buttonId:cast[1].id,preview:true,audio,onExit:exit});loading.remove();return active;}
   catch(error){showError(error);return null;}
- }).catch(showError);
+ }).catch(showError);}
+ const ready=load();
  function showError(error){
   if(disposed)return;
   loading.textContent='Could not load the cinematic. Check the model connection and retry.';
   const retry=element('button','','Retry'),back=element('button','','Back to menu');loading.append(retry,back);
-  retry.addEventListener('click',()=>{exit();});
+  retry.addEventListener('click',()=>{loading.textContent='LOADING FINALE...';if(!loading.isConnected)shell.append(loading);void audio.resume();void load();});
   back.addEventListener('click',()=>exit());
   console.warn('Finale preview unavailable',error);
  }

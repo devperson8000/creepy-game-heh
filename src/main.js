@@ -31,12 +31,12 @@ try {
  else if(mode==='finale'){
   document.body.classList.add('overlay-open');
   const button=document.createElement('button');button.type='button';button.id='finale-start';button.textContent='Play finale animation';button.className='finale-standalone-start';button.style.cssText='position:fixed;inset:42% auto auto 50%;transform:translateX(-50%);z-index:10;padding:18px 28px;background:#142019;border:1px solid #789;color:white;cursor:pointer';document.body.append(button);
-  button.onclick=()=>{button.remove();startFinalePreview(document.querySelector('#scene'),{onExit:()=>location.assign(location.pathname)});};
+  button.onclick=()=>{button.remove();window.monochromeFinalePreview=startFinalePreview(document.querySelector('#scene'),{onExit:()=>location.assign(location.pathname)});};
  }
  else {
   document.body.classList.add('overlay-open');
   function beginPreview(castSize=2){
-   startFinalePreview(document.querySelector('#scene'),{castSize,onExit:options=>options?.castSize?beginPreview(options.castSize):makeMenu()});
+   window.monochromeFinalePreview=startFinalePreview(document.querySelector('#scene'),{castSize,onExit:options=>options?.castSize?beginPreview(options.castSize):makeMenu()});
   }
   function makeMenu(options={}){
    return createLobbyMenu({

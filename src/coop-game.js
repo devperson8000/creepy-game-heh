@@ -223,7 +223,7 @@ export function startCoopGame(container,{client,session}){
   if(!finalePlayer&&!finaleError&&avatarAsset){
    try{
     finalePlayer=createFinalePlayer({container,renderer,asset:avatarAsset,cast:run.finale.cast,runnerId:run.finale.runnerId,buttonId:run.finale.buttonId,preview:false});
-    void finalePlayer.audio.resume();
+    finalePlayer.audio.setMuted(audio.muted);void finalePlayer.audio.resume();
    }catch(error){finaleError=error;console.warn('Finale scene could not initialize',error);}
   }
   if(finaleError||(!avatarAsset&&run.phase==='won')){
