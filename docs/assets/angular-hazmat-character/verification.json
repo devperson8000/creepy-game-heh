@@ -1,0 +1,57 @@
+{
+  "three": "180",
+  "clips": [
+    {
+      "name": "Death",
+      "duration": 1.6666666269302368,
+      "tracks": 87
+    },
+    {
+      "name": "Idle",
+      "duration": 3.3333332538604736,
+      "tracks": 87
+    },
+    {
+      "name": "Jump",
+      "duration": 0.8333333134651184,
+      "tracks": 87
+    },
+    {
+      "name": "Run",
+      "duration": 0.699999988079071,
+      "tracks": 87
+    },
+    {
+      "name": "Walk",
+      "duration": 0.8333333134651184,
+      "tracks": 87
+    }
+  ],
+  "skinnedMeshes": 9,
+  "bones": 29,
+  "triangles": 1398,
+  "externalImages": 0,
+  "movement": {
+    "Death": 0.5367500810309469,
+    "Idle": 0.06996516657216378,
+    "Jump": 0.8144643808069923,
+    "Run": 1.7520103736082748,
+    "Walk": 1.9677756288651653
+  },
+  "bounds": {
+    "Death": 1.9473286531182232,
+    "Idle": 1.807020681914361,
+    "Jump": 1.7979788227031634,
+    "Run": 1.6517271324503706,
+    "Walk": 1.7510020095084682
+  },
+  "independentPlayerSkeletons": 4,
+  "browserErrors": [],
+  "model": {
+    "path": "public/models/angular-hazmat-survivor.glb",
+    "bytes": 5176868,
+    "sha256": "caa8e1c3aba6198a393778130b189de73bf5da9d726bd8880fdc14a8649a831c",
+    "selfContained": true
+  },
+  "method": "Chromium WebGL, Three.js r180 GLTFLoader + AnimationMixer. All clips sampled at 0%, 25%, 50%, 75%, 99% for finite deformed bounds, with bone motion measured at 37%. Four SkeletonUtils clones checked for independent bones and animation."
+}

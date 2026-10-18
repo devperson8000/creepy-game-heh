@@ -1,0 +1,21 @@
+Hazmat survivor asset and preview images
+
+Model source: Hazmat zombie, by sandsound (2023).
+Original base mesh credited by the source author to tigertowel.
+https://opengameart.org/content/hazmat-zombie
+https://opengameart.org/sites/default/files/hazmat.blend
+The source asset page lists License(s): CC0.
+
+Human animation source: Animated Men Pack, by Quaternius.
+https://quaternius.com/packs/animatedmen.html
+The source pack declares CC0 1.0 Universal.
+Original distributor licence text is preserved alongside the first candidate:
+../player-character/SOURCE-LICENSE.txt
+
+Both sources are CC0 1.0 Universal (Public Domain Dedication):
+https://creativecommons.org/publicdomain/zero/1.0/
+https://creativecommons.org/publicdomain/zero/1.0/legalcode
+
+The modified GLB, retargeted animation data and preview renders supplied in
+this repository are also dedicated to the public domain under CC0 1.0.
+Credits are retained voluntarily; no attribution is required by CC0.
