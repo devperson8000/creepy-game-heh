@@ -21,3 +21,7 @@ test('trapped creature opens its jaw; severed head falls independently and stops
  a.sample({time:40,mode:'dead',position:[0,0,0],yaw:0,neckPosition:[0,2,0],deathTime:5});const settled=a.head.position.clone(),rotation=a.head.quaternion.clone();assert.ok(settled.y<before.y);
  a.sample({time:43,mode:'dead',position:[0,0,0],yaw:0,neckPosition:[0,2,0],deathTime:8});assert.ok(a.head.position.distanceTo(settled)<1e-8);assert.ok(a.head.quaternion.angleTo(rotation)<1e-6);a.dispose();a.dispose();
 });
+test('chase creature returns to the same absolute position after a seek',()=>{
+ const a=createFinaleCreature(),pose={time:6,mode:'chase',position:[0,0,30],yaw:Math.PI};a.sample(pose);const first=a.body.root.position.clone();a.sample({...pose,time:8,position:[0,0,20]});a.sample(pose);assert.ok(a.body.root.position.distanceTo(first)<1e-8);a.dispose();
+});
+test('severed head falls inward onto the elevator floor',()=>{const a=createFinaleCreature();a.sample({time:38,mode:'severed',neckPosition:[0,2,-.08],deathTime:2.7});assert.ok(a.head.position.z<-.7);a.dispose();});
