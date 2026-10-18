@@ -26,12 +26,12 @@ export function createTorch(scene,camera){
  // Draw the held torch separately so its hand cannot clip into nearby walls
  // or obstruct interaction/sight rays through the scene.
  const viewScene=new THREE.Scene(),viewCamera=new THREE.PerspectiveCamera(66,1,.02,3),model=new THREE.Group();
- model.position.set(.27,-.28,-.55);model.rotation.set(-.12,-.16,-.06);viewScene.add(model);
- viewScene.add(new THREE.AmbientLight(0xdde0da,.8));
- const handLight=new THREE.PointLight(0xe0e2dc,1.5,3);handLight.position.set(-.15,.35,.2);viewScene.add(handLight);
+ model.scale.setScalar(.88);model.position.set(.27,-.28,-.55);model.rotation.set(-.12,-.16,-.06);viewScene.add(model);
+ viewScene.add(new THREE.AmbientLight(0xdde0da,1.15));
+ const handLight=new THREE.PointLight(0xe0e2dc,2.3,3);handLight.position.set(-.15,.35,.2);viewScene.add(handLight);
  const metal=new THREE.MeshStandardMaterial({color:0x393d3d,roughness:.45,metalness:.65});
  const grip=new THREE.MeshStandardMaterial({color:0x151819,roughness:.9});
- const glove=new THREE.MeshStandardMaterial({name:'hazmat-glove',color:0x151819,roughness:.95});
+ const glove=new THREE.MeshStandardMaterial({name:'hazmat-glove',color:0x242b29,roughness:.95});
  const suit=new THREE.MeshStandardMaterial({name:'hazmat-sleeve',color:0xd9b525,roughness:.85});
  function cylinder(top,bottom,length,z,material){const mesh=new THREE.Mesh(new THREE.CylinderGeometry(top,bottom,length,24),material);mesh.rotation.x=Math.PI/2;mesh.position.z=z;model.add(mesh);return mesh;}
  cylinder(.046,.05,.25,.055,grip);cylinder(.078,.053,.105,-.12,metal);
@@ -42,12 +42,16 @@ export function createTorch(scene,camera){
  for(let i=0;i<4;i++){const finger=new THREE.Mesh(new THREE.CapsuleGeometry(.017,.066,4,8),glove);finger.rotation.z=Math.PI/2;finger.position.set(.006,-.033,.004+i*.034);model.add(finger);}
  const thumb=new THREE.Mesh(new THREE.CapsuleGeometry(.022,.055,4,8),glove);thumb.position.set(-.055,.005,.07);thumb.rotation.z=-.65;model.add(thumb);
  const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.074,.34,4,12),suit);sleeve.position.set(.018,-.23,.18);sleeve.rotation.x=-.55;model.add(sleeve);
+ const switchBase=new THREE.Mesh(new THREE.BoxGeometry(.035,.014,.065),grip);switchBase.position.set(0,.051,-.035);model.add(switchBase);
+ const switchLever=new THREE.Mesh(new THREE.BoxGeometry(.022,.009,.028),metal);switchLever.position.set(0,.062,-.05);model.add(switchLever);
+ for(const x of [-.06,.06]){const bolt=new THREE.Mesh(new THREE.SphereGeometry(.007,8,6),metal);bolt.position.set(x,.036,-.11);model.add(bolt);}
+ const seam=new THREE.Mesh(new THREE.TorusGeometry(.071,.004,6,24),glove);seam.rotation.x=Math.PI/2-.55;seam.position.set(.014,-.14,.125);model.add(seam);
  let on=true,exposure=.95;
- function toggle(){on=!on;beam.intensity=on?140:0;lens.material.color.setHex(on?0xcbd5c7:0x171b1a);return on;}
+ function toggle(){on=!on;beam.intensity=on?140:0;lens.material.color.setHex(on?0xcbd5c7:0x171b1a);switchLever.position.z=on?-.05:-.02;return on;}
  function update({ceilingPower=1,time=0,moving=false}={}){
   exposure=.95*(on?1:ceilingPower);
   for(const material of reactive.values()){material.emissive.copy(material.color);material.emissiveIntensity=.35*ceilingPower;}
-  const bob=moving?.009:0;model.position.y=-.28+Math.sin(time*8)*bob;model.position.x=Math.min(.27,.2*camera.aspect)+Math.cos(time*4)*bob*.5;
+  const bob=moving?.009:0;model.rotation.z=-.06+Math.sin(time*1.7)*.003+(moving?Math.sin(time*8)*.006:0);model.position.y=-.28+Math.sin(time*8)*bob;model.position.x=Math.min(.27,.2*camera.aspect)+Math.cos(time*4)*bob*.5;
  }
  function render(renderer){
   viewCamera.projectionMatrix.copy(camera.projectionMatrix);viewCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse);

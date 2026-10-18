@@ -52,7 +52,7 @@ export function startCoopGame(container,{client,session}){
  const roster=team.querySelector('ul'),teamStatus=team.querySelector('#coop-status'),nextButton=team.querySelector('#coop-next');
  const rosterRows=new Map();
  function local(){return state.players.get(localId);}
- function viewRun(watched=local()){const own=local();return {...run,carried:own?.carried??new Set(),hidden:!!watched?.hidden};}
+ function viewRun(watched=local()){const own=local();return {...run,carried:own?.carried??new Set(),hidden:!!watched?.hidden,teamKeyCount:run.banked.size+[...state.players.values()].reduce((n,p)=>n+p.carried.size,0)};}
  async function leave(){if(leaving)return;leaving=true;await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
  function resume(){ui.hideScreen();input.capture();void audio.resume();}
  function screen(kind){
@@ -72,12 +72,12 @@ export function startCoopGame(container,{client,session}){
   const secondary=ui.el('new-run');if(secondary){secondary.textContent='Leave this session';secondary.addEventListener('click',leave);}
  }
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(disconnected||run.phase!=='playing')return;if(ui.overlay==='pause')resume();else if(!ui.overlay)screen('pause');}
- const input=gameInput(camera,renderer.domElement,ui,pause);
+ const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void audio.resume();});
  input.setView(local().yaw);
  function cycleSpectator(){const available=[...state.players.values()].filter(p=>p.id!==localId&&p.status==='alive');if(!available.length){spectateId=null;return;}const at=available.findIndex(p=>p.id===spectateId);spectateId=available[(at+1)%available.length].id;}
  nextButton.addEventListener('click',cycleSpectator);team.querySelector('#coop-leave').addEventListener('click',leave);
- function toggleTorch(){if(ui.overlay||local()?.status!=='alive')return;torch.toggle();ui.el('torch-toggle').textContent=torch.on?'Torch on':'Torch off';ui.el('torch-toggle').setAttribute('aria-pressed',String(torch.on));}
- function toggleSound(){audio.setMuted(!audio.muted);ui.el('sound-toggle').textContent=audio.muted?'Sound off':'Sound on';ui.el('sound-toggle').setAttribute('aria-pressed',String(audio.muted));}
+ function toggleTorch(){if(ui.overlay||local()?.status!=='alive')return;torch.toggle();ui.el('torch-toggle').textContent=torch.on?'Torch on':'Torch off';ui.el('torch-toggle').setAttribute('aria-pressed',String(torch.on));ui.el('torch-toggle').setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
+ function toggleSound(){audio.setMuted(!audio.muted);ui.el('sound-toggle').textContent=audio.muted?'Sound off':'Sound on';ui.el('sound-toggle').setAttribute('aria-pressed',String(audio.muted));ui.el('sound-toggle').setAttribute('aria-label',audio.muted?'Unmute game sound':'Mute game sound');}
  ui.el('torch-toggle').addEventListener('click',toggleTorch);ui.el('sound-toggle').hidden=!audio.configured;ui.el('sound-toggle').addEventListener('click',toggleSound);ui.el('pause-game').addEventListener('click',pause);
  document.addEventListener('keydown',event=>{
   if(event.repeat||event.target.closest?.('input'))return;

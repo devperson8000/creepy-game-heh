@@ -3,23 +3,26 @@ import {createWaitingRoomScene} from './waiting-room-scene.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createTorch} from './torch.js';
 import {moveInWorld} from './level.js';
+import {createRoomAmbience} from './room-ambience.js';
 
 export function createWaitingRoom(container,{client,room,onTerminal=()=>{}}){
  const world=createWaitingRoomScene(),renderer=new THREE.WebGLRenderer({antialias:true});
  renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;container.append(renderer.domElement);
+ const ambience=createRoomAmbience();
  const camera=new THREE.PerspectiveCamera(66,1,.05,40);camera.rotation.order='YXZ';const torch=createTorch(world.scene,camera);
  const abort=new AbortController(),options={signal:abort.signal},keys=new Set(),avatars=new Map(),poses=new Map();
  let current=room,asset,disposed=false,terminal=false,drag=null,last=performance.now(),clock=0,sendClock=0;
  const me=room.members.find(p=>p.id===client.id),own={...world.spawn(me?.slot??0),torch:true,moving:false,status:'alive'};
  function toggleTerminal(value){terminal=value;keys.clear();onTerminal(value);if(value)document.exitPointerLock?.();}
- function capture(){if(terminal)return;renderer.domElement.tabIndex=0;renderer.domElement.focus();const p=renderer.domElement.requestPointerLock?.();p?.catch?.(()=>{});}
+ function capture(){if(terminal)return;void ambience.resume();renderer.domElement.tabIndex=0;renderer.domElement.focus();const p=renderer.domElement.requestPointerLock?.();p?.catch?.(()=>{});}
  renderer.domElement.addEventListener('click',capture,options);
  document.addEventListener('keydown',event=>{
   if(event.target.closest?.('input'))return;
   if(event.code==='Escape'){toggleTerminal(!terminal);return;}
   if(event.code==='KeyE'){if(Math.hypot(own.x-world.terminalPosition.x,own.z-world.terminalPosition.z)<3)toggleTerminal(!terminal);return;}
-  if(event.code==='KeyF'&&!event.repeat&&!terminal){torch.toggle();own.torch=torch.on;}
-  if(!terminal&&['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)){keys.add(event.code);event.preventDefault();}
+  if(event.code==='KeyM'&&!event.repeat){ambience.toggle();updateSound();return;}
+  if(event.code==='KeyF'&&!event.repeat&&!terminal){torch.toggle();own.torch=torch.on;hints.querySelector('#waiting-torch-button').textContent=torch.on?'Torch on':'Torch off';}
+  if(!terminal&&['KeyW','KeyS','KeyA','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(event.code)){keys.add(event.code);event.preventDefault();if(!event.repeat)void ambience.resume();}
  },options);
  document.addEventListener('keyup',event=>keys.delete(event.code),options);
  function look(x,y){own.yaw-=x*.0021;own.pitch=Math.max(-1.3,Math.min(1.3,own.pitch-y*.0021));}
@@ -28,13 +31,16 @@ export function createWaitingRoom(container,{client,room,onTerminal=()=>{}}){
  renderer.domElement.addEventListener('pointermove',e=>{if(drag&&!terminal){look(e.clientX-drag.x,e.clientY-drag.y);drag={x:e.clientX,y:e.clientY};}},options);
  for(const event of ['pointerup','pointercancel'])renderer.domElement.addEventListener(event,()=>{drag=null;},options);
  window.addEventListener('blur',()=>keys.clear(),options);
- const hints=document.createElement('div');hints.id='waiting-controls';hints.innerHTML='<span>WASD move · Mouse look · F torch · Esc terminal</span><strong id="waiting-interaction"></strong><div class="waiting-touch"><button data-direction="KeyW">↑</button><button data-direction="KeyA">←</button><button data-direction="KeyS">↓</button><button data-direction="KeyD">→</button><button id="waiting-terminal-button">Terminal</button></div>';document.body.append(hints);
+ const hints=document.createElement('div');hints.id='waiting-controls';hints.innerHTML='<span>WASD move · Mouse look · F torch · Esc terminal</span><button class="waiting-sound" id="waiting-sound">Room sound on · M</button><strong id="waiting-interaction"></strong><div class="waiting-touch"><button data-direction="KeyW">↑</button><button data-direction="KeyA">←</button><button data-direction="KeyS">↓</button><button data-direction="KeyD">→</button><button id="waiting-torch-button">Torch on</button><button id="waiting-terminal-button">Terminal</button></div>';document.body.append(hints);
  for(const button of hints.querySelectorAll('[data-direction]')){
-  button.addEventListener('pointerdown',e=>{keys.add(button.dataset.direction);button.setPointerCapture(e.pointerId);},options);
+  button.addEventListener('pointerdown',e=>{keys.add(button.dataset.direction);void ambience.resume();button.setPointerCapture(e.pointerId);},options);
   for(const type of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(type,()=>keys.delete(button.dataset.direction),options);
  }
+ hints.querySelector('#waiting-torch-button').addEventListener('click',()=>{torch.toggle();own.torch=torch.on;hints.querySelector('#waiting-torch-button').textContent=torch.on?'Torch on':'Torch off';},options);
  hints.querySelector('#waiting-terminal-button').addEventListener('click',()=>toggleTerminal(!terminal),options);
  const hint=hints.querySelector('#waiting-interaction');
+ function updateSound(){hints.querySelector('#waiting-sound').textContent=ambience.muted?'Room sound off · M':'Room sound on · M';}
+ hints.querySelector('#waiting-sound').addEventListener('click',()=>{ambience.toggle();updateSound();},options);
  const unsubscribe=client.subscribe(event=>{if(event.type==='waitingPose'&&current.members.some(m=>m.id===event.playerId))poses.set(event.playerId,{...event.pose,height:0,status:'alive'});});
  void loadPlayerAvatarAsset().then(a=>{if(!disposed)asset=a;}).catch(()=>{if(!disposed)hint.textContent='Suit model could not load. Refresh to reconnect.';});
  function setRoom(next){current=next;for(const [id,avatar] of avatars)if(!next.members.some(m=>m.id===id)){avatar.dispose();avatars.delete(id);poses.delete(id);}}
@@ -51,12 +57,12 @@ export function createWaitingRoom(container,{client,room,onTerminal=()=>{}}){
   if(asset)for(const member of current.members){
    if(member.id===client.id)continue;
    if(!avatars.has(member.id)){const a=createPlayerAvatar(asset,member);avatars.set(member.id,a);world.scene.add(a.root);}
-   avatars.get(member.id).update({...poses.get(member.id)??{...world.spawn(member.slot),torch:true,status:'alive'},speaking:client.voice?.isSpeaking(member.id)},dt);
+   avatars.get(member.id).update({...(poses.get(member.id)??{...world.spawn(member.slot),torch:true,status:'alive'}),speaking:client.voice?.isSpeaking(member.id)},dt);
   }
-  world.update(dt,clock,current);torch.update({time:clock,moving:own.moving});renderer.toneMappingExposure=.95;
+  ambience.update();world.update(dt,clock,current);torch.update({time:clock,moving:own.moving});renderer.toneMappingExposure=.95;
   if(asset)hint.textContent=terminal?'Press Esc to return to the room':Math.hypot(own.x-world.terminalPosition.x,own.z-world.terminalPosition.z)<3?'E · Open lobby terminal':current.requests?.length?'New join request · Open terminal with Esc':'Decontamination complete · Prepare for descent';
   renderer.render(world.scene,camera);torch.render(renderer);
  });
- function dispose(){if(disposed)return;disposed=true;abort.abort();unsubscribe();renderer.setAnimationLoop(null);if(document.pointerLockElement===renderer.domElement)document.exitPointerLock?.();for(const avatar of avatars.values())avatar.dispose();world.dispose();torch.beam.shadow.map?.dispose();renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();hints.remove();}
+ function dispose(){if(disposed)return;disposed=true;ambience.dispose();abort.abort();unsubscribe();renderer.setAnimationLoop(null);if(document.pointerLockElement===renderer.domElement)document.exitPointerLock?.();for(const avatar of avatars.values())avatar.dispose();world.dispose();torch.beam.shadow.map?.dispose();renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();hints.remove();}
  return {setRoom,dispose,world,camera,renderer,avatars,own};
 }

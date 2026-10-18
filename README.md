@@ -32,6 +32,12 @@ Choose **Two-tab co-op test** on the title screen (or open `?mode=coop-test`), t
 
 For the automated two-tab browser check, start `npm run dev`, install Chromium once with `npx playwright install chromium`, then run `npm run test:browser`. It opens two tabs in one browser context, checks automatic pairing, actual microphone audio/speaking indicators, mute/capture release, blocked-mic recovery, both opening sequences, hidden-host gameplay, and replicated movement/torch state. `GAME_TEST_URL` selects a development server (default `http://localhost:5173`); `BROWSER_EXECUTABLE` selects an existing Chromium. On environments that require a TCP relay, set `VOICE_TEST_ICE_SERVERS` to an RTCIceServer JSON array for the test. The runner generates its own synthetic microphone tone and does not request a physical microphone.
 
+## Presentation and control polish
+
+The title backdrop is a locally rendered image of this game's actual creature and basement (`public/images/title-basement.webp`). Menus, pause/keypad screens, voice/team panels and the objective HUD share subdued industrial styling with phone layouts and keyboard focus states. The waiting room has soft contact shadows, restrained dust, clearer signage and a generated electrical hum with occasional distant pipe knocks. Room ambience starts only after a gesture; M or its sound button mutes it. The elevator hub has floor joints, hazard markings and return-point signage. The held torch has a smaller profile, visible glove/cuff detail and a physical switch.
+
+Touch players can hold **Run** while moving, toggle the waiting-room torch, and open the terminal without using a keyboard. Held touch controls release on pointer cancellation, focus loss or pause. Holding Escape does not repeatedly toggle pause. Clicking back into the scene also unlocks game audio on browsers that require a fresh gesture. Co-op objectives count keys across the whole team and distinguish finding the clue, entering its code, opening the elevator and stepping inside.
+
 ## Play
 
 Select Singleplayer or join a started multiplayer lobby. Open the boarded **DO NOT ENTER** doorway in the elevator lobby. Descend the return stairs, search dresser drawers for **four keys**, and read the **four-digit note** in the basement. Hide in closets when the moving creature approaches. Return upstairs, bank the keys at the four-lock panel, enter the number at the separate keypad, then open the elevator and walk inside.

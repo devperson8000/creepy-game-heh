@@ -65,6 +65,16 @@ export function createWorld(run){
  const elevatorDoors=[box(1,3.2,.13,-3.1,5.2,-32.91,metal),box(1,3.2,.13,-2.1,5.2,-32.91,metal)];
  for(const d of elevatorDoors)d.userData.interactId='elevator';targets.set('elevator',{id:'elevator',type:'elevator',mesh:elevatorDoors[0]});
  sign('EXIT',1.2,.35,-2.6,7.05,-32.84);
+ // Quiet industrial details reinforce the elevator as the return landmark.
+ const paint=new THREE.MeshStandardMaterial({color:0x9b9a82,roughness:.96});
+ for(const x of [-8.47,3.27])box(.035,.18,7.7,x,3.73,-29,metal);
+ for(const z of [-32.86,-25.14])for(const [x,w] of [[-6.1,4.6],[.9,4.5]])box(w,.18,.035,x,3.73,z,metal);
+ for(const x of [-7,-4,0,2])box(.01,.006,7.65,x,3.604,-29,dark);
+ for(const z of [-31.5,-29,-26.5])box(11.6,.006,.01,-2.6,3.605,z,dark);
+ for(let i=0;i<9;i++){const stripe=box(.15,.008,.44,-3.45+i*.22,3.61,-26,paint);stripe.rotation.y=-.45;}
+ sign('B1 / RETURN POINT',1.7,.32,-6.4,5.75,-32.84,{size:54});
+ sign('KEEP THE EXIT CLEAR',1.8,.28,1.4,5.7,-32.84,{size:45});
+
  const panel=box(.68,1.2,.14,-4.1,5,-32.79,dark);target('locks','locks',panel);
  const indicators=[];
  for(let i=0;i<4;i++){const mat=new THREE.MeshBasicMaterial({color:0x3b3c3c});const led=box(.14,.14,.025,-4.1,5.37-i*.24,-32.7,mat);led.userData.interactId='locks';indicators.push(led);}

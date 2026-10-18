@@ -5,6 +5,7 @@ import './waiting-room.css';
 import './arrival.css';
 import './voice-chat.css';
 import './two-tab-test.css';
+import './polish.css';
 import {createTwoTabTest,readTestSession} from './two-tab-test.js';
 import {createVoiceChat} from './voice-chat.js';
 import {startScene} from './scene.js';
@@ -33,6 +34,7 @@ try {
    });
   }
   const testSession=readTestSession(location.search);
+  document.body.classList.toggle('two-tab-mode',!!testSession);
   if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
   else makeMenu();
  }

@@ -40,6 +40,11 @@ export function createWaitingRoomScene(){
  for(const x of [-2.6,2.6]){box(.075,.012,11.7,yellow,x,.012,.2);for(let z=-5;z<6;z+=1.5)box(.3,.014,.07,yellow,x+(x<0?-.12:.12),.014,z);}
  for(let i=0;i<15;i++){const stripe=box(.13,.016,1.25,i%2?black:yellow,-2.1+i*.3,.017,-5.75);stripe.rotation.y=-.4;}
  for(let i=0;i<4;i++){box(.7,.012,.055,yellow,[-1.8,-.6,.6,1.8][i],.013,3.9);box(.055,.012,.45,yellow,[-1.8,-.6,.6,1.8][i]-.35,.013,3.7);}
+ // Soft contact shadows keep heavy furniture grounded without extra shadow lights.
+ const shadow=canvas(128,128,ctx=>{const g=ctx.createRadialGradient(64,64,8,64,64,64);g.addColorStop(0,'rgba(0,0,0,.58)');g.addColorStop(.65,'rgba(0,0,0,.25)');g.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=g;ctx.fillRect(0,0,128,128);});
+ if(shadow){const surface=new THREE.MeshBasicMaterial({map:shadow.texture,transparent:true,depthWrite:false,opacity:.6});materials.add(surface);for(const [x,z,w,d] of [[-5.3,2.3,1.9,6.1],[5.1,1.45,2,6],[-4.5,-3,1.8,1.7]]){const contact=mesh(new THREE.PlaneGeometry(w,d),surface,x,.004,z);contact.rotation.x=-Math.PI/2;}}
+ const dustGeometry=new THREE.BufferGeometry(),dustPositions=[];for(let i=0;i<100;i++)dustPositions.push((random()-.5)*11,.3+random()*3,(random()-.5)*13);
+ dustGeometry.setAttribute('position',new THREE.Float32BufferAttribute(dustPositions,3));geometries.add(dustGeometry);const dustMaterial=new THREE.PointsMaterial({color:0xa9b4a2,size:.011,transparent:true,opacity:.16,depthWrite:false});materials.add(dustMaterial);const dust=new THREE.Points(dustGeometry,dustMaterial);scene.add(dust);
  // Locker bank, with recessed vents, numbered plates and worn handles.
  for(let i=0;i<5;i++){
   const z=.2+i*1.02;solid(.78,2.48,.94,metal,-5.52,1.24,z);
@@ -70,7 +75,7 @@ export function createWaitingRoomScene(){
   const m=material({color:art?0xffffff:0xb9bba7,map:art?.texture,roughness:.85});return mesh(new THREE.PlaneGeometry(w,h),m,x,y,z);
  }
  sign('BASEMENT ACCESS',2.6,.43,0,2.77,-6.54,{size:62});
- sign('DECONTAMINATION / HOLDING 04',4.5,.54,0,3.34,-6.84,{size:47});
+ sign('DECONTAMINATION / HOLDING 04',4.5,.36,0,3.48,-6.84,{size:47});
  sign('PERSONNEL INTAKE',2.4,.48,0,2.6,6.94).rotation.y=Math.PI;
  sign('01 / REQUEST CLEARANCE',1.35,.36,-4.5,1.94,-3.35,{size:53});
  const notice=sign('KEEP RESPIRATOR ON',1.6,.44,5.94,2.15,-3.9,{background:'#b29b51',foreground:'#242b26',size:63});notice.rotation.y=-Math.PI/2;
@@ -86,7 +91,7 @@ export function createWaitingRoomScene(){
  for(let z=-5;z<7;z+=2.4)box(11.9,.12,.12,dark,0,3.68,z);
  const fixtures=[];
  for(const z of [-3.7,1.1,5.2]){box(2.65,.12,.55,dark,0,3.57,z);for(const x of [-.9,.9])box(.05,.16,.4,edge,x,3.55,z);const tube=box(2.35,.045,.13,lamp,0,3.48,z);fixtures.push(tube);}
- const ambient=new THREE.HemisphereLight(0xc2d4c9,0x505144,2.1);scene.add(ambient);
+ const ambient=new THREE.HemisphereLight(0xc2d4c9,0x505144,1.65);scene.add(ambient);
  const lights=[[-.5,3.05,-3.7,0xc9e2d2,22],[0,3.1,2,0xd3e0c9,25],[4.7,2.6,-5.5,0xe4b86d,7]].map(([x,y,z,color,intensity])=>{const l=new THREE.PointLight(color,intensity,13,2);l.position.set(x,y,z);scene.add(l);return l;});
  box(.28,.18,.12,amber,1.76,2.87,-6.7);
  let manifestKey='',disposed=false;
@@ -102,7 +107,7 @@ export function createWaitingRoomScene(){
    }
   }
   // Slow, shallow ballast variation stays readable and never flashes or blacks out.
-  const t=Number.isFinite(time)?time:0;lights[0].intensity=22*(.97+.025*Math.sin(t*1.47)+.015*Math.sin(t*7.13));
+  const t=Number.isFinite(time)?time:0;dust.position.y=Math.sin(t*.21)*.055;lights[0].intensity=22*(.97+.025*Math.sin(t*1.47)+.015*Math.sin(t*7.13));
  }
  update(0,0,{});
  return {scene,terminalPosition:{x:-4.5,y:1.3,z:-3},doorPosition:{x:0,y:1.5,z:-6.65},
