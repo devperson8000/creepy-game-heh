@@ -1,3 +1,6 @@
+import {createHostClock,needsHostClockSync} from './coop-clock.js';
+import {createFinalePlayer} from './finale-player.js';
+import {createFinaleClock} from './finale-state.js';
 import {gamePreferences,createRenderQuality} from './preferences.js';
 import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
@@ -60,6 +63,7 @@ export function startCoopGame(container,{client,session}){
  // through authenticated member actions and owner-only database snapshots first.
  function peerReady(id){return !!client.voice?.gameConnected(id)&&client.voice.remoteFingerprint(id)===(isHost?peerFingerprints.get(id):ownerFingerprint)&&(isHost||client.voice.localFingerprint(id)===acceptedFingerprint);}
  const correction={x:0,z:0};
+ let finale=null,finaleId=null,finaleFailed=false,finaleFinished=false,finaleCompleteAt=null;const finaleClock=createFinaleClock(),hostClock=createHostClock(),clockEchoes=new Map();let nextClockPing=performance.now()+300;
  function recordPoses(){
   const at=performance.now()/1000;
   for(const [id,player] of state.players){if(id===localId)continue;if(!poseBuffers.has(id))poseBuffers.set(id,createPoseBuffer({adaptive:true}));poseBuffers.get(id).push(at,player);}
@@ -70,10 +74,10 @@ export function startCoopGame(container,{client,session}){
  const rosterRows=new Map();
  function local(){return state.players.get(localId);}
  function viewRun(watched=local()){const own=local();return {...run,carried:own?.carried??new Set(),hidden:!!watched?.hidden,teamKeyCount:run.banked.size+[...state.players.values()].reduce((n,p)=>n+p.carried.size,0)};}
- async function leave(){if(leaving)return;leaving=true;await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
+ async function leave(){if(leaving)return;leaving=true;finale?.dispose();await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
  function resume(){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
  function screen(kind){
-  if(kind==='lost')arrival.dispose();
+  if(kind==='lost'){arrival.dispose();finale?.dispose();finaleFinished=true;}
   audio.pause();ambience.pause();input?.clear();document.exitPointerLock?.();ui.screen(kind==='menu'?'menu':kind==='won'?'won':kind==='dead'?'dead':'pause',viewRun());
   const card=ui.el('screen-content'),heading=card.querySelector('h1'),description=card.querySelector('p'),primary=ui.el('screen-primary');
   if(kind==='menu'){heading.textContent='STAY TOGETHER';description.textContent=`${session.players.length} survivors. Shared keys. One creature that sees and hears every one of you.`;primary.firstChild.textContent='Enter with your team';}
@@ -94,7 +98,7 @@ export function startCoopGame(container,{client,session}){
  function cycleSpectator(){const available=[...state.players.values()].filter(p=>p.id!==localId&&p.status==='alive');if(!available.length){spectateId=null;return;}const at=available.findIndex(p=>p.id===spectateId);spectateId=available[(at+1)%available.length].id;}
  nextButton.addEventListener('click',cycleSpectator);team.querySelector('#coop-leave').addEventListener('click',leave);
  function toggleTorch(){if(ui.overlay||local()?.status!=='alive')return;torch.toggle();ui.el('torch-toggle').textContent=torch.on?'Torch on':'Torch off';ui.el('torch-toggle').setAttribute('aria-pressed',String(torch.on));ui.el('torch-toggle').setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
- function toggleSound(){audio.setMuted(!audio.muted);ambience.setMuted(audio.muted);ui.el('sound-toggle').textContent=audio.muted?'Sound off':'Sound on';ui.el('sound-toggle').setAttribute('aria-pressed',String(audio.muted));ui.el('sound-toggle').setAttribute('aria-label',audio.muted?'Unmute game sound':'Mute game sound');}
+ function toggleSound(){audio.setMuted(!audio.muted);ambience.setMuted(audio.muted);finale?.audio.setMuted(audio.muted);ui.el('sound-toggle').textContent=audio.muted?'Sound off':'Sound on';ui.el('sound-toggle').setAttribute('aria-pressed',String(audio.muted));ui.el('sound-toggle').setAttribute('aria-label',audio.muted?'Unmute game sound':'Mute game sound');}
  ui.el('torch-toggle').addEventListener('click',toggleTorch);ui.el('sound-toggle').hidden=!audio.configured;ui.el('sound-toggle').addEventListener('click',toggleSound);ui.el('pause-game').addEventListener('click',pause);
  document.addEventListener('keydown',event=>{
   if(event.repeat||event.target.closest?.('input'))return;
@@ -140,13 +144,14 @@ export function startCoopGame(container,{client,session}){
    const accepted=snapshot.peerAcknowledged?.[localId];if(typeof accepted==='string'&&/^[a-f0-9]{64}$/.test(accepted))acceptedFingerprint=accepted;
   }
   if(isHost||!snapshot||!Number.isFinite(snapshot.sequence)||snapshot.sequence<=latestSequence||snapshot.state?.seed!==state.seed)return;
+  hostClock.accept(snapshot.clockSync?.echoes?.[localId]);
   const before=local()?{...local()}:null;latestSequence=snapshot.sequence;lastSnapshotAt=performance.now();
   applyCoopSnapshot(state,snapshot.state);
   const after=local();
   if(!after){disconnected=true;screen('lost');return;}
   const transition=before?.status!==after?.status||before?.hidden!==after?.hidden||before?.closetId!==after?.closetId;
-  prediction.reconcile({...after},before);
-  if(before&&!transition){correction.x+=before.x-after.x;correction.z+=before.z-after.z;}
+  if(run.phase==='playing')prediction.reconcile({...after},before);
+  if(run.phase==='playing'&&before&&!transition){correction.x+=before.x-after.x;correction.z+=before.z-after.z;}
   else{correction.x=0;correction.z=0;}
   enemyView=snapshot.enemy??enemyView;recordPoses();
   for(const notice of snapshot.notices??[])if(notice.id>lastNotice){if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);}
@@ -160,6 +165,7 @@ export function startCoopGame(container,{client,session}){
   if(isHost&&event.type==='input')simulation.setInput(event.playerId,event.input);
   if(isHost&&event.type==='action'){
    if(event.action?.targetId==='peer-channel'&&/^[a-f0-9]{64}$/.test(event.action.code??''))peerFingerprints.set(event.playerId,event.action.code);
+   else if(event.action?.targetId==='finale-clock'&&state.players.has(event.playerId)&&Number.isFinite(Number(event.action.code)))clockEchoes.set(event.playerId,{clientSent:Number(event.action.code),hostReceived:Date.now()/1000});
    else simulation.interact(event.playerId,event.action);
   }
   if(isHost&&event.type==='lobby'&&event.lobby){const ids=new Set(event.lobby.members.map(p=>p.id));for(const id of state.players.keys())if(!ids.has(id))simulation.removePlayer(id);}
@@ -190,28 +196,63 @@ export function startCoopGame(container,{client,session}){
   nextButton.hidden=local()?.status==='alive';
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
- function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{client.send('leave');client.close();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);finale?.resize();}resize();window.addEventListener('resize',resize);
+ window.addEventListener('pagehide',()=>{client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
  screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
+ function broadcast(wallDelta){
+  if(isHost&&!disconnected){
+   snapshotClock+=wallDelta;proofSnapshotClock+=wallDelta;
+   if(snapshotClock>=.05){
+    snapshotClock%=.05;const snapshot=simulation.snapshot();
+    snapshot.clockSync={echoes:Object.fromEntries([...clockEchoes].filter(([id])=>state.players.has(id)).map(([id,echo])=>[id,{...echo,hostSent:Date.now()/1000}]))};
+    snapshot.peerAcknowledged=Object.fromEntries(peerFingerprints);
+    snapshot.peerProofs=Object.fromEntries([...state.players.keys()].filter(id=>id!==localId).map(id=>[id,client.voice?.localFingerprint?.(id)]));
+    recordPoses();let fallback=false;
+    for(const id of state.players.keys())if(id!==localId&&(!peerReady(id)||!client.voice?.sendGameplay(id,'snapshot',{snapshot})))fallback=true;
+    if(fallback||proofSnapshotClock>=1){if(client.send('snapshot',{snapshot}))proofSnapshotClock=0;}
+    for(const notice of snapshot.notices)if(notice.id>lastNotice){if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);}
+   }
+  }
+ }
+ function playFinale(now){
+  if(finaleId!==run.finale.id){
+   finale?.dispose();finale=null;finaleId=run.finale.id;finaleClock.reset();finaleFailed=false;finaleCompleteAt=null;
+   arrival.dispose();ui.hideScreen();ui.overlay='finale';ui.el('keypad-dialog').hidden=true;input.clear();document.exitPointerLock?.();audio.pause();ambience.pause();
+   for(let i=0;i<30&&jumpscare.active;i++)jumpscare.update(.2);
+   scareStatus=null;ui.el('jumpscare-border').hidden=true;document.body.classList.remove('jumpscare-active');
+  }
+  const record=!isHost&&hostClock.ready?{...run.finale,elapsed:Math.max(run.finale.elapsed,hostClock.sample()-run.finale.startedAt)}:run.finale;
+  finaleClock.sync(record);const elapsed=finaleClock.sample();
+  try{
+   if(!finale&&!finaleFailed&&avatarAsset)finale=createFinalePlayer({container,renderer,asset:avatarAsset,...run.finale,muted:audio.muted});
+   finale?.sample(finaleClock.sample());
+  }catch(error){console.warn('Finale presentation unavailable',error);finale?.dispose();finale=null;finaleFailed=true;document.body.classList.remove('finale-active');}
+  if(run.phase==='won'&&elapsed>=52){
+   finaleCompleteAt??=now;
+   if(finaleFailed||now-finaleCompleteAt>=1500){finale?.dispose();finale=null;finaleFinished=true;outcome='won';lastStatus=local()?.status;screen('won');}
+  }
+ }
  function frame(){
   const now=performance.now(),wallDelta=Math.min(1,(now-previous)/1000),delta=Math.min(.2,wallDelta);previous=now;time+=delta;
   avatarResume=wasHidden&&!document.hidden;wasHidden=document.hidden;
   let own=local();if(!own)return;
-  const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||own.status!=='alive'};
+  const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||run.phase!=='playing'||own.status!=='alive'};
   if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:10000)){disconnected=true;screen('lost');}
   if(isHost){simulation.setInput(localId,command);if(!disconnected){for(let left=document.hidden?wallDelta:delta;left>0;left-=.2)simulation.advance(Math.min(.2,left));}enemyView=simulation.enemySnapshot();}
   else if(!disconnected){
    const fingerprint=client.voice?.localFingerprint?.(session.ownerId);
    const direct=peerReady(session.ownerId);
    if(!direct&&fingerprint&&client.voice?.gameConnected(session.ownerId)&&now-peerProofAt>2000){if(client.send('action',{action:{targetId:'peer-channel',code:fingerprint}}))peerProofAt=now;}
-   prediction.step(command,delta);
+   if(run.phase==='playing')prediction.step(command,delta);
    inputClock+=wallDelta;
-   if(inputClock>=.05){inputClock%=.05;
+   if(inputClock>=.05&&run.phase==='playing'){inputClock%=.05;
     const packet=prediction.packet(command);
     if(!direct||!client.voice.sendGameplay(session.ownerId,'input',{input:packet}))client.send('input',{input:packet});
    }
   }
+  if(!isHost&&!disconnected&&needsHostClockSync(hostClock.ready,run.phase)&&!input.interact&&ui.overlay!=='keypad'&&now>=nextClockPing&&now-peerProofAt>200){client.send('action',{action:{targetId:'finale-clock',code:hostClock.ping()}});nextClockPing=now+5000;}
   own=local();
+  if(!disconnected&&run.finale&&!finaleFinished){playFinale(now);broadcast(wallDelta);return;}
   if(own.status!==lastStatus){
    if(lastStatus==='alive'&&(own.status==='downed'||own.status==='dead'))startScare();
    if(own.status==='alive'){spectateId=null;if(scaredOrWatching()){ui.hideScreen();void audio.resume();void ambience.resume();}if(torch.on!==own.torch)torch.toggle();}
@@ -264,23 +305,12 @@ export function startCoopGame(container,{client,session}){
   if(!document.hidden&&jumpscare.active){renderer.toneMappingExposure=1;jumpscare.render(renderer);const border=ui.el('jumpscare-border');border.style.opacity=String(jumpscare.borderOpacity);border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);}
   else if(!document.hidden&&(!ui.overlay||arrival.active||renderDirty||lastOverlay!==ui.overlay)){renderer.render(world.scene,camera);renderDirty=false;if(own.status==='alive'&&(!arrival.active||arrival.elapsed>9.5))torch.render(renderer);}
   lastOverlay=ui.overlay;
-  if(isHost&&!disconnected){
-   snapshotClock+=wallDelta;proofSnapshotClock+=wallDelta;
-   if(snapshotClock>=.05){
-    snapshotClock%=.05;const snapshot=simulation.snapshot();
-    snapshot.peerAcknowledged=Object.fromEntries(peerFingerprints);
-    snapshot.peerProofs=Object.fromEntries([...state.players.keys()].filter(id=>id!==localId).map(id=>[id,client.voice?.localFingerprint?.(id)]));
-    recordPoses();let fallback=false;
-    for(const id of state.players.keys())if(id!==localId&&(!peerReady(id)||!client.voice?.sendGameplay(id,'snapshot',{snapshot})))fallback=true;
-    if(fallback||proofSnapshotClock>=1){if(client.send('snapshot',{snapshot}))proofSnapshotClock=0;}
-    for(const notice of snapshot.notices)if(notice.id>lastNotice){if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);}
-   }
-  }
+  broadcast(wallDelta);
  }
  renderer.setAnimationLoop(frame);
  // A second tab must remain playable while the owner's canvas is hidden.
  const backgroundTimer=setInterval(()=>{if(document.hidden)frame();},100);
  window.addEventListener('pagehide',()=>clearInterval(backgroundTimer),{once:true});
  function scaredOrWatching(){return scareStatus||ui.overlay==='pause'||local()?.status==='alive';}
- return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival};
+ return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival,get finale(){return finale;}};
 }

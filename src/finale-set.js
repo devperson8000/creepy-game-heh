@@ -45,7 +45,7 @@ export function createFinaleSet({quality='auto'}={}){
  const shaftFrame=box(shaft,'fixed-shaft-frame',[4.2,.32,.5],[0,12.2,.23],dark);
  const shaftLights=[];for(let y=5;y<26;y+=2.5)for(const side of [-1,1])shaftLights.push(box(shaft,'shaft-marker',[.18,.12,.1],[side*1.85,y,.3],lamp));
  const bloodMaterial=mat({color:0x030206,metalness:.22,roughness:.16});const bloodGeometry=new T.CircleGeometry(1,48);geometries.add(bloodGeometry);const blood=new T.Mesh(bloodGeometry,bloodMaterial);blood.name='black-blood';blood.rotation.x=-Math.PI/2;blood.position.set(.35,.012,-.8);cab.add(blood);
- for(let i=0;i<7;i++){const drop=box(cab,'black-droplet',[.035,.007,.05],[.2+Math.sin(i*9)*.7,.015,-.4-i*.14],bloodMaterial);drop.userData.blood=true;}
+ for(let i=0;i<7;i++){const geometry=new T.SphereGeometry(1,10,6);geometries.add(geometry);const drop=new T.Mesh(geometry,bloodMaterial);drop.name='black-droplet';drop.position.set(.2+Math.sin(i*9)*.7,.014,-.4-i*.14);drop.scale.set(.025,.004,.04);cab.add(drop);drop.userData.blood=true;}
  // Daylight outside the upper elevator, with a quiet concrete forecourt.
  const pale=mat({color:0xbfc3ac,roughness:1});box(surface,'surface-floor',[50,.2,50],[0,-.15,12],pale);
  for(const side of [-1,1]){box(surface,'surface-wall',[7,8,.35],[side*5.3,3.8,-.15],wall);box(surface,'surface-pier',[.6,5,2],[side*2.1,2.5,.1],wall);box(surface,'surface-step',[4.5,.15,.4],[0,-.05,3.4],pale);}

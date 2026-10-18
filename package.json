@@ -11,7 +11,9 @@
     "test:browser": "node scripts/check-two-tab-browser.mjs",
     "test:browser:polish": "node scripts/check-polish-browser.mjs",
     "test:browser:movement": "node scripts/check-coop-movement-browser.mjs",
-    "test:browser:finale": "node scripts/check-finale-browser.mjs"
+    "test:browser:finale": "node scripts/check-finale-browser.mjs",
+    "test:browser:coop-finale": "node scripts/check-coop-finale-browser.mjs",
+    "test:browser:finale-failure": "node scripts/check-finale-failure-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

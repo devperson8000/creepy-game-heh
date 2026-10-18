@@ -22,3 +22,4 @@ test('transition fades smoothly around the surface cut and floor readout changes
  const a=make();assert.ok(a.sample(43).fade>0&&a.sample(43).fade<1);assert.equal(a.sample(44).fade,1);assert.ok(a.sample(44.7).fade>0&&a.sample(44.7).fade<1);a.dispose();
 });
 test('stair chase has clear headroom above the rising flight',()=>{const a=make();a.scene.updateMatrixWorld(true);const ray=new T.Raycaster(new T.Vector3(0,3.5,5),new T.Vector3(0,1,0),0,.7);assert.equal(ray.intersectObject(a.set.basement,true).length,0);a.dispose();});
+test('portrait framing keeps camera inside the corridor and fits the trapped horns',()=>{const a=make(true);a.resize(390/844);a.sample(6);assert.ok(Math.abs(a.camera.position.x)<3.4);a.sample(27);for(const x of [-1.2,1.2]){const p=a.creature.head.localToWorld(new T.Vector3(x,.83,0)).project(a.camera);assert.ok(Math.abs(p.x)<1);}a.dispose();});

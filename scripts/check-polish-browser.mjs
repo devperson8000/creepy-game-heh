@@ -25,8 +25,8 @@ try{
  await page.waitForFunction(()=>monochrome.ui.overlay===null);
  // Aim at the real keypad and exercise hold-to-interact plus both code outcomes.
  await page.evaluate(()=>{const game=monochrome,target=game.world.targets.get('keypad').mesh.position;game.player.x=target.x;game.player.z=target.z+1.2;game.input.setView(0,Math.atan2(target.y-5.25,1.2));});
- await page.keyboard.down('KeyE');await page.waitForTimeout(600);await page.keyboard.up('KeyE');
- await page.waitForSelector('#keypad-dialog:not([hidden])');
+ await page.waitForFunction(()=>monochrome.ui.el('interaction-label').textContent==='Enter elevator code');
+ await page.keyboard.down('KeyE');await page.waitForSelector('#keypad-dialog:not([hidden])');await page.keyboard.up('KeyE');
  const code=await page.evaluate(()=>monochrome.run.code);
  await page.keyboard.type(code==='0000'?'0001':'0000');await page.keyboard.press('Enter');
  assert.match(await page.locator('#keypad-feedback').innerText(),/denied/);
@@ -40,5 +40,5 @@ try{
  await page.evaluate(()=>{const game=monochrome;for(const d of game.run.drawers.filter(d=>d.key))game.run.banked.add(d.id);game.run.codeAccepted=true;game.run.exitOpen=true;game.world.update(1,0,game.player,0);game.player.x=-2.6;game.player.z=-34;});
  await page.waitForFunction(()=>monochrome.run.phase==='won');assert.match(await page.locator('#screen-content').innerText(),/YOU GOT OUT/);
  assert.deepEqual(errors,[]);console.log('PASS arrival skip, solo start, focused pause, saved settings, mobile layout, resume, real keypad rejection/acceptance, monster capture, retry and elevator escape; no runtime errors');
-}catch(error){console.error(error);console.log(errors);process.exitCode=1;}
+}catch(error){console.error(error);console.log(errors);console.log(await page.evaluate(()=>({overlay:window.monochrome?.ui.overlay,keys:[...(window.monochrome?.input.keys??[])],prompt:document.querySelector('#interaction-label')?.textContent,lock:!!document.pointerLockElement})));process.exitCode=1;}
 finally{await browser.close();}

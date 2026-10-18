@@ -5,7 +5,7 @@ import {createFinaleSurvivor,createFinaleCreature} from './finale-actors.js';
 const smooth=(a,b,t)=>T.MathUtils.smoothstep(t,a,b),mix=T.MathUtils.lerp;
 const stairHeight=z=>3.6*T.MathUtils.clamp((8-z)/6,0,1);
 export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=false,quality='auto'}){
- const scene=new T.Scene();scene.background=new T.Color(0x070c0e);scene.fog=new T.FogExp2(0x101918,.027);
+ const scene=new T.Scene();scene.name='monochrome-finale';scene.background=new T.Color(0x070c0e);scene.fog=new T.FogExp2(0x101918,.027);
  const camera=new T.PerspectiveCamera(58,1,.045,100),set=createFinaleSet({quality}),creature=createFinaleCreature();scene.add(set.root,creature.root);
  const actors=new Map(cast.map(member=>[member.id,createFinaleSurvivor(asset,member)]));for(const a of actors.values())scene.add(a.root);
  const ambient=new T.HemisphereLight(0x9bb4b6,0x12150e,.5);scene.add(ambient);
@@ -13,7 +13,7 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=fa
  const rim=new T.PointLight(0x8ba7af,12,12,2);scene.add(rim);
  const sun=new T.DirectionalLight(0xf2ecd3,0);sun.position.set(-6,12,10);scene.add(sun);
  let aspect=1,disposed=false;const target=new T.Vector3();
- function resize(value){aspect=Math.max(.2,value);camera.aspect=aspect;camera.fov=aspect<.8?72:58;camera.updateProjectionMatrix();}
+ function resize(value){aspect=Math.max(.2,value);camera.aspect=aspect;camera.fov=aspect<.8?82:58;camera.updateProjectionMatrix();}
  function sample(seconds){
   const t=Math.max(0,Math.min(FINALE_DURATION,Number.isFinite(seconds)?seconds:0)),shot=finaleShot(t).name;set.sample(t);
   const cabY=set.cab.position.y,epilogue=t>=44,rise=epilogue?0:cabY-3.6;
@@ -46,7 +46,8 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=fa
   else if(t<44){const lift=smooth(41,44,t);camera.position.set(-.85,cabY+mix(.75,1.65,lift),-1.9);target.set(.28,cabY+mix(.18,1.55,lift),mix(-.6,-2.6,lift));key.position.set(-1,cabY+2.7,-1.9);key.target.position.copy(target);}
   else {camera.position.set(.05,1.35,8.5+(t-44)*.13);target.set(0,1.25,mix(-1,3,smooth(44,52,t)));key.intensity=0;rim.intensity=0;}
   if(!epilogue){key.intensity=60;rim.intensity=12;}
-  if(aspect<.8&&t<12)camera.position.x*=1.25;
+  if(aspect<.8&&t<12){camera.position.x=2.8;camera.position.z=z-6;}
+  if(aspect<.8&&t>=23&&t<35.3)camera.position.z=-3.42;
   if(!reducedMotion&&t>=2&&t<21.2){camera.position.y+=Math.sin(t*18)*.025;camera.position.x+=Math.sin(t*9)*.012;}
   if(!reducedMotion&&t>=23&&t<35.6)camera.position.x+=Math.sin(t*39)*.008*(t<24?2:1);
   camera.lookAt(target);camera.updateMatrixWorld(true);scene.updateMatrixWorld(true);

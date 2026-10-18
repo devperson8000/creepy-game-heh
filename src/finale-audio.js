@@ -36,5 +36,5 @@ export function createFinaleAudio({volume=.8,muted=false}={}){
  function setVolume(value){level=Math.max(0,Math.min(1,Number.isFinite(value)?value:0));if(master)master.gain.setTargetAtTime(quiet?0:level,context.currentTime,.03);}
  function setMuted(value){quiet=!!value;setVolume(level);}
  function dispose(){if(disposed)return;disposed=true;abort.abort();for(const sound of sounds){try{sound.stop();}catch{}}sounds.clear();try{monster?.stop();}catch{}context?.close().catch(()=>{});}
- return {resume,sample,setVolume,setMuted,dispose,get muted(){return quiet;},get volume(){return level;}};
+ return {resume,sample,setVolume,setMuted,dispose,get unlocked(){return context?.state==='running';},get muted(){return quiet;},get volume(){return level;}};
 }

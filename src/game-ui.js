@@ -61,7 +61,7 @@ export function createGameUI(){
   if(performance.now()>toastUntil)el('toast').classList.remove('show');
  }
  root.addEventListener('keydown',event=>{
-  if(event.key!=='Tab'||!overlay)return;
+  if(event.key!=='Tab'||!overlay||overlay==='finale')return;
   const dialog=overlay==='keypad'?el('keypad-dialog'):el('game-screen');
   const items=[...dialog.querySelectorAll('button:not(:disabled),a[href],input,select')].filter(node=>!node.hidden);
   if(!items.length)return;

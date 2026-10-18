@@ -50,3 +50,11 @@ test('authority freezes movement, enemy and downed timers while wall clock advan
  assert.equal(s.run.finale.elapsed,40);assert.equal(s.run.elapsed,elapsed);assert.equal(JSON.stringify([...s.players.values()]),before);assert.equal(JSON.stringify(sim.enemy),enemy);assert.equal(sim.interact('a',{targetId:'keypad',code:s.run.code}).ok,false);
  now=152;sim.advance(.1);assert.equal(s.run.phase,'won');
 });
+test('the final trusted interaction starts the cinematic before another enemy tick',()=>{
+ for(const last of ['locks','keypad']){
+  const s=ready(team.slice(0,2)),p=s.players.get('a'),targets=new Map(),target={id:last,type:last,position:{x:p.x,z:p.z,height:p.height}};targets.set(last,target);
+  if(last==='locks'){s.run.banked.delete(4);p.carried.add(4);}else s.run.codeAccepted=false;
+  const simulation=createCoopSimulation(s,{targets,canMove:()=>true},{now:()=>100});
+  assert.equal(simulation.interact('a',{targetId:last,code:s.run.code}).ok,true);assert.equal(s.run.phase,'finale');assert.equal(s.run.elapsed,0);assert.equal(simulation.setInput('a',{forward:1,right:0,yaw:0,pitch:0}),false);
+ }
+});
