@@ -2,9 +2,21 @@
 
 A first-person monochrome horror escape game built with Three.js and Vite. Uses the creature developed in this repository and the documented escape loop from [monochromegame.wiki](https://monochromegame.wiki/walkthrough/).
 
+## Modes and co-op
+
+The opening screen offers **Singleplayer** and **Multiplayer**. Multiplayer uses Supabase anonymous authentication, owner-approved named lobbies and a maximum of four players. The host starts once two to four members are ready. The selected player model is the **curved yellow hazmat survivor**, with numbered patches, teammate names and a visible handheld torch. First-person hands wear matching black gloves and a yellow sleeve. The angular model remains a preview option only.
+
+Co-op shares one monster, four keys, the clue and banked progress. Each player carries their own keys. Getting caught drops unbanked keys back into their drawers and briefly allows rescue by holding E near the fallen teammate. After that window the player watches a survivor; Tab or the teammate button changes the view. Surviving players must all reach the elevator. A team wipe ends the round. The host leaving closes the session; multiplayer pause stops only your controls, so the world keeps moving.
+
+Two players use the original 17-cell map. Three and four players use 21- and 25-cell maps with more storage rooms and search locations. Monster sight, actual movement noise and interactions from all players feed one authoritative simulation on the lobby owner's browser. Supabase authenticates player input ownership and restricts round snapshots to the owner. Clients predict local movement while receiving the same world state. Expired input stops after 0.65 seconds. This is host-authoritative cooperative play, not a competitive anti-cheat service.
+
+A small minority of rounds can contain one silent corner stalk after at least 90 seconds of exposed basement play. The creature must already be behind a wall with a short navigable path; it approaches through the ordinary collision system, stays silent for at most six seconds, and returns to audible pursuit when revealed. It never teleports for the scare. A full capture jumpscare still requires a real catch.
+
+**Supabase setup is required for online play:** see [the setup instructions](supabase/README.md). Singleplayer works independently. Public client configuration is included; the target project must enable Anonymous Sign-Ins and run the supplied migration before the lobby service can connect.
+
 ## Play
 
-Open the boarded **DO NOT ENTER** doorway in the elevator lobby. Descend the return stairs, search dresser drawers for **four keys**, and read the **four-digit note** in the basement. Hide in closets when the moving creature approaches. Return upstairs, bank the keys at the four-lock panel, enter the number at the separate keypad, then open the elevator and walk inside.
+Select Singleplayer or join a started multiplayer lobby. Open the boarded **DO NOT ENTER** doorway in the elevator lobby. Descend the return stairs, search dresser drawers for **four keys**, and read the **four-digit note** in the basement. Hide in closets when the moving creature approaches. Return upstairs, bank the keys at the four-lock panel, enter the number at the separate keypad, then open the elevator and walk inside.
 
 Key locations, basement corridors, and the four-digit number vary between runs. Banked keys and an accepted code survive a retry. Unbanked keys return to their original drawers when you are caught. The clue is recorded in the HUD after you read it. Leaving a searched drawer open helps track progress.
 
@@ -44,7 +56,7 @@ The wiki mentions footsteps and light warnings but does not verify an exact atte
 
 The wiki documents the boarded doorway, upstairs elevator hub, stairs, basement furniture searches, closets, four keys, a run-specific four-digit clue, and two separate elevator lock systems. See [route map](https://monochromegame.wiki/route-map/), [keys](https://monochromegame.wiki/keys-and-code/), and [code](https://monochromegame.wiki/code/). These pages were read on October 14, 2026.
 
-The wiki explicitly does not confirm an exact basement floor plan, fixed key spawns, current-build control bindings, or detailed monster AI. This browser version supplies its own connected maze, collision, patrol/chase behavior, visual danger cues, controls, menus, and retry system around the documented route. It does not claim to reproduce unverified Roblox internals or Part 2. All scene assets are locally generated; no external asset service or account is required.
+The wiki explicitly does not confirm an exact basement floor plan, fixed key spawns, current-build control bindings, or detailed monster AI. This browser version supplies its own connected maze, collision, patrol/chase behavior, visual danger cues, controls, menus, and retry system around the documented route. It does not claim to reproduce unverified Roblox internals or Part 2. Environment and creature assets are locally generated. The bundled CC0 player model and animation sources are documented in [the hazmat credits](docs/assets/hazmat-character/README.md). Singleplayer needs no external service; multiplayer uses the configured Supabase project.
 
 ## Development
 
@@ -58,8 +70,14 @@ npm run build
 npm run preview
 ```
 
+Database authorization and concurrent four-player approvals can also be checked against a temporary PostgreSQL 17 container:
+
+```sh
+bash supabase/tests/run-postgres.sh
+```
+
 In a restricted cloud workspace, use `npm ci --cache /tmp/creepy-npm-cache` if the default npm cache is not writable. Use the existing checkout; no extra worktree is needed. A WebGL-capable browser is required.
 
 ## Vercel
 
-Import `devperson8000/creepy-game-heh` from GitHub into Vercel. Select the **Vite** preset, build with `npm run build`, output **dist**, production branch **main**. The included `vercel.json` supplies the build settings. Subsequent pushes trigger deployment once the GitHub integration is connected. No backend or secrets are needed.
+Import `devperson8000/creepy-game-heh` from GitHub into Vercel. Select the **Vite** preset, build with `npm run build`, output **dist**, production branch **main**. The included `vercel.json` supplies the build settings. Subsequent pushes trigger deployment once the GitHub integration is connected. Singleplayer needs no backend. Multiplayer uses Supabase; follow [its setup instructions](supabase/README.md). No service-role secret belongs in this browser application.

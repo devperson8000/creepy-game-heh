@@ -1,4 +1,4 @@
-import {gridPoint,worldPoint,pathBetween,lineOfSight,walkable} from './level.js';
+import {gridPoint,worldPoint,pathBetween,lineOfSight,walkable,randomSource} from './level.js';
 import {sweepMove} from './navigation.js';
 export const MONSTER_SPEED={patrol:1.8,investigate:2.65,chase:4.15};
 export const SIGHT_RANGE=16;
@@ -25,6 +25,50 @@ function routeTo(enemy,layout,target,navigation){
  if(route.length>1)route.shift();
  if(route.length)route.push({x:target.x,z:target.z});
  return route;
+}
+// A round gets one rare opportunity. Cover and a short real route are required;
+// this director only chooses a target, while tickEnemy owns movement and catches.
+export function createAmbush(seed,{chance=.12,minElapsed=90,duration=6,cooldown=2}={}){
+ return {eligible:randomSource((seed>>>0)^0xA6B05)()<Math.max(0,Math.min(1,chance)),elapsed:0,minElapsed,remaining:0,duration:Math.max(0,Math.min(6,duration)),cooldown,checkIn:0,used:false,targetId:null};
+}
+export function tickAmbush(state,{enemy,layout,player,delta,active=true,navigation={}}){
+ const result=(silent=false,triggered=false)=>({silent,triggered,targetId:state.targetId});
+ const dt=Number.isFinite(delta)?Math.max(0,delta):0;
+ const safe=!active||!player||player.height>=1.5||player.hidden||player.dead;
+ if(safe){state.remaining=0;return result();}
+ if(!state.eligible)return result();
+ state.elapsed+=dt;
+ const distance=Math.hypot(player.x-enemy.position.x,player.z-enemy.position.z);
+ const exposed=lineOfSight(layout,enemy.position,player);
+ function stalk(){
+  const target={x:player.x,z:player.z};
+  if(enemy.mode!=='investigate'||!enemy.lastHeard||Math.hypot(enemy.lastHeard.x-target.x,enemy.lastHeard.z-target.z)>.65){
+   enemy.path=[];enemy.repath=0;enemy.lastHeard=target;
+  }
+  enemy.mode='investigate';enemy.sensedBy='ambush';
+ }
+ if(state.remaining>0){
+  state.remaining=Math.max(0,state.remaining-dt);
+  if(state.targetId!==(player.id??null)){state.remaining=0;return result();}
+  if(exposed){
+   state.remaining=0;enemy.mode='chase';enemy.lastSeen={x:player.x,z:player.z};enemy.lostFor=0;enemy.repath=0;enemy.sensedBy='sight';
+   return result(false,true);
+  }
+  if(!state.remaining||distance>10||enemy.mode==='chase'){state.remaining=0;return result();}
+  stalk();return result(true);
+ }
+ if(state.used||state.elapsed<state.minElapsed||dt===0)return result();
+ state.checkIn-=dt;
+ if(state.checkIn>0)return result();
+ state.checkIn=state.cooldown;
+ if(exposed||enemy.mode==='chase'||distance<2.6||distance>8||state.duration<=0)return result();
+ const route=routeTo(enemy,layout,player,navigation);
+ if(!route.length)return result();
+ let length=0,previous=enemy.position;
+ for(const point of route){length+=Math.hypot(point.x-previous.x,point.z-previous.z);previous=point;}
+ if(length>12||Math.hypot(previous.x-player.x,previous.z-player.z)>1)return result();
+ state.used=true;state.remaining=state.duration;state.targetId=player.id??null;
+ stalk();return result(true);
 }
 export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],navigation={}){
  if(!active)return {caught:false,distance:Infinity,visible:false,heard:false};

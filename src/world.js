@@ -12,6 +12,9 @@ function texture(){
  const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
 export function createWorld(run){
+ const size=run.layout.size??SIZE,span=size*CELL;
+ const firstCell=worldPoint({x:0,z:0}),lastCell=worldPoint({x:size-1,z:size-1});
+ const center={x:(firstCell.x+lastCell.x)/2,z:(firstCell.z+lastCell.z)/2};
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x090a0b);scene.fog=new THREE.FogExp2(0x101112,.026);
  const targets=new Map(),rayMeshes=[],blockers=[],drawerViews=[],closets=[],lamps=[];
  const concrete=new THREE.MeshStandardMaterial({map:texture(),color:0x999999,roughness:1});
@@ -32,14 +35,14 @@ export function createWorld(run){
   box(1.05,.09,.25,x,y+.06,z,dark);
   const tube=box(.9,.04,.17,x,y,z,white.clone());
   tube.userData.ceilingLight=true;
-  const light=new THREE.PointLight(0xdddcd4,strength,9,1.4);light.position.set(x,y-.12,z);scene.add(light);
+  const light=new THREE.PointLight(0xdddcd4,strength,9,1.4);light.position.set(x,y-.12,z);
   lamps.push({light,tube,base:strength,position:{x,z,height:groundHeight({x,z})}});
  }
  const walls=[];
- for(let z=0;z<SIZE;z++)for(let x=0;x<SIZE;x++)if(!run.layout.grid[z][x])walls.push(worldPoint({x,z}));
+ for(let z=0;z<size;z++)for(let x=0;x<size;x++)if(!run.layout.grid[z][x])walls.push(worldPoint({x,z}));
  const wallMesh=new THREE.InstancedMesh(boxGeometry,concrete,walls.length),matrix=new THREE.Matrix4();
  walls.forEach((p,i)=>{matrix.compose(new THREE.Vector3(p.x,2.2,p.z),new THREE.Quaternion(),new THREE.Vector3(CELL,4.4,CELL));wallMesh.setMatrixAt(i,matrix);});wallMesh.receiveShadow=true;scene.add(wallMesh);rayMeshes.push(wallMesh);
- box(44.2,.12,44.2,0,-.06,0,floorMat);box(44.2,.1,44.2,0,4.45,0,concrete);
+ box(span,.12,span,center.x,-.06,center.z,floorMat);box(span,.1,span,center.x,4.45,center.z,concrete);
  // Elevator hub, stair corridor, and enclosed cab are on the upper floor.
  box(12,.15,8,-2.6,3.525,-29,floorMat);box(12,.15,8,-2.6,7.85,-29);
  box(.2,4.4,8,-8.6,5.8,-29);box(.2,4.4,8,3.4,5.8,-29);
@@ -96,7 +99,7 @@ export function createWorld(run){
   collider(x,z,1.4,1.1);const data={id:`closet-${index}`,type:'closet',mesh:door,hide:{x,z:z+.17},exit:{x,z:z+1.35}};targets.set(data.id,data);closets.push(data);
  });
  // Spread ceiling fixtures through the corridors as well as the storage rooms.
- for(let z=1;z<SIZE-1;z++)for(let x=1;x<SIZE-1;x++){
+ for(let z=1;z<size-1;z++)for(let x=1;x<size-1;x++){
   if(!run.layout.grid[z][x])continue;
   const p=worldPoint({x,z});
   if(run.layout.rooms.some(room=>{const r=worldPoint(room);return Math.hypot(p.x-r.x,p.z-r.z)<4.5;}))continue;
@@ -108,11 +111,17 @@ export function createWorld(run){
  box(.84,.37,.04,clueRoom.x,1.25,clueRoom.z+2.42,wood);box(.045,.35,.045,clueRoom.x,1.08,clueRoom.z+2.4,wood);
  const note=sign(run.code,.8,.3,clueRoom.x,1.25,clueRoom.z+2.45,{background:'#b7b5aa',color:'#151515',size:125});target('clue','clue',note);
  const ambient=new THREE.AmbientLight(0xaeb4be,.65);scene.add(ambient);
- const dustPositions=[];for(let i=0;i<900;i++){const x=1+Math.floor(Math.random()*15),z=1+Math.floor(Math.random()*15);if(!run.layout.grid[z][x])continue;const p=worldPoint({x,z});dustPositions.push(p.x+(Math.random()-.5)*2,p.y||.25+Math.random()*3.8,p.z+(Math.random()-.5)*2);}
+ const dustPositions=[];for(let i=0;i<900;i++){const x=1+Math.floor(Math.random()*(size-2)),z=1+Math.floor(Math.random()*(size-2));if(!run.layout.grid[z][x])continue;const p=worldPoint({x,z});dustPositions.push(p.x+(Math.random()-.5)*2,p.y||.25+Math.random()*3.8,p.z+(Math.random()-.5)*2);}
  const dustGeometry=new THREE.BufferGeometry();dustGeometry.setAttribute('position',new THREE.Float32BufferAttribute(dustPositions,3));
  const dust=new THREE.Points(dustGeometry,new THREE.PointsMaterial({color:0xaeb2ae,size:.018,transparent:true,opacity:.15,depthWrite:false}));scene.add(dust);
  const pipeMaterial=new THREE.MeshStandardMaterial({color:0x292c2d,roughness:.9,metalness:.3});
  for(const room of run.layout.rooms){const p=worldPoint(room);const pipe=new THREE.Mesh(new THREE.CylinderGeometry(.055,.055,6.8,8),pipeMaterial);pipe.rotation.z=Math.PI/2;pipe.position.set(p.x,3.95,p.z+.65);scene.add(pipe);}
+ // Keep shader light counts fixed as co-op basements grow. Every physical
+ // fixture retains its own electrical state; nearby ones supply these lights.
+ const ceilingLights=Array.from({length:8},()=>{
+  const light=new THREE.PointLight(0xdddcd4,0,9,1.4);scene.add(light);return light;
+ });
+ const lightEye=new THREE.Vector3();
  const fill=new THREE.PointLight(0xc8cbd0,7,5,1.7);scene.add(fill);
  const lighting=createProximityLighting(lamps.map(lamp=>lamp.position));
  const backgroundColor=scene.background.clone(),fogColor=scene.fog.color.clone();
@@ -139,7 +148,7 @@ export function createWorld(run){
   return !sightRay.intersectObjects(solids,false).length;
  }
  const enemyCanMove=(x,z)=>canMove(x,z,.6,1.1);
- const navigator=createNavigator(enemyCanMove);
+ const navigator=createNavigator(enemyCanMove,{minX:firstCell.x-CELL/2,maxX:lastCell.x+CELL/2,minZ:firstCell.z-CELL/2,maxZ:lastCell.z+CELL/2});
  function update(delta,time,player,threat,hold=0,monster){
   for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,Math.min(1,delta*12));view.key.visible=d.key&&!d.taken&&d.opened;}
   boardHitbox.visible=!run.boardsOpen;
@@ -158,6 +167,13 @@ export function createWorld(run){
    const intensity=power.fixtures[index].intensity;
    light.intensity=base*intensity;
    tube.material.color.copy(white.color).multiplyScalar(intensity);
+  });
+  lightEye.set(player.x,groundHeight(player)+1.65,player.z);
+  const nearest=[...lamps].sort((a,b)=>a.light.position.distanceToSquared(lightEye)-b.light.position.distanceToSquared(lightEye));
+  ceilingLights.forEach((light,index)=>{
+   const source=nearest[index]?.light;
+   light.intensity=source?.intensity??0;
+   if(source)light.position.copy(source.position);
   });
  }
  return {scene,targets,rayMeshes,canMove,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:clueRoom.x,z:clueRoom.z+2.45},get doorProgress(){return doorProgress;}};

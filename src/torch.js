@@ -31,16 +31,17 @@ export function createTorch(scene,camera){
  const handLight=new THREE.PointLight(0xe0e2dc,1.5,3);handLight.position.set(-.15,.35,.2);viewScene.add(handLight);
  const metal=new THREE.MeshStandardMaterial({color:0x393d3d,roughness:.45,metalness:.65});
  const grip=new THREE.MeshStandardMaterial({color:0x151819,roughness:.9});
- const skin=new THREE.MeshStandardMaterial({color:0x756b60,roughness:.9});
+ const glove=new THREE.MeshStandardMaterial({name:'hazmat-glove',color:0x151819,roughness:.95});
+ const suit=new THREE.MeshStandardMaterial({name:'hazmat-sleeve',color:0xd9b525,roughness:.85});
  function cylinder(top,bottom,length,z,material){const mesh=new THREE.Mesh(new THREE.CylinderGeometry(top,bottom,length,24),material);mesh.rotation.x=Math.PI/2;mesh.position.z=z;model.add(mesh);return mesh;}
  cylinder(.046,.05,.25,.055,grip);cylinder(.078,.053,.105,-.12,metal);
  for(let i=0;i<5;i++)cylinder(.052,.052,.012,-.04+i*.045,metal);
  cylinder(.081,.081,.013,-.18,metal);
  const lens=new THREE.Mesh(new THREE.CircleGeometry(.066,24),new THREE.MeshBasicMaterial({color:0xcbd5c7,side:THREE.DoubleSide}));lens.position.z=-.188;model.add(lens);
- const palm=new THREE.Mesh(new THREE.CapsuleGeometry(.053,.10,4,12),skin);palm.rotation.z=Math.PI/2;palm.position.set(-.024,-.04,.07);model.add(palm);
- for(let i=0;i<4;i++){const finger=new THREE.Mesh(new THREE.CapsuleGeometry(.017,.066,4,8),skin);finger.rotation.z=Math.PI/2;finger.position.set(.006,-.033,.004+i*.034);model.add(finger);}
- const thumb=new THREE.Mesh(new THREE.CapsuleGeometry(.022,.055,4,8),skin);thumb.position.set(-.055,.005,.07);thumb.rotation.z=-.65;model.add(thumb);
- const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.074,.34,4,12),grip);sleeve.position.set(.018,-.23,.18);sleeve.rotation.x=-.55;model.add(sleeve);
+ const palm=new THREE.Mesh(new THREE.CapsuleGeometry(.053,.10,4,12),glove);palm.rotation.z=Math.PI/2;palm.position.set(-.024,-.04,.07);model.add(palm);
+ for(let i=0;i<4;i++){const finger=new THREE.Mesh(new THREE.CapsuleGeometry(.017,.066,4,8),glove);finger.rotation.z=Math.PI/2;finger.position.set(.006,-.033,.004+i*.034);model.add(finger);}
+ const thumb=new THREE.Mesh(new THREE.CapsuleGeometry(.022,.055,4,8),glove);thumb.position.set(-.055,.005,.07);thumb.rotation.z=-.65;model.add(thumb);
+ const sleeve=new THREE.Mesh(new THREE.CapsuleGeometry(.074,.34,4,12),suit);sleeve.position.set(.018,-.23,.18);sleeve.rotation.x=-.55;model.add(sleeve);
  let on=true,exposure=.95;
  function toggle(){on=!on;beam.intensity=on?140:0;lens.material.color.setHex(on?0xcbd5c7:0x171b1a);return on;}
  function update({ceilingPower=1,time=0,moving=false}={}){

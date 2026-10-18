@@ -3,7 +3,7 @@ import {createRun,searchDrawer,takeKey,bankKeys,enterCode,readClue,catchPlayer,r
 import {createWorld} from './world.js';
 import {createCreature,applyIdle,applyRunning} from './creature.js';
 import {idlePose} from './idle.js';
-import {createEnemy,tickEnemy} from './enemy.js';
+import {createEnemy,tickEnemy,createAmbush,tickAmbush} from './enemy.js';
 import {groundHeight,moveInWorld,worldPoint} from './level.js';
 import {createGameUI} from './game-ui.js';
 import {gameInput} from './game-input.js';
@@ -12,7 +12,7 @@ import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 
-export function startGame(container,{seed}={}){
+export function startGame(container,{seed,autostart=false}={}){
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed),world=createWorld(run),ui=createGameUI();
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
@@ -26,6 +26,7 @@ export function startGame(container,{seed}={}){
  const jumpscare=createJumpscare({mouthTexture});
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-29,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
+ const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause);
  let pendingNoise=[],noiseUntil=0;const footsteps={distance:0};
@@ -90,7 +91,7 @@ export function startGame(container,{seed}={}){
  }
  let renderDirty=true,lastOverlay;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();}resize();window.addEventListener('resize',resize);
- showScreen('menu');let previous=performance.now(),time=0;
+ showScreen('menu');if(autostart)resume();let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),frameDelta=Math.min((now-previous)/1000,.2);previous=now;
   if(jumpscare.active){
@@ -104,6 +105,7 @@ export function startGame(container,{seed}={}){
     const step=Math.min(.025,remaining);
     if(!run.hidden){const next=moveInWorld(player,input.movement,input.yaw,step,world.canMove,input.sprint?3.7:2.5);const moved=Math.hypot(next.x-player.x,next.z-player.z);player.x=next.x;player.z=next.z;emitNoise(footstepNoise(footsteps,moved,input.sprint,{x:player.x,z:player.z,height:groundHeight(player)}));}
     player.height=groundHeight(player);
+    ambushResult=tickAmbush(ambush,{enemy,layout:run.layout,player:{...player,hidden:run.hidden},delta:step,active:run.boardsOpen,navigation:world.enemyNavigation});
     lastResult=tickEnemy(enemy,run.layout,{...player,hidden:run.hidden&&!hideWitnessed},step,run.boardsOpen,pendingNoise,world.enemyNavigation);pendingNoise=[];
     if(lastResult.caught||(run.hidden&&hideWitnessed&&lastResult.distance<1.8)){capturePlayer();break;}
    }
@@ -120,7 +122,7 @@ export function startGame(container,{seed}={}){
   applyIdle(creature,idlePose(time));if(enemy.path.length)applyRunning(creature,time*(enemy.mode==='chase'?1.2:enemy.mode==='investigate'?.8:.65),enemy.mode==='chase'?1:.6);
   creature.root.position.y+=groundHeight(enemy.position);creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
   const soundDistance=run.boardsOpen?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height-groundHeight(enemy.position)):Infinity;
-  monsterAudio.update(soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
+  monsterAudio.update(ambushResult.silent?Infinity:soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
   const breathingFov=66+Math.sin(time*1.4)*threat*.45;
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:run.boardsOpen});
