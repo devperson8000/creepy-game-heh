@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test",
-    "test:browser": "node scripts/check-two-tab-browser.mjs"
+    "test:browser": "node scripts/check-two-tab-browser.mjs",
+    "test:browser:polish": "node scripts/check-polish-browser.mjs",
+    "test:browser:movement": "node scripts/check-coop-movement-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

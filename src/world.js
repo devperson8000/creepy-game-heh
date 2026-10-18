@@ -1,3 +1,4 @@
+import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {CELL,SIZE,worldPoint,gridPoint,walkable,groundHeight} from './level.js';
 import {createNavigator} from './navigation.js';
@@ -9,16 +10,18 @@ function texture(){
  for(let i=0;i<15000;i++){const v=Math.floor(65+Math.random()*90);ctx.fillStyle=`rgba(${v},${v},${v},${Math.random()*.2})`;ctx.fillRect(Math.random()*256,Math.random()*256,1+Math.random()*3,1+Math.random()*8);}
  const grime=ctx.createLinearGradient(0,0,0,256);grime.addColorStop(0,'rgba(5,5,5,.1)');grime.addColorStop(.6,'rgba(5,5,5,0)');grime.addColorStop(1,'rgba(5,5,5,.45)');ctx.fillStyle=grime;ctx.fillRect(0,0,256,256);
  for(let i=0;i<12;i++){ctx.fillStyle='rgba(20,20,20,.025)';ctx.fillRect(Math.random()*256,0,4+Math.random()*12,256);}
+ ctx.strokeStyle='rgba(10,16,9,.2)';ctx.lineWidth=.65;
+ for(let i=0;i<5;i++){let x=Math.random()*256,y=Math.random()*256;ctx.beginPath();ctx.moveTo(x,y);for(let j=0;j<5;j++){x+=(Math.random()-.5)*23;y+=4+Math.random()*12;ctx.lineTo(x,y);}ctx.stroke();}
  const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
 export function createWorld(run){
  const size=run.layout.size??SIZE,span=size*CELL;
  const firstCell=worldPoint({x:0,z:0}),lastCell=worldPoint({x:size-1,z:size-1});
  const center={x:(firstCell.x+lastCell.x)/2,z:(firstCell.z+lastCell.z)/2};
- const scene=new THREE.Scene();scene.background=new THREE.Color(0x090a0b);scene.fog=new THREE.FogExp2(0x101112,.026);
+ const scene=new THREE.Scene();scene.background=new THREE.Color(0x080b09);scene.fog=new THREE.FogExp2(0x111610,.026);
  const targets=new Map(),rayMeshes=[],blockers=[],drawerViews=[],closets=[],lamps=[];
- const concrete=new THREE.MeshStandardMaterial({map:texture(),color:0x999999,roughness:1});
- const floorMat=new THREE.MeshStandardMaterial({map:texture(),color:0x56585a,roughness:1});
+ const concrete=new THREE.MeshStandardMaterial({map:texture(),color:0x92988c,roughness:1});
+ const floorMat=new THREE.MeshStandardMaterial({map:texture(),color:0x50564d,roughness:1});
  const dark=new THREE.MeshStandardMaterial({color:0x242527,roughness:.95});
  const wood=new THREE.MeshStandardMaterial({map:texture(),color:0x42413f,roughness:1});
  const metal=new THREE.MeshStandardMaterial({color:0x646669,roughness:.6,metalness:.4});
@@ -135,7 +138,7 @@ export function createWorld(run){
  const fill=new THREE.PointLight(0xc8cbd0,7,5,1.7);scene.add(fill);
  const lighting=createProximityLighting(lamps.map(lamp=>lamp.position));
  const backgroundColor=scene.background.clone(),fogColor=scene.fog.color.clone();
- let doorProgress=0;
+ let doorProgress=0,lightSelection=null,lastLightX=Infinity,lastLightZ=Infinity;
  function domain(x,z,radius){
   if(z<=-25-radius-.1&&z>=-33+radius+.1&&x>=-8.6+radius+.1&&x<=3.4-radius-.1)return true;
   if(z<-32.5&&z>=-35.35+radius+.06&&x>=-3.65+radius+.06&&x<=-1.55-radius-.06)return true;
@@ -167,7 +170,7 @@ export function createWorld(run){
   doorProgress=THREE.MathUtils.lerp(doorProgress,run.exitOpen?1:0,Math.min(1,delta*2));
   elevatorDoors[0].position.x=-3.1-doorProgress*.96;elevatorDoors[1].position.x=-2.1+doorProgress*.96;
   fill.position.set(player.x,groundHeight(player)+1.7,player.z);
-  const power=lighting.update(delta,{monster:monster?.position,player:{...player,height:groundHeight(player)},hunting:monster?.hunting,active:!!monster?.active});
+  const power=lighting.update(delta,{monster:monster?.position,player:{...player,height:groundHeight(player)},hunting:monster?.hunting,active:!!monster?.active,reducedMotion:reducedMotion()});
   ambient.intensity=.65*(1-power.warning*.9)*power.visibility;
   fill.intensity=7*(1-power.warning*.96)*power.visibility;
   scene.background.copy(backgroundColor).multiplyScalar(power.visibility);
@@ -179,7 +182,8 @@ export function createWorld(run){
    tube.material.color.copy(white.color).multiplyScalar(intensity);
   });
   lightEye.set(player.x,groundHeight(player)+1.65,player.z);
-  const nearest=[...lamps].sort((a,b)=>a.light.position.distanceToSquared(lightEye)-b.light.position.distanceToSquared(lightEye));
+  if(!lightSelection||Math.hypot(player.x-lastLightX,player.z-lastLightZ)>.4){lightSelection=[...lamps].sort((a,b)=>a.light.position.distanceToSquared(lightEye)-b.light.position.distanceToSquared(lightEye));lastLightX=player.x;lastLightZ=player.z;}
+  const nearest=lightSelection;
   ceilingLights.forEach((light,index)=>{
    const source=nearest[index]?.light;
    light.intensity=source?.intensity??0;

@@ -8,8 +8,13 @@ const b=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||un
 const context=await b.newContext({permissions:['microphone'],viewport:{width:1050,height:760}}),errors=[];context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
 if(process.env.VOICE_TEST_ICE_SERVERS){
  const ice=JSON.parse(process.env.VOICE_TEST_ICE_SERVERS);
- await context.route('**/src/voice-chat.js*',async route=>{const response=await route.fetch();const body=(await response.text()).replace('readIceServers(import.meta.env?.VITE_WEBRTC_ICE_SERVERS)',JSON.stringify(ice));await route.fulfill({response,body});});
+ await context.addInitScript(servers=>{const Peer=window.RTCPeerConnection;window.RTCPeerConnection=class extends Peer{constructor(config){super({...config,iceServers:servers});}};},ice);
 }
+// Keep the synthetic capture tone out of browser speech/noise suppression.
+await context.addInitScript(()=>{
+ const capture=navigator.mediaDevices?.getUserMedia?.bind(navigator.mediaDevices);if(!capture)return;
+ navigator.mediaDevices.getUserMedia=options=>capture({...options,audio:options.audio?{...(typeof options.audio==='object'?options.audio:{}),echoCancellation:false,noiseSuppression:false,autoGainControl:false}:options.audio});
+});
 const host=await context.newPage();let guest;
 try{
  await host.goto(origin+'/?mode=coop-test');
@@ -34,16 +39,25 @@ try{
  const before=await guest.evaluate(()=>monochromeTest.waitingRoom.own.z);
  await guest.keyboard.down('KeyW');await guest.waitForTimeout(500);await guest.keyboard.up('KeyW');
  assert.ok(await guest.evaluate(z=>monochromeTest.waitingRoom.own.z<z,before));
- await host.locator('#lobby-start').click();
+ await host.locator('#lobby-start').click({force:true});
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>window.monochrome?.arrival,null,{timeout:45000})));
- await Promise.all([host,guest].map(p=>p.evaluate(()=>{monochrome.renderer.setPixelRatio(.4);monochrome.renderer.setSize(innerWidth,innerHeight)})));
+ await Promise.all([host,guest].map(p=>p.evaluate(()=>{monochrome.renderer.setPixelRatio(.4);monochrome.renderer.setSize(innerWidth,innerHeight);monochrome.renderer.render=()=>{};})));
  // Exercise the hidden-host fallback that keeps tab 2's round alive.
  await host.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,get:()=>true}));
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>!monochrome.arrival.active,null,{timeout:40000})));
  await guest.evaluate(()=>{monochrome.ui.hideScreen();monochrome.input.clear()});
+ await Promise.all([host,guest].map(p=>p.evaluate(()=>{
+  window.gameTelemetry={peerInputs:0,peerSnapshots:0,databaseInputs:0};
+  monochrome.client.voice.subscribeGameplay(event=>{if(event.type==='input')gameTelemetry.peerInputs++;if(event.type==='snapshot')gameTelemetry.peerSnapshots++;});
+  const send=monochrome.client.send.bind(monochrome.client);monochrome.client.send=(type,payload)=>{if(type==='input')gameTelemetry.databaseInputs++;return send(type,payload);};
+ })));
  await guest.keyboard.down('KeyW');await guest.waitForTimeout(600);await guest.keyboard.up('KeyW');
  await host.waitForFunction(()=>monochrome.state.players.get([...monochrome.state.players.keys()].find(id=>id!==monochrome.client.id)).z>-30,null,{timeout:10000});
  assert.ok(await host.evaluate(()=>monochrome.run.elapsed>0));
+ await host.waitForFunction(()=>gameTelemetry.peerInputs>0,null,{timeout:10000});
+ await guest.waitForFunction(()=>gameTelemetry.peerSnapshots>0,null,{timeout:10000});
+ console.log('Peer gameplay:',await host.evaluate(()=>gameTelemetry),await guest.evaluate(()=>gameTelemetry));
+ await host.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>false});});
  assert.equal(await host.evaluate(()=>[...monochrome.client.voice.peers.values()][0].pc.connectionState),'connected');
  await guest.keyboard.press('KeyF');await host.waitForFunction(()=>[...monochrome.state.players.values()].find(p=>p.id!==monochrome.client.id).torch===false);
  assert.equal(await guest.evaluate(()=>monochrome.torch.on),false);

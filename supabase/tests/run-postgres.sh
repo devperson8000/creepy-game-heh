@@ -13,7 +13,8 @@ for attempt in {1..60}; do
 done
 run_sql() { docker exec -i "$container" psql -X -q -U postgres -v ON_ERROR_STOP=1 "$@"; }
 run_sql < supabase/tests/bootstrap.sql > "$logs/bootstrap.log"
-run_sql < supabase/migrations/202610180001_multiplayer.sql > "$logs/migration.log"
+for migration in supabase/migrations/*.sql; do run_sql < "$migration" >> "$logs/migration.log"; done
+run_sql < supabase/tests/movement.sql > "$logs/movement.log"
 run_sql < supabase/tests/security.sql > "$logs/security.log"
 run_sql < supabase/tests/expiry.sql > "$logs/expiry.log"
 run_sql < supabase/tests/concurrency.sql > "$logs/concurrency.log"

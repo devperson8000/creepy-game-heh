@@ -1,3 +1,4 @@
+import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 
 export function createTorch(scene,camera){
@@ -20,7 +21,7 @@ export function createTorch(scene,camera){
  });
  const beam=new THREE.SpotLight(0xe4e9dc,140,24,.58,1,1.5);
  beam.position.set(0,-.035,-.025);beam.castShadow=true;
- beam.shadow.mapSize.set(1024,1024);beam.shadow.camera.near=.05;beam.shadow.camera.far=24;beam.shadow.bias=-.00015;beam.shadow.normalBias=.015;
+ beam.shadow.mapSize.set(512,512);beam.shadow.camera.near=.05;beam.shadow.camera.far=24;beam.shadow.bias=-.00015;beam.shadow.normalBias=.015;
  const aim=new THREE.Object3D();aim.position.set(0,0,-20);camera.add(beam,aim);beam.target=aim;
 
  // Draw the held torch separately so its hand cannot clip into nearby walls
@@ -51,7 +52,8 @@ export function createTorch(scene,camera){
  function update({ceilingPower=1,time=0,moving=false}={}){
   exposure=.95*(on?1:ceilingPower);
   for(const material of reactive.values()){material.emissive.copy(material.color);material.emissiveIntensity=.35*ceilingPower;}
-  const bob=moving?.009:0;model.rotation.z=-.06+Math.sin(time*1.7)*.003+(moving?Math.sin(time*8)*.006:0);model.position.y=-.28+Math.sin(time*8)*bob;model.position.x=Math.min(.27,.2*camera.aspect)+Math.cos(time*4)*bob*.5;
+  moving=moving&&!reducedMotion();
+  const bob=moving?.009:0;model.rotation.z=-.06+(reducedMotion()?0:Math.sin(time*1.7)*.003)+(moving?Math.sin(time*8)*.006:0);model.position.y=-.28+Math.sin(time*8)*bob;model.position.x=Math.min(.27,.2*camera.aspect)+Math.cos(time*4)*bob*.5;
  }
  function render(renderer){
   viewCamera.projectionMatrix.copy(camera.projectionMatrix);viewCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse);

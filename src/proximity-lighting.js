@@ -16,7 +16,7 @@ export function createProximityLighting(positions,{random=Math.random}={}){
   visibility=1;warning=0;blackout=false;
   for(const fixture of fixtures)Object.assign(fixture,{intensity:1,mode:'steady',timer:0,flashes:0,glitch:false,glitchLevel:1});
  }
- function update(delta,{monster,player,hunting=false,active=true}={}){
+ function update(delta,{monster,player,hunting=false,active=true,reducedMotion=false}={}){
   delta=Math.max(0,Math.min(delta,.2));
   const playerDistance=active&&monster&&player?distance(monster,player):Infinity;
   const localHunt=active&&hunting&&monster&&player&&Math.abs((monster.height??0)-(player.height??0))<1.5;
@@ -38,6 +38,7 @@ export function createProximityLighting(positions,{random=Math.random}={}){
     fixture.mode=fixture.intensity===1?'steady':'recovering';
     continue;
    }
+   if(reducedMotion){fixture.glitch=false;fixture.flashes=0;fixture.mode='warning';fixture.intensity=recover(fixture.intensity,.42,delta,.6);continue;}
    const severity=clamp((WARNING_DISTANCE-d)/(WARNING_DISTANCE-BLACKOUT_DISTANCE));
    if(fixture.mode==='blackout'||fixture.mode==='steady'||fixture.mode==='recovering'){
     fixture.timer=between(.35,1.3);fixture.glitch=false;fixture.flashes=0;

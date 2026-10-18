@@ -160,3 +160,12 @@ test('microphone icon floats above head only while speaking and disappears for h
  avatar.update({speaking:true,hidden:true});assert.equal(icon.visible,false);
  avatar.update({speaking:true,status:'escaped'});assert.equal(icon.visible,false);avatar.dispose();
 });
+
+test('late buffered poses cannot make a walking avatar jump across a frame',()=>{
+ const avatar=createPlayerAvatar(fixture(),{});
+ avatar.update({x:0,z:0,interpolated:true,moving:true},1/60);
+ avatar.update({x:1,z:0,interpolated:true,moving:true},1/60);
+ assert.ok(avatar.root.position.x>0&&avatar.root.position.x<=.07);
+ avatar.update({x:3,z:1,interpolated:true,resetPose:true},1/60);
+ assert.deepEqual(avatar.root.position.toArray(),[3,0,1]);avatar.dispose();
+});

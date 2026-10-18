@@ -197,9 +197,14 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   const dt=THREE.MathUtils.clamp(finite(delta),0,.1),status=pose.status??'alive',fallen=status==='downed'||status==='dead';
   goal.set(finite(pose.x,root.position.x),finite(pose.height,root.position.y),finite(pose.z,root.position.z));
   const yaw=finite(pose.yaw,root.rotation.y-Math.PI)+Math.PI;
-  if(!spawned||root.position.distanceToSquared(goal)>36){root.position.copy(goal);root.rotation.y=yaw;spawned=true;}
+  if(pose.resetPose||!spawned||root.position.distanceToSquared(goal)>36){root.position.copy(goal);root.rotation.y=yaw;spawned=true;}
   else{
-   const blend=1-Math.exp(-14*dt);root.position.lerp(goal,blend);
+   const blend=1-Math.exp(-(pose.interpolated?24:14)*dt);
+   const distance=root.position.distanceTo(goal);
+   // Timestamp interpolation handles regular updates; this catches a late
+   // correction without turning a network gap into a one-frame body jump.
+   const follow=pose.interpolated&&distance>0?Math.min(blend,(pose.sprint?5.2:3.8)*dt/distance):blend;
+   root.position.lerp(goal,follow);
    root.rotation.y+=Math.atan2(Math.sin(yaw-root.rotation.y),Math.cos(yaw-root.rotation.y))*blend;
   }
   root.visible=!pose.hidden&&status!=='escaped';

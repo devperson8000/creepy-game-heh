@@ -8,7 +8,7 @@ import {createWorld} from '../src/world.js';
 // the decorative canvas drawing methods require a browser substitute.
 function headlessWorld(run){
  const previous=globalThis.document;
- const context={fillRect(){},strokeRect(){},fillText(){},createLinearGradient(){return {addColorStop(){}};}};
+ const context={beginPath(){},moveTo(){},lineTo(){},stroke(){},fillRect(){},strokeRect(){},fillText(){},createLinearGradient(){return {addColorStop(){}};}};
  globalThis.document={createElement:()=>({getContext:()=>context})};
  try{return createWorld(run);}finally{
   if(previous===undefined)delete globalThis.document;else globalThis.document=previous;

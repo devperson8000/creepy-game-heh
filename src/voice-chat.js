@@ -1,3 +1,4 @@
+import {bindGameplayChannel} from './peer-gameplay.js';
 // One small WebRTC mesh per accepted lobby, retained through the game transition.
 // Supabase carries signalling only; microphone audio travels over encrypted WebRTC.
 export function createSpeechGate(){
@@ -12,11 +13,11 @@ export function createSpeechGate(){
 export function readIceServers(value){
  const defaults=[{urls:'stun:stun.cloudflare.com:3478'},{urls:'stun:stun.l.google.com:19302'}];
  if(!value)return defaults;
- try{const list=JSON.parse(value);if(Array.isArray(list)&&list.length&&list.every(s=>s&&((typeof s.urls==='string')||(Array.isArray(s.urls)&&s.urls.every(u=>typeof u==='string')))))return list;}catch{}
+ try{const list=JSON.parse(value);if(Array.isArray(list)&&list.length&&list.every(s=>{if(!s)return false;const urls=typeof s.urls==='string'?[s.urls]:s.urls;if(!Array.isArray(urls)||!urls.length||!urls.every(u=>typeof u==='string'&&/^(stuns?|turns?):/.test(u)))return false;return !urls.some(u=>/^turns?:/.test(u))||(typeof s.username==='string'&&typeof s.credential==='string');}))return list;}catch{}
  return defaults;
 }
 export function createVoiceChat({client,iceServers=readIceServers(import.meta.env?.VITE_WEBRTC_ICE_SERVERS)}={}){
- const peers=new Map(),speaking=new Map(),meters=new Map();
+ const peers=new Map(),speaking=new Map(),meters=new Map(),gameListeners=new Set();
  let members=[],roomId=null,context=null,stream=null,disposed=false,busy=false,notice='',retryAt=0,captureGeneration=0;
  const supported=typeof RTCPeerConnection!=='undefined'&&!!navigator.mediaDevices?.getUserMedia;
  const panel=document.createElement('aside');panel.id='voice-chat';panel.hidden=true;panel.setAttribute('aria-label','Team voice chat');
@@ -52,7 +53,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   try{await context?.resume();}catch{}
   let blocked=false;await Promise.all([...peers.values()].map(async p=>{if(p.audio.srcObject)try{await p.audio.play();}catch{blocked=true;}}));listen.hidden=!blocked;
  }
- function drop(id){const p=peers.get(id);if(!p)return;peers.delete(id);p.pc.onconnectionstatechange=null;p.pc.onicecandidate=null;p.pc.ontrack=null;p.pc.close();p.audio.pause();p.audio.srcObject=null;p.audio.remove();unmeter(id);}
+ function drop(id){const p=peers.get(id);if(!p)return;peers.delete(id);p.pc.onconnectionstatechange=null;p.pc.onicecandidate=null;p.pc.ontrack=null;p.pc.ondatachannel=null;p.gameChannel?.close();p.pc.close();p.audio.pause();p.audio.srcObject=null;p.audio.remove();unmeter(id);}
  function enqueue(p,fn){p.queue=p.queue.then(()=>peers.get(p.id)===p&&!disposed?fn():undefined).catch(()=>{if(peers.get(p.id)===p){p.failed=true;notice='Voice connection interrupted. Retrying…';render();}});return p.queue;}
  async function offer(p,restart=false){
   if(p.pc.signalingState!=='stable')return;
@@ -64,6 +65,12 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   const pc=new RTCPeerConnection({iceServers}),audio=document.createElement('audio');audio.autoplay=true;audio.setAttribute('playsinline','');audio.hidden=true;panel.append(audio);
   const transceiver=pc.addTransceiver('audio',{direction:'sendrecv'});
   const p={id,pc,audio,sender:transceiver.sender,queue:Promise.resolve(),candidates:[],remoteMuted:true,offered:false,failed:false};peers.set(id,p);
+  function attach(channel){
+   if(channel.label!=='monochrome-game'){channel.close();return;}
+   p.gameChannel=channel;p.game=bindGameplayChannel(channel,message=>{for(const listener of gameListeners)listener({playerId:id,...message});});
+  }
+  pc.ondatachannel=event=>attach(event.channel);
+  if(client.id<id&&pc.createDataChannel)attach(pc.createDataChannel('monochrome-game',{ordered:false,maxRetransmits:0}));
   if(stream)void p.sender.replaceTrack(stream.getAudioTracks()[0]);
   pc.onicecandidate=event=>{if(event.candidate)send(id,{type:'candidate',candidate:event.candidate.toJSON()});};
   pc.ontrack=event=>{const media=event.streams[0]||new MediaStream([event.track]);audio.srcObject=media;meter(id,media);void unlock();};
@@ -79,7 +86,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   if(roomId&&roomId!==nextRoom.id)reset();
   roomId=nextRoom.id;members=nextRoom.members||[];
   for(const id of peers.keys())if(!members.some(m=>m.id===id))drop(id);
-  if(supported)for(const m of members){if(m.id===client.id)continue;const fresh=!peers.has(m.id),p=peer(m.id);if(fresh){send(m.id,{type:'hello'});send(m.id,{type:'state',muted:muted()});if(client.id<m.id)void enqueue(p,()=>offer(p));}}
+  if(supported)for(const m of members){if(m.id===client.id)continue;try{const fresh=!peers.has(m.id),p=peer(m.id);if(fresh){send(m.id,{type:'hello'});send(m.id,{type:'state',muted:muted()});if(client.id<m.id)void enqueue(p,()=>offer(p));}}catch{notice='Voice is unavailable. You can keep playing.';}}
   render();
  }
  async function signal(id,s){
@@ -132,7 +139,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
  button.addEventListener('click',toggle);listen.addEventListener('click',unlock);
  const unsubscribe=client.subscribe(e=>{
   if(e.type==='lobby')sync(e.lobby);
-  else if(e.type==='voice')void signal(e.playerId,e.signal);
+  else if(e.type==='voice')void signal(e.playerId,e.signal).catch(()=>{notice='Voice connection interrupted. You can keep playing.';render();});
   else if(e.type==='voiceReady')for(const id of peers.keys()){send(id,{type:'hello'});send(id,{type:'state',muted:muted()});}
   else if(['left','roomClosed','disconnected'].includes(e.type))reset();
   else if(e.type==='connection'&&e.status==='closed')dispose();
@@ -145,5 +152,5 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
  },100);
  function dispose(){if(disposed)return;disposed=true;window.removeEventListener('pagehide',onPageHide);reset();clearInterval(timer);unsubscribe();button.removeEventListener('click',toggle);listen.removeEventListener('click',unlock);panel.remove();void context?.close();}
  const onPageHide=()=>dispose();window.addEventListener('pagehide',onPageHide,{once:true});
- render();return {toggle,mute,dispose,isSpeaking:id=>!!speaking.get(id),get muted(){return muted();},get peers(){return peers;}};
+ render();return {toggle,mute,dispose,subscribeGameplay(fn){gameListeners.add(fn);return()=>gameListeners.delete(fn);},gameConnected:id=>!!peers.get(id)?.game?.ready,localFingerprint:id=>peers.get(id)?.pc.localDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),remoteFingerprint:id=>peers.get(id)?.pc.remoteDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),sendGameplay:(id,type,payload)=>peers.get(id)?.game?.send(type,payload)??false,isSpeaking:id=>!!speaking.get(id),get muted(){return muted();},get peers(){return peers;}};
 }

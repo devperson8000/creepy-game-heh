@@ -12,3 +12,7 @@ test('ICE configuration supports an operator TURN service and falls back safely 
  assert.deepEqual(readIceServers(JSON.stringify(turn)),turn);
  assert.deepEqual(readIceServers('broken'),readIceServers());assert.deepEqual(readIceServers('{}'),readIceServers());
 });
+test('a TURN URL without browser credentials falls back without breaking lobby joins',()=>{
+ assert.deepEqual(readIceServers(JSON.stringify([{urls:'turn:relay.example:3478'}])),readIceServers());
+ assert.deepEqual(readIceServers(JSON.stringify([{urls:'https://not-an-ice-server'}])),readIceServers());
+});

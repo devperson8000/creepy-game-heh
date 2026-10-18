@@ -1,3 +1,4 @@
+import {startMenuHallway} from './menu-hallway.js';
 import {createWaitingRoom} from './waiting-room.js';
 const NAME_KEY = 'monochrome.playerName';
 
@@ -34,6 +35,9 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
  notice.setAttribute('aria-live', 'polite');
  root.append(atmosphere, header, content, notice, footer);
  document.body.append(root);
+ const hallway=element('div','lobby-hallway');atmosphere.prepend(hallway);
+ let menuHallway;
+ try{menuHallway=startMenuHallway(hallway);}catch(error){console.warn('Menu hallway unavailable',error);}
 
  let screen = 'mode', playerName = initialPlayerName ?? storedName(), lobbyName = '', client = null, unsubscribe = null;
  let network = 'idle', lobbies = [], room = null, pendingLobby = null, actionPending = false;
@@ -363,6 +367,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
  function dispose({keepClient = false} = {}) {
   if (disposed) return;
   disposed = true;
+  menuHallway?.dispose();
   releaseWaiting();
   if (keepClient) { generation++; unsubscribe?.(); unsubscribe = null; }
   else releaseClient();

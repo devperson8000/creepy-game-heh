@@ -1,3 +1,5 @@
+import {gamePreferences,createRenderQuality,reducedMotion} from './preferences.js';
+import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
 import {createRun,searchDrawer,takeKey,bankKeys,enterCode,readClue,catchPlayer,retryRun,openExit} from './game-state.js';
 import {createWorld} from './world.js';
@@ -14,12 +16,14 @@ import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {createArrival} from './arrival.js';
 
 export function startGame(container,{seed,autostart=false}={}){
+ const ambience=createRoomAmbience();
  const arrival=autostart?createArrival():null;
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed),world=createWorld(run),ui=createGameUI();
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
  container.appendChild(renderer.domElement);
+ const quality=createRenderQuality(renderer);
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -30,12 +34,12 @@ export function startGame(container,{seed,autostart=false}={}){
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
- const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void monsterAudio.resume();});
+ const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void monsterAudio.resume();void ambience.resume();});
  let pendingNoise=[],noiseUntil=0;const footsteps={distance:0};
  function emitNoise(noise){if(!noise)return;monsterAudio.playNoise(noise.type);player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noiseUntil=performance.now()+1000;if(run.boardsOpen)pendingNoise.push(noise);}
- function resume(){ui.hideScreen();input.capture();void monsterAudio.resume();}
+ function resume(){ui.hideScreen();input.capture();void monsterAudio.resume();void ambience.resume();}
  function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);world.lighting.reset();pendingNoise=[];footsteps.distance=0;noiseUntil=0;threat=0;hold=0;latched=false;}
- function showScreen(kind){monsterAudio.pause();ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
+ function showScreen(kind){monsterAudio.pause();ambience.pause();ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
  function capturePlayer(){
   if(run.phase!=='playing')return;
   catchPlayer(run);ui.overlay='jumpscare';ui.el('game-screen').hidden=true;ui.el('jumpscare-border').hidden=false;
@@ -44,22 +48,22 @@ export function startGame(container,{seed,autostart=false}={}){
  }
  // Pause content uses the same action wiring as the initial and outcome screens.
  const soundButton=ui.el('sound-toggle');soundButton.hidden=!monsterAudio.configured;
- function toggleSound(){monsterAudio.setMuted(!monsterAudio.muted);soundButton.textContent=monsterAudio.muted?'Sound off':'Sound on';soundButton.setAttribute('aria-pressed',String(monsterAudio.muted));soundButton.setAttribute('aria-label',monsterAudio.muted?'Unmute game sound':'Mute game sound');}
+ function toggleSound(){monsterAudio.setMuted(!monsterAudio.muted);ambience.setMuted(monsterAudio.muted);soundButton.textContent=monsterAudio.muted?'Sound off':'Sound on';soundButton.setAttribute('aria-pressed',String(monsterAudio.muted));soundButton.setAttribute('aria-label',monsterAudio.muted?'Unmute game sound':'Mute game sound');}
  soundButton.addEventListener('click',toggleSound);
  const torchButton=ui.el('torch-toggle');
  function toggleTorch(){if(ui.overlay||run.phase!=='playing')return;torch.toggle();torchButton.textContent=torch.on?'Torch on':'Torch off';torchButton.setAttribute('aria-pressed',String(torch.on));torchButton.setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
  torchButton.addEventListener('click',toggleTorch);
  document.addEventListener('keydown',event=>{if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}});
  document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'))toggleSound();});
- window.addEventListener('pagehide',()=>monsterAudio.dispose(),{once:true});
+ window.addEventListener('pagehide',()=>{monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
- function closeKeypad(){void monsterAudio.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
+ function closeKeypad(){void monsterAudio.resume();void ambience.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
  function submitCode(){if(enterCode(run,buffer)){ui.el('keypad-feedback').textContent='Code accepted. Complete the four key locks to open the elevator.';ui.toast('Code accepted.');closeKeypad();}else{ui.el('keypad-feedback').textContent='Access denied. Read the four digits from this run.';buffer='';ui.el('code-display').textContent='— — — —';}}
  function digit(value){if(value==='✓'){submitCode();return;}if(value==='←')buffer=buffer.slice(0,-1);else if(buffer.length<4)buffer+=value;ui.el('code-display').textContent=buffer.padEnd(4,'—').split('').join(' ');}
  ui.root.querySelectorAll('[data-digit]').forEach(b=>b.addEventListener('click',()=>digit(b.dataset.digit)));
  ui.el('close-keypad').addEventListener('click',closeKeypad);
  document.addEventListener('keydown',e=>{if(ui.overlay!=='keypad')return;if(/^\d$/.test(e.key)){e.preventDefault();digit(e.key);}else if(e.key==='Backspace'){e.preventDefault();digit('←');}else if(e.key==='Enter'){e.preventDefault();submitCode();}});
- function openKeypad(){monsterAudio.pause();buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.el('keypad-feedback').textContent='';ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
+ function openKeypad(){monsterAudio.pause();ambience.pause();buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.el('keypad-feedback').textContent='';ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
  function targetInfo(t){
   if(!t)return null;let label='',duration=.35;
   if(t.type==='boards'){if(run.boardsOpen)return null;label='Pry away the boards';duration=1.8;}
@@ -125,11 +129,12 @@ export function startGame(container,{seed,autostart=false}={}){
   creature.root.position.y+=groundHeight(enemy.position);creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
   const soundDistance=run.boardsOpen?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height-groundHeight(enemy.position)):Infinity;
   monsterAudio.update(ambushResult.silent?Infinity:soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
-  const breathingFov=66+Math.sin(time*1.4)*threat*.45;
+  const breathingFov=66+(reducedMotion()?0:Math.sin(time*1.4)*threat*.45);
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:run.boardsOpen});
   torch.update({ceilingPower:world.lighting.visibility,time,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
-  renderer.toneMappingExposure=torch.exposure;
+  const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update();
+  renderer.toneMappingExposure=torch.exposure*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(arrival?.active){

@@ -12,6 +12,7 @@ export function monsterGain(distance,active=true){
 
 export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
  let context,gain,effectsGain,source,loading,noiseBuffer,wanted=false,muted=false,disposed=false,failed=false,volume=0;
+ let masterVolume=1;
  let scareGain,scareBuffer,scareLoading,scareSource,scaring=false,scareStartedAt=0;
  const abort=new AbortController(),effects=new Set();
  function silence(){volume=0;if(gain&&context?.state!=='closed'){gain.gain.cancelScheduledValues(context.currentTime);gain.gain.setValueAtTime(0,context.currentTime);}}
@@ -33,7 +34,7 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
   if(!scaring||scareSource||!scareBuffer||muted||disposed)return;
   const offset=Math.max(0,context.currentTime-scareStartedAt);
   if(offset>=scareBuffer.duration){stopScare();return;}
-  const sound=context.createBufferSource();sound.buffer=scareBuffer;sound.loop=false;sound.connect(scareGain);scareGain.gain.value=.95;scareSource=sound;sound.start(0,offset);
+  const sound=context.createBufferSource();sound.buffer=scareBuffer;sound.loop=false;sound.connect(scareGain);scareGain.gain.value=.95*masterVolume;scareSource=sound;sound.start(0,offset);
   sound.onended=()=>{sound.disconnect();if(scareSource===sound){scareSource=null;scaring=false;if(!wanted&&context.state==='running')context.suspend().catch(()=>{});}};
  }
  async function resume(){
@@ -43,11 +44,11 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
    if(!context){
     const AudioContext=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!AudioContext)throw new Error('This browser does not support Web Audio.');
-    context=new AudioContext();gain=context.createGain();gain.gain.value=0;gain.connect(context.destination);effectsGain=context.createGain();effectsGain.gain.value=muted?0:.8;effectsGain.connect(context.destination);
+    context=new AudioContext();gain=context.createGain();gain.gain.value=0;gain.connect(context.destination);effectsGain=context.createGain();effectsGain.gain.value=muted?0:.8*masterVolume;effectsGain.connect(context.destination);
     scareGain=context.createGain();scareGain.gain.value=0;scareGain.connect(context.destination);
    }
    // Called directly from the Enter/Continue gesture, including on mobile.
-   effectsGain.gain.value=muted?0:.8;
+   effectsGain.gain.value=muted?0:.8*masterVolume;
    await context.resume();
    scareLoading??=loadScare().catch(error=>{stopScare();if(!disposed)onScareError(error);});
    if(!failed){
@@ -71,7 +72,7 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
  }
  function update(distance,active=true,delta=1/60){
   if(!url||!gain||failed||disposed)return;
-  const target=monsterGain(distance,active&&wanted&&!muted);
+  const target=monsterGain(distance,active&&wanted&&!muted)*masterVolume;
   if(target===0){silence();return;}
   volume+=(target-volume)*(1-Math.exp(-Math.max(0,Math.min(delta,.25))/.25));
   gain.gain.setTargetAtTime(volume,context.currentTime,.025);
@@ -86,7 +87,12 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
   sound.connect(filter);filter.connect(envelope);envelope.connect(effectsGain);effects.add(sound);sound.start();sound.stop(now+duration+.01);
   sound.onended=()=>{effects.delete(sound);sound.disconnect();filter.disconnect();envelope.disconnect();};
  }
- function setMuted(value){muted=!!value;if(effectsGain)effectsGain.gain.value=muted?0:.8;if(muted){silence();stopScare();for(const sound of effects)sound.stop();}}
+ function setMuted(value){muted=!!value;if(effectsGain)effectsGain.gain.value=muted?0:.8*masterVolume;if(muted){silence();stopScare();for(const sound of effects)sound.stop();}}
+ function setVolume(value){
+  const next=Math.max(0,Math.min(1,Number.isFinite(value)?value:1));if(next===masterVolume)return;masterVolume=next;
+  if(effectsGain)effectsGain.gain.value=muted?0:.8*masterVolume;
+  if(scareGain&&scaring)scareGain.gain.value=muted?0:.95*masterVolume;
+ }
  function dispose(){disposed=true;wanted=false;abort.abort();silence();stopScare();source?.stop();context?.close().catch(()=>{});}
- return {resume,pause,update,playNoise,playJumpscare,setMuted,dispose,get volume(){return volume;},get muted(){return muted;},get configured(){return !!url;}};
+ return {resume,pause,update,playNoise,playJumpscare,setMuted,setVolume,dispose,get volume(){return volume;},get muted(){return muted;},get configured(){return !!url;}};
 }

@@ -1,6 +1,7 @@
 import {createEnemy,tickEnemy,createAmbush,tickAmbush,SIGHT_RANGE} from './enemy.js';
 import {groundHeight,moveInWorld,lineOfSight} from './level.js';
 import {coopInteract,downPlayer,expireDowned,markEscaped,removeCoopPlayer,serializeCoopState} from './coop-state.js';
+import {createRemoteMovement} from './coop-motion.js';
 import {footstepNoise,interactionNoise} from './player-noise.js';
 
 function observedPosition(player){
@@ -27,12 +28,20 @@ const reasons={'wrong-code':'Access denied. Check the four-digit clue.','locked'
 /** The lobby owner runs one simulation; peers submit inputs, never positions or monster state. */
 export function createCoopSimulation(state,world,{ambushChance=.12}={}){
  const enemy=createEnemy(state.run.layout),ambush=createAmbush(state.seed,{chance:ambushChance});
+ const remoteMovement=new Map(),remoteAt=new Map();
  const inputs=new Map(),footsteps=new Map(),noisyUntil=new Map(),notices=[];
  let pendingNoise=[],sequence=0,noticeId=0,ambushResult={silent:false,triggered:false,targetId:null},reveal=0;
  const navigation=world.enemyNavigation??{};
  function tell(playerId,message){notices.push({id:++noticeId,playerId,message});if(notices.length>24)notices.shift();}
  function setInput(id,input){
   if(!state.players.has(id)||!input||!['forward','right','yaw','pitch'].every(k=>Number.isFinite(input[k])))return false;
+  if(Array.isArray(input.commands)){
+   if(!remoteMovement.has(id))remoteMovement.set(id,createRemoteMovement(state.players.get(id),world.canMove));
+   if(!remoteMovement.get(id).receive(input))return false;
+   remoteAt.set(id,state.run.elapsed);return true;
+  }
+  if(state.run.elapsed-(remoteAt.get(id)??-Infinity)<.65)return false;
+  remoteMovement.delete(id);
   inputs.set(id,{forward:Math.max(-1,Math.min(1,input.forward)),right:Math.max(-1,Math.min(1,input.right)),yaw:input.yaw,pitch:Math.max(-1.3,Math.min(1.3,input.pitch)),sprint:!!input.sprint,torch:!!input.torch,paused:!!input.paused,at:state.run.elapsed});return true;
  }
  function emit(player,noise){
@@ -63,6 +72,14 @@ export function createCoopSimulation(state,world,{ambushChance=.12}={}){
     const command=inputs.get(player.id),fresh=command&&state.run.elapsed-command.at<.65;
     if(fresh){player.yaw=command.yaw;player.pitch=command.pitch;player.torch=command.torch;}
     let moved=0;
+    if(remoteMovement.has(player.id)){
+     remoteMovement.get(player.id).advance(step,(distance,input)=>{
+      if(!footsteps.has(player.id))footsteps.set(player.id,{distance:0});
+      emit(player,footstepNoise(footsteps.get(player.id),distance,input.sprint,player));
+     });
+     if(state.run.elapsed>(noisyUntil.get(player.id)??0))player.noise='Quiet';
+     continue;
+    }
     if(player.status==='alive'&&!player.hidden&&fresh&&!command.paused){
      const next=moveInWorld(player,{forward:command.forward,right:command.right},player.yaw,step,world.canMove,command.sprint?3.7:2.5);
      moved=Math.hypot(next.x-player.x,next.z-player.z);player.x=next.x;player.z=next.z;
@@ -90,6 +107,6 @@ export function createCoopSimulation(state,world,{ambushChance=.12}={}){
  }
  function enemySnapshot(){return {position:{...enemy.position},yaw:enemy.yaw,mode:enemy.mode,moving:enemy.path.length>0,targetId:enemy.targetId,silent:ambushResult.silent,silentTargetId:ambushResult.targetId,reveal};}
  function snapshot(){return {sequence:++sequence,state:serializeCoopState(state),enemy:enemySnapshot(),notices:[...notices]};}
- function removePlayer(id){inputs.delete(id);footsteps.delete(id);noisyUntil.delete(id);removeCoopPlayer(state,id);}
+ function removePlayer(id){inputs.delete(id);remoteMovement.delete(id);remoteAt.delete(id);footsteps.delete(id);noisyUntil.delete(id);removeCoopPlayer(state,id);}
  return {state,enemy,setInput,interact,advance,snapshot,enemySnapshot,removePlayer};
 }

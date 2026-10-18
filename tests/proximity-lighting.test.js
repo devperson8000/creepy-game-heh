@@ -73,3 +73,13 @@ test('pausing freezes the random warning and recovery timers; resetting restores
  assert.equal(lighting.visibility,1);assert.equal(lighting.blackout,false);
  assert.equal(lighting.fixtures[0].intensity,1);
 });
+
+test('reduced motion replaces repeated warning glitches with a steady dim state',()=>{
+ const lighting=createProximityLighting([lamp],{random:()=>.1});
+ for(let i=0;i<200;i++){
+  const frame=lighting.update(.05,{player,monster:monster(10),reducedMotion:true});
+  assert.equal(frame.fixtures[0].glitch,false);
+  assert.equal(frame.fixtures[0].mode,'warning');
+ }
+ assert.ok(Math.abs(lighting.fixtures[0].intensity-.42)<.002);
+});

@@ -1,3 +1,4 @@
+import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {createCreature} from './creature.js';
 
@@ -82,7 +83,8 @@ export function createJumpscare({mouthTexture} = {}) {
 
  function pose(){
   const rush = ease(elapsed, 0, .24);
-  const shock = Math.exp(-Math.max(0, elapsed-.20)*7.5) * rush;
+  const motion=reducedMotion()?0:1;
+  const shock = motion*Math.exp(-Math.max(0, elapsed-.20)*7.5) * rush;
   const withdraw = ease(elapsed, 1.15, JUMPSCARE_DURATION);
   const darkness = 1-withdraw;
   const open = ease(elapsed, .035, .17);
@@ -102,7 +104,7 @@ export function createJumpscare({mouthTexture} = {}) {
   mouth.material.opacity = clamp01(open*2) * darkness;
   mouth.material.color.setScalar(darkness);
 
-  const roll = rush * darkness;
+  const roll = motion*rush * darkness;
   face.rotation.set(
    -roll*.085 + Math.sin(elapsed*28)*shock*.033,
    Math.sin(elapsed*24)*shock*.075,
@@ -113,7 +115,7 @@ export function createJumpscare({mouthTexture} = {}) {
   const tangent = Math.tan(THREE.MathUtils.degToRad(camera.fov/2));
   const radius = Math.max(size.x/(2*tangent*camera.aspect), size.y/(2*tangent));
   const fittingDistance = bounds.max.z + radius * 1.28;
-  const distance = fittingDistance * (1-.50*rush);
+  const distance = fittingDistance * (1-(motion?.50:.10)*rush);
   const wobble = shock*.018;
   camera.position.set(
    center.x + Math.sin(elapsed*77)*wobble,
@@ -123,7 +125,7 @@ export function createJumpscare({mouthTexture} = {}) {
   camera.lookAt(center.x, center.y-.035*rush, 0);
 
   borderOpacity = clamp01((.83+.15*rush) * darkness);
-  impactOpacity = clamp01(Math.exp(-Math.pow((elapsed-.22)/.085,2))*.58);
+  impactOpacity = motion*clamp01(Math.exp(-Math.pow((elapsed-.22)/.085,2))*.58);
   glitch = clamp01(shock*.55);
  }
  function start(){

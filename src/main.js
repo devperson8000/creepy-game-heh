@@ -1,3 +1,4 @@
+import {gamePreferences} from './preferences.js';
 import './style.css';
 import './lobby-menu.css';
 import './coop-game.css';
@@ -19,6 +20,7 @@ function failed(error){
  message.textContent='The game could not start. Please reload and check that WebGL is enabled.';
 }
 try {
+ document.documentElement.classList.toggle('reduce-motion',gamePreferences().reducedMotion);
  const study=new URLSearchParams(location.search).get('mode')==='study';
  document.body.classList.toggle('study-mode',study);
  document.querySelector('#scene').setAttribute('aria-label',study?'An animated black horned creature':'First-person basement escape game');
