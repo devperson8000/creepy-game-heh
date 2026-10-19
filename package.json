@@ -17,7 +17,9 @@
     "test:browser:coop-finale": "node scripts/check-coop-finale-browser.mjs",
     "test:browser:finale-failure": "node scripts/check-finale-failure-browser.mjs",
     "test:browser:coop-rescue": "node scripts/check-coop-rescue-browser.mjs",
-    "test:browser:release-menu": "node scripts/check-release-menu-browser.mjs"
+    "test:browser:release-menu": "node scripts/check-release-menu-browser.mjs",
+    "test:browser:sounds": "node scripts/check-interaction-audio-browser.mjs",
+    "test:browser:closet": "node scripts/check-closet-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

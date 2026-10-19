@@ -106,9 +106,11 @@ export function createWorld(run){
   fixture(p.x,4.15,p.z,26);
   const x=p.x+2.35,z=p.z+1.4,closet=new THREE.Group();closet.position.set(x,0,z);scene.add(closet);
   box(1.3,2.85,.12,0,1.425,-.45,wood,closet);box(.1,2.85,1,-.65,1.425,0,wood,closet);box(.1,2.85,1,.65,1.425,0,wood,closet);box(1.4,.1,1,0,2.85,0,wood,closet);
-  const door=box(1.22,2.75,.09,0,1.39,.5,wood,closet);door.userData.interactId=`closet-${index}`;
-  for(let j=0;j<4;j++){const slit=box(.62,.018,.015,0,2.1-j*.08,.553,dark,closet);slit.userData.interactId=`closet-${index}`;}
-  const handle=box(.035,.2,.035,.45,1.4,.57,metal,closet);handle.userData.interactId=`closet-${index}`;
+  const door=new THREE.Group();door.position.set(0,1.39,.5);closet.add(door);
+  const front=box(1.22,2.75,.09,0,0,0,wood,door);front.userData.interactId=`closet-${index}`;
+  const grille=box(.88,.92,.018,0,.36,.056,dark,door);grille.userData.interactId=`closet-${index}`;
+  for(let j=0;j<9;j++){const bar=box(.86,.035,.025,0,.74-j*.095,.075,metal,door);bar.userData.interactId=`closet-${index}`;}
+  const handle=box(.035,.2,.035,.45,.01,.07,metal,door);handle.userData.interactId=`closet-${index}`;
   collider(x,z,1.4,1.1);const data={id:`closet-${index}`,type:'closet',mesh:door,hide:{x,z:z+.17},exit:{x,z:z+1.35}};targets.set(data.id,data);closets.push(data);
  });
  // Spread ceiling fixtures through the corridors as well as the storage rooms.

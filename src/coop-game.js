@@ -1,3 +1,4 @@
+import {createRevivePrompts} from './revive-prompts.js';
 import {huntActive,sampleHuntElapsed} from './hunt-clock.js';
 import {createHostClock,needsHostClockSync} from './coop-clock.js';
 import {createFinalePlayer} from './finale-player.js';
@@ -27,7 +28,7 @@ export function startCoopGame(container,{client,session}){
  state.ownerId=session.ownerId;
  const localId=client.id,isHost=localId===session.ownerId;
  if(!state.players.has(localId))throw new Error('You are not a member of this round.');
- const world=createWorld(run),ui=createGameUI();
+ const world=createWorld(run),ui=createGameUI(),revivePrompts=createRevivePrompts(ui.root);
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;container.append(renderer.domElement);
  const quality=createRenderQuality(renderer,{pixelRatio:Math.min(devicePixelRatio,1.4)});
  const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();world.scene.add(creature.root);
@@ -137,7 +138,7 @@ export function startCoopGame(container,{client,session}){
    point.set(player.x-own.x,0,player.z-own.z).normalize();
    const looking=new THREE.Vector3(direction.x,0,direction.z).normalize();
    const target={id:`revive:${player.id}`,type:'revive',position:player};
-   if(point.dot(looking)>.65&&world.canSeeInteraction(own,target))return {...target,label:`Rescue ${player.name}`,duration:2.5};
+   if(point.dot(looking)>.65&&world.canSeeInteraction(own,target))return {...target,label:`Revive ${player.name}`,duration:2.5};
   }
   raycaster.setFromCamera(new THREE.Vector2(),camera);raycaster.far=2.5;const hit=raycaster.intersectObjects(world.rayMeshes.filter(mesh=>{if(mesh.userData.actor)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;}),false)[0];
   return hit?targetInfo(world.targets.get(hit.object.userData.interactId)):null;
@@ -204,7 +205,7 @@ export function startCoopGame(container,{client,session}){
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);finale?.resize();}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ window.addEventListener('pagehide',()=>{revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
  screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
  function broadcast(wallDelta){
   if(isHost&&!disconnected){
@@ -223,6 +224,7 @@ export function startCoopGame(container,{client,session}){
  }
  function playFinale(now){
   if(finaleId!==run.finale.id){
+   revivePrompts.dispose();
    finale?.dispose();finale=null;finaleId=run.finale.id;finaleClock.reset();finaleFailed=false;finaleCompleteAt=null;
    arrival.dispose();ui.hideScreen();ui.overlay='finale';ui.el('keypad-dialog').hidden=true;input.clear();document.exitPointerLock?.();audio.pause();ambience.pause();
    for(let i=0;i<30&&jumpscare.active;i++)jumpscare.update(.2);
@@ -298,6 +300,7 @@ export function startCoopGame(container,{client,session}){
   if(!input.interact){hold=0;holdId=null;latched=false;}
   else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+delta/target.duration);if(hold>=1){if(target.type==='keypad'&&!run.codeAccepted)openKeypad();else sendAction(target.id);latched=true;hold=0;}}
   else if(!target){hold=0;holdId=null;}
+  revivePrompts.update({players:state.players.values(),own,camera,elapsed:run.elapsed,targetId:target?.id,progress:latched&&holdId===target?.id?1:hold,active:!ui.overlay&&!document.hidden&&!disconnected&&run.phase==='playing',canSee:world.canSeeInteraction});
   const renderedRun=viewRun(watched),hunting=huntActive(renderedRun);
   if(!document.hidden){ui.update(renderedRun,watched,target,hold);updateTeam();updateAvatars(delta);}
   creature.root.visible=hunting;

@@ -1,3 +1,4 @@
+import {playInteractionSound} from './interaction-sounds.js';
 // Full audio extracted from the user-provided monster sound video.
 export const MONSTER_SOUND_URL = '/audio/monster.mp3';
 export const JUMPSCARE_SOUND_URL='/audio/jumpscare.mp3';
@@ -80,12 +81,7 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
  function playNoise(type){
   if(!context||context.state!=='running'||!wanted||muted||disposed)return;
   noiseBuffer??=(()=>{const buffer=context.createBuffer(1,context.sampleRate*.5,context.sampleRate),data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.5;return buffer;})();
-  const moving=type==='walk'||type==='sprint',duration=moving?.13:type==='key'||type==='clue'?.08:type==='drawer'?.24:.35;
-  const sound=context.createBufferSource(),filter=context.createBiquadFilter(),envelope=context.createGain();
-  sound.buffer=noiseBuffer;filter.type='lowpass';filter.frequency.value=moving?type==='sprint'?650:420:950;filter.Q.value=moving?.7:1.8;
-  const now=context.currentTime;envelope.gain.setValueAtTime(0,now);envelope.gain.linearRampToValueAtTime(moving?.11:type==='key'||type==='clue'?.03:.07,now+.01);envelope.gain.exponentialRampToValueAtTime(.0001,now+duration);
-  sound.connect(filter);filter.connect(envelope);envelope.connect(effectsGain);effects.add(sound);sound.start();sound.stop(now+duration+.01);
-  sound.onended=()=>{effects.delete(sound);sound.disconnect();filter.disconnect();envelope.disconnect();};
+  playInteractionSound(context,effectsGain,noiseBuffer,type,effects);
  }
  function setMuted(value){muted=!!value;if(effectsGain)effectsGain.gain.value=muted?0:.8*masterVolume;if(muted){silence();stopScare();for(const sound of effects)sound.stop();}}
  function setVolume(value){
@@ -93,6 +89,6 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
   if(effectsGain)effectsGain.gain.value=muted?0:.8*masterVolume;
   if(scareGain&&scaring)scareGain.gain.value=muted?0:.95*masterVolume;
  }
- function dispose(){disposed=true;wanted=false;abort.abort();silence();stopScare();source?.stop();context?.close().catch(()=>{});}
+ function dispose(){disposed=true;wanted=false;abort.abort();silence();stopScare();source?.stop();for(const sound of effects)sound.stop();effects.clear();context?.close().catch(()=>{});}
  return {resume,pause,update,playNoise,playJumpscare,setMuted,setVolume,dispose,get volume(){return volume;},get muted(){return muted;},get configured(){return !!url;}};
 }

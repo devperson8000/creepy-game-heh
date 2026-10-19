@@ -20,22 +20,27 @@ try{
   const before=game.simulation.snapshot().notices.length;
   Object.assign(p,{x:at.x,z:at.z-1,height:at.height});
   const blocked=game.simulation.interact(p.id,{targetId:target.id}),after=game.simulation.snapshot().notices.length;
-  Object.assign(p,{x:at.x,z:at.z+1.3,height:at.height});
+  Object.assign(p,{x:at.x+1.65,z:at.z+2.5,height:at.height});
   return {visible,opened,blocked,before,after};
  });
  assert.equal(drawer.visible,true);assert.equal(drawer.opened.ok,true);assert.equal(drawer.blocked.reason,'blocked');assert.equal(drawer.after,drawer.before);
  const guestId=await guest.evaluate(()=>monochrome.client.id);
  const deadline=await host.evaluate(async id=>{
   const {downPlayer}=await import('/src/coop-state.js'),g=monochrome,p=g.state.players.get(id),rescuer=g.state.players.get(g.client.id);
-  Object.assign(p,{x:rescuer.x+.5,z:rescuer.z,height:rescuer.height});
+  Object.assign(p,{x:rescuer.x,z:rescuer.z-1,height:rescuer.height});
   downPlayer(g.state,id,g.run.elapsed);return p.downedUntil-g.run.elapsed;
  },guestId);
  assert.equal(deadline,45);
  await guest.waitForFunction(()=>monochrome.state.players.get(monochrome.client.id)?.status==='downed');
  await guest.locator('#screen-content').getByText(/45 seconds/).waitFor({timeout:15000});
  const replicated=await guest.evaluate(()=>{const g=monochrome,p=g.state.players.get(g.client.id);return p.downedUntil-g.run.elapsed;});assert.ok(replicated>40&&replicated<=45);
- const rescue=await host.evaluate(id=>{monochrome.run.elapsed+=30;return monochrome.simulation.interact(monochrome.client.id,{targetId:`revive:${id}`});},guestId);
- assert.equal(rescue.ok,true);await guest.waitForFunction(()=>monochrome.state.players.get(monochrome.client.id)?.status==='alive');
- assert.deepEqual(errors,[]);console.log('PASS real cabinet opens from the front, occluded drawer stays blocked without warning, 45-second deadline reaches guest HUD, late rescue at 30 seconds replicates over database fallback');
+ await host.evaluate(()=>{monochrome.run.elapsed+=30;monochrome.ui.hideScreen();monochrome.input.setView(0,-.55);});
+ const marker=host.locator(`.revive-marker[data-player-id="${guestId}"]`),bar=marker.getByRole('progressbar');
+ await marker.waitFor({state:'visible'});assert.match(await marker.innerText(),/REVIVE/);
+ await host.keyboard.down('KeyE');await host.waitForFunction(()=>Number(document.querySelector('.revive-marker [role="progressbar"]')?.getAttribute('aria-valuenow'))>12);
+ const partial=Number(await bar.getAttribute('aria-valuenow'));assert.ok(partial>0&&partial<100);
+ await host.keyboard.up('KeyE');await host.waitForFunction(()=>document.querySelector('.revive-marker [role="progressbar"]')?.getAttribute('aria-valuenow')==='0');
+ await host.keyboard.down('KeyE');await guest.waitForFunction(()=>monochrome.state.players.get(monochrome.client.id)?.status==='alive');await host.keyboard.up('KeyE');await marker.waitFor({state:'detached'});
+ assert.deepEqual(errors,[]);console.log('PASS real cabinet opens from the front, occluded drawer stays blocked without warning, 45-second deadline reaches guest HUD, over-player revive prompt fills on E, resets on release, and successful late rescue removes it on both clients');
 }catch(e){console.error(e);console.log(errors);process.exitCode=1;}
 finally{await Promise.all(context.pages().map(p=>p.evaluate(()=>window.monochromeTest?.client?.close()).catch(()=>{})));await browser.close();}
