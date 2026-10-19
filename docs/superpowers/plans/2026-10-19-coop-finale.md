@@ -1,6 +1,6 @@
 # Monochrome Co-op Finale Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Deliver the approved multiplayer elevator finale and a main-menu button that previews the same animation without completing a round.
 
@@ -55,11 +55,11 @@
 - `createFinaleClock({now=()=>performance.now()/1000}={}) -> {sync(record),sample(),reset()}` uses monotonic local elapsed after receipt. Ignore backwards updates for the current ID, including after completion; a new ID resets. Correct drift <=.75 seconds gently; catch up immediately for greater drift. Clamp sample to [0,52].
 - `createCoopSimulation(state, world, {ambushChance=.12, now=()=>Date.now()/1000}={})` preserves existing callers. Store original team size in co-op run state, carry cinematic record in existing snapshots, and call begin/advance before ordinary movement/AI. Successful interactions can trigger immediately after their result.
 
-- [ ] Write failing tests for either objective order, incomplete/solo objectives, repeat trigger, distant runner/tied slot ordering, dead/disconnected exclusion, downed rescue, single-cast button fallback, gameplay freeze, original round size after departures, JSON snapshot roundtrip, delayed/new/old clock updates, and exactly one win transition.
-- [ ] Run `node --test tests/finale-state.test.js tests/coop-simulation.test.js`; confirm new tests fail for missing behavior.
-- [ ] Implement the interfaces above without changing movement packets, peer authentication, or database schema. Reject interaction/input consumption during the finale; preserve existing one-player co-op behavior.
-- [ ] Run the focused tests and `npm test`; all pass, including existing movement and victory tests adjusted only where multiplayer ending semantics intentionally change.
-- [ ] Commit as `feat: coordinate the co-op finale timeline`.
+- [x] Write failing tests for either objective order, incomplete/solo objectives, repeat trigger, distant runner/tied slot ordering, dead/disconnected exclusion, downed rescue, single-cast button fallback, gameplay freeze, original round size after departures, JSON snapshot roundtrip, delayed/new/old clock updates, and exactly one win transition.
+- [x] Run `node --test tests/finale-state.test.js tests/coop-simulation.test.js`; confirm new tests fail for missing behavior.
+- [x] Implement the interfaces above without changing movement packets, peer authentication, or database schema. Reject interaction/input consumption during the finale; preserve existing one-player co-op behavior.
+- [x] Run the focused tests and `npm test`; all pass, including existing movement and victory tests adjusted only where multiplayer ending semantics intentionally change.
+- [x] Commit as `feat: coordinate the co-op finale timeline`.
 
 ### Task 2: Cinematic character performances
 
@@ -70,11 +70,11 @@
 - `createFinaleSurvivor(asset, member) -> {root,sample(pose),dispose()}` wraps that API and exposes no shared mutable rig.
 - `createFinaleCreature() -> {root,head,jaw,sample({time,mode,position,yaw,neckPosition,deathTime}),dispose()}` reuses `createCreature`; modes are `chase`, `trapped`, `severed`, `dead`. A hinged mouth visibly opens/snaps, the neck is constrained at the door plane, and a detached head settles independently of the body. After deathTime >=4, no twitch remains.
 
-- [ ] Write failing assertions for absolute-time sampling reproducibility, isolated clone transforms, source asset immutability, dive posture, button hand reaching its world target, labels hidden, head detachment, stable terminal death pose, and idempotent cleanup. Include a real hazmat GLB fixture using the existing test loader pattern.
-- [ ] Run `node --test tests/finale-actors.test.js tests/player-avatar.test.js`; confirm the new assertions fail.
-- [ ] Investigate a reusable web death clip, document source/license and actual rig compatibility in `docs/assets/finale/README.md`. Use a compatible clip if available; otherwise document why the procedural head/jaw requires authored motion. Implement the interfaces and character performances, including the one-survivor hand press.
-- [ ] Run the focused tests; confirm existing avatar movement, IK, lights, and material ownership checks still pass.
-- [ ] Commit as `feat: animate the finale survivors and creature`.
+- [x] Write failing assertions for absolute-time sampling reproducibility, isolated clone transforms, source asset immutability, dive posture, button hand reaching its world target, labels hidden, head detachment, stable terminal death pose, and idempotent cleanup. Include a real hazmat GLB fixture using the existing test loader pattern.
+- [x] Run `node --test tests/finale-actors.test.js tests/player-avatar.test.js`; confirm the new assertions fail.
+- [x] Investigate a reusable web death clip, document source/license and actual rig compatibility in `docs/assets/finale/README.md`. Use a compatible clip if available; otherwise document why the procedural head/jaw requires authored motion. Implement the interfaces and character performances, including the one-survivor hand press.
+- [x] Run the focused tests; confirm existing avatar movement, IK, lights, and material ownership checks still pass.
+- [x] Commit as `feat: animate the finale survivors and creature`.
 
 ### Task 3: Cinematic set, staging, and cameras
 
@@ -85,11 +85,11 @@
 - `createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=false,quality='auto'}) -> {scene,camera,sample(time),resize(aspect),dispose()}` owns set/actors and returns `{shot,fade,title,complete}` from sample. Sampling any time directly must produce the correct scene without playing preceding frames.
 - Shot staging follows all time intervals in the spec. Title is two DOM-ready strings `YOU ESCAPED.` and `TOGETHER.`. Fade transitions use smooth easing; reduced motion disables shake while keeping the shot boundaries and 52-second duration.
 
-- [ ] Write failing tests that sample each shot midpoint and its boundary; assert finite camera/actor transforms, door closure before ascent, shaft frame outside moving cab, independent detached head and black blood after the cut, stable corpse, daylight exit, title timing, and deterministic results when seeking backward/forward. Compare shake-free reduced-motion camera samples.
-- [ ] Run `node --test tests/finale-scene.test.js`; confirm missing scene interfaces fail.
-- [ ] Implement the set and scene. Use actual meshes for the illuminated close button, moving door leaves, dark blood pool, mouth interior and visible shaft cross-frame. Frame the pressing hand, trapped head, elevator indicator and final team exit clearly. Apply mobile framing through resize; avoid postprocessing dependencies.
-- [ ] Run focused tests; manually inspect rendered frames from chase, stairs, press, trap, ascent, severing, corpse and daylight on wide and narrow viewports before accepting the scene.
-- [ ] Commit as `feat: stage the elevator finale and cinematic cameras`.
+- [x] Write failing tests that sample each shot midpoint and its boundary; assert finite camera/actor transforms, door closure before ascent, shaft frame outside moving cab, independent detached head and black blood after the cut, stable corpse, daylight exit, title timing, and deterministic results when seeking backward/forward. Compare shake-free reduced-motion camera samples.
+- [x] Run `node --test tests/finale-scene.test.js`; confirm missing scene interfaces fail.
+- [x] Implement the set and scene. Use actual meshes for the illuminated close button, moving door leaves, dark blood pool, mouth interior and visible shaft cross-frame. Frame the pressing hand, trapped head, elevator indicator and final team exit clearly. Apply mobile framing through resize; avoid postprocessing dependencies.
+- [x] Run focused tests; manually inspect rendered frames from chase, stairs, press, trap, ascent, severing, corpse and daylight on wide and narrow viewports before accepting the scene.
+- [x] Commit as `feat: stage the elevator finale and cinematic cameras`.
 
 ### Task 4: Shared playback, audio, and test button
 
@@ -101,11 +101,11 @@
 - `startFinalePreview(container,{onExit}) -> Promise<controller>` preloads the avatar, starts two demonstrators by default and handles loading/error/retry UI. A direct `onTestFinale` menu callback starts it inside the user gesture; `?mode=finale` also opens the same preview with a Play control if browser audio needs a gesture. Returning recreates the menu.
 - Add npm script `test:browser:finale` for `node scripts/check-finale-browser.mjs`.
 
-- [ ] Write failing audio tests for mute/volume, duplicate events, late seeks, track failure and repeated dispose. Add browser assertions for the visible menu button, preview initialization, full 52-second progression, both title lines, replay, cast changes, Escape/back, model-load failure with retry, and no runtime errors or growing canvas count after three preview visits.
-- [ ] Run the new tests/script against the current build; verify missing controls/interfaces fail.
-- [ ] Implement playback, cinematic styling and preview controls. Use saved preferences; prevent gameplay keys from leaking into preview; keep controls keyboard-accessible and visible on phones. Stop old audio and loops on replay, cast change, error or exit.
-- [ ] Run audio tests and the preview browser script on a fresh production build. Check narrow viewport overflow, muted playback and reduced-motion playback. Listen to the mix and inspect the full scene sequence; save review screenshots in ignored `work/`.
-- [ ] Commit as `feat: add finale sound and a replayable menu preview`.
+- [x] Write failing audio tests for mute/volume, duplicate events, late seeks, track failure and repeated dispose. Add browser assertions for the visible menu button, preview initialization, full 52-second progression, both title lines, replay, cast changes, Escape/back, model-load failure with retry, and no runtime errors or growing canvas count after three preview visits.
+- [x] Run the new tests/script against the current build; verify missing controls/interfaces fail.
+- [x] Implement playback, cinematic styling and preview controls. Use saved preferences; prevent gameplay keys from leaking into preview; keep controls keyboard-accessible and visible on phones. Stop old audio and loops on replay, cast change, error or exit.
+- [x] Run audio tests and the preview browser script on a fresh production build. Check narrow viewport overflow, muted playback and reduced-motion playback. Listen to the mix and inspect the full scene sequence; save review screenshots in ignored `work/`.
+- [x] Commit as `feat: add finale sound and a replayable menu preview`.
 
 ### Task 5: Multiplayer presentation and end-to-end verification
 
@@ -117,15 +117,15 @@
 - Gate normal victory/death overlays until the cinematic reaches its final frame; then dispose presentation and show the normal won screen. A viewer receiving a finished run with finale metadata renders the final shot/title before the ordinary result. Initialization failure falls back to the legitimate victory result and never leaves a black screen.
 - Exiting/disconnecting/pagehide cleans up the finale, listeners and audio. Do not add host migration or change movement prediction.
 
-- [ ] Add failing integration assertions for objective-triggered presentation, previously downed local viewer, late snapshots, hidden host clock, disconnected cast member, terminal outcome and initialization-failure fallback. Include real two-client playback checks with peer transport and forced database fallback.
-- [ ] Run focused tests/browser checks to demonstrate the integration is absent before wiring it.
-- [ ] Wire the player into co-op frame/resize/cleanup paths; keep network broadcast outside the cinematic rendering branch. Preload avatar assets during round startup. Preserve shared timing when a tab is hidden and suppress obsolete gameplay prediction/camera work during the scene.
-- [ ] Run `npm test`, `npm run build`, `npm run test:browser:finale`, `npm run test:browser:polish`, `npm run test:browser`, and movement browser checks with peer and forced database fallback, using the existing local TURN fixture if required. All must pass; inspect logs and `git diff --check`. No claim of universal zero network latency.
-- [ ] Review the complete branch against the spec: every story beat readable, actual hand contact, shaft-relative motion and neck cut coherent, no resurrection, volume respected, scene cleanup verified. Record measured synchronization and asset provenance in README/verification notes. Request whole-branch code review according to the selected execution method.
-- [ ] Commit as `feat: play the synchronized finale on co-op victory`. Report the tested result and current branch; push the feature to main only when authorized by the user's integration direction and after all required checks pass.
+- [x] Add failing integration assertions for objective-triggered presentation, previously downed local viewer, late snapshots, hidden host clock, disconnected cast member, terminal outcome and initialization-failure fallback. Include real two-client playback checks with peer transport and forced database fallback.
+- [x] Run focused tests/browser checks to demonstrate the integration is absent before wiring it.
+- [x] Wire the player into co-op frame/resize/cleanup paths; keep network broadcast outside the cinematic rendering branch. Preload avatar assets during round startup. Preserve shared timing when a tab is hidden and suppress obsolete gameplay prediction/camera work during the scene.
+- [x] Run `npm test`, `npm run build`, `npm run test:browser:finale`, `npm run test:browser:polish`, `npm run test:browser`, and movement browser checks with peer and forced database fallback, using the existing local TURN fixture if required. All must pass; inspect logs and `git diff --check`. No claim of universal zero network latency.
+- [x] Review the complete branch against the spec: every story beat readable, actual hand contact, shaft-relative motion and neck cut coherent, no resurrection, volume respected, scene cleanup verified. Record measured synchronization and asset provenance in README/verification notes. Request whole-branch code review according to the selected execution method.
+- [x] Commit as `feat: play the synchronized finale on co-op victory`. Report the tested result and current branch; push the feature to main only when authorized by the user's integration direction and after all required checks pass.
 
 ## Execution handoff
 
 Recommended: **Native** execution in this session. These five tasks share the clock, actor and scene interfaces closely, so implementing them together makes visual and synchronization adjustments easier. A whole-branch independent review follows implementation. **Subagent-driven** execution is also available, with fresh implementer/reviewer contexts per task.
 
-The written plan requires user review and an execution-method choice before product-code changes begin.
+The user approved this plan and instructed implementation. Native execution, independent review and the resulting mute-regression fix are complete; see `docs/verification/2026-10-19-coop-finale.md`.

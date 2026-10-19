@@ -4,7 +4,7 @@ import {createFinaleAudio} from './finale-audio.js';
 import {loadPlayerAvatarAsset} from './player-avatar.js';
 import {gamePreferences,reducedMotion,createRenderQuality} from './preferences.js';
 function node(tag,className,text){const el=document.createElement(tag);el.className=className;if(text)el.textContent=text;return el;}
-export function createFinalePlayer({container,renderer:borrowedRenderer,asset,cast,runnerId,buttonId,preview=false,muted=false,audio:initialAudio,onExit=()=>{},onComplete=()=>{}}){
+export function createFinalePlayer({container,renderer:borrowedRenderer,asset,cast,runnerId,buttonId,preview=false,muted=false,audio:initialAudio,onExit=()=>{},onComplete=()=>{},onMuteChange=()=>{}}){
  const renderer=borrowedRenderer??new T.WebGLRenderer({antialias:true}),owned=!borrowedRenderer;
  if(owned){renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;container.append(renderer.domElement);}
  const quality=owned?createRenderQuality(renderer):null,prefs=gamePreferences();let scene=createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion:reducedMotion(),quality:prefs.quality});
@@ -15,8 +15,9 @@ export function createFinalePlayer({container,renderer:borrowedRenderer,asset,ca
  const titleMain=node('h1','','YOU ESCAPED.'),titleSub=node('p','','TOGETHER.');title.append(titleMain,titleSub);title.hidden=true;
  const top=node('div','finale-top'),brand=node('span','','MONOCHROME');top.append(brand,node('span','',preview?'FINALE PREVIEW':'THE LAST ASCENT'));
  const controls=node('div','finale-controls'),sound=node('button','finale-button');sound.type='button';
- function soundLabel(){sound.textContent=audio.muted?'Sound off':audio.unlocked?'Sound on':'Enable sound';sound.setAttribute('aria-label',audio.muted?'Unmute finale':audio.unlocked?'Mute finale':'Enable finale sound');sound.setAttribute('aria-pressed',String(audio.muted));}soundLabel();sound.addEventListener('click',()=>{if(audio.unlocked||audio.muted)audio.setMuted(!audio.muted);void audio.resume().then(()=>{if(!disposed)soundLabel();});soundLabel();});void audio.resume().then(()=>{if(!disposed)soundLabel();});
+ function soundLabel(){sound.textContent=audio.muted?'Sound off':audio.unlocked?'Sound on':'Enable sound';sound.setAttribute('aria-label',audio.muted?'Unmute finale':audio.unlocked?'Mute finale':'Enable finale sound');sound.setAttribute('aria-pressed',String(audio.muted));}soundLabel();sound.addEventListener('click',()=>{if(audio.unlocked||audio.muted){setMuted(!audio.muted);onMuteChange(audio.muted);}void audio.resume().then(()=>{if(!disposed)soundLabel();});soundLabel();});void audio.resume().then(()=>{if(!disposed)soundLabel();});
  const progress=node('div','finale-progress'),bar=node('i','');progress.append(bar);root.append(grain,fade,title,top,controls,progress);document.body.append(root);document.body.classList.add('finale-active');
+ function setMuted(value){if(disposed)return;audio.setMuted(value);soundLabel();}
  function exit(){dispose();onExit();}
  if(preview){
   const label=node('label','finale-cast','Survivors '),select=node('select','');select.setAttribute('aria-label','Preview survivors');for(const count of [2,3,4]){const option=node('option','',String(count));option.value=String(count);select.append(option);}select.value=String(cast.length);label.append(select);
@@ -42,7 +43,7 @@ export function createFinalePlayer({container,renderer:borrowedRenderer,asset,ca
  function key(event){if(preview&&event.code==='Escape'){event.preventDefault();exit();}}
  function dispose(){if(disposed)return;disposed=true;if(owned)renderer.setAnimationLoop(null);audio.dispose();scene.dispose();root.remove();window.removeEventListener('resize',resize);document.removeEventListener('keydown',key);window.removeEventListener('pagehide',dispose);if(owned){renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}document.body.classList.remove('finale-active');}
  window.addEventListener('resize',resize);document.addEventListener('keydown',key);window.addEventListener('pagehide',dispose,{once:true});try{resize();if(preview){origin=previous=performance.now();renderer.setAnimationLoop(frame);}}catch(error){dispose();throw error;}
- return {sample,resize,dispose,get ready(){return !disposed;},get time(){return time;},get audio(){return audio;},get scene(){return scene;},get castCount(){return cast.length;}};
+ return {sample,resize,dispose,setMuted,get ready(){return !disposed;},get time(){return time;},get audio(){return audio;},get scene(){return scene;},get castCount(){return cast.length;}};
 }
 export async function startFinalePreview(container,{onExit=()=>{}}={}){
  const audio=createFinaleAudio({volume:gamePreferences().volume});void audio.resume();

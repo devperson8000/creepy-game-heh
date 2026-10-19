@@ -98,7 +98,8 @@ export function startCoopGame(container,{client,session}){
  function cycleSpectator(){const available=[...state.players.values()].filter(p=>p.id!==localId&&p.status==='alive');if(!available.length){spectateId=null;return;}const at=available.findIndex(p=>p.id===spectateId);spectateId=available[(at+1)%available.length].id;}
  nextButton.addEventListener('click',cycleSpectator);team.querySelector('#coop-leave').addEventListener('click',leave);
  function toggleTorch(){if(ui.overlay||local()?.status!=='alive')return;torch.toggle();ui.el('torch-toggle').textContent=torch.on?'Torch on':'Torch off';ui.el('torch-toggle').setAttribute('aria-pressed',String(torch.on));ui.el('torch-toggle').setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
- function toggleSound(){audio.setMuted(!audio.muted);ambience.setMuted(audio.muted);finale?.audio.setMuted(audio.muted);ui.el('sound-toggle').textContent=audio.muted?'Sound off':'Sound on';ui.el('sound-toggle').setAttribute('aria-pressed',String(audio.muted));ui.el('sound-toggle').setAttribute('aria-label',audio.muted?'Unmute game sound':'Mute game sound');}
+ function setSoundMuted(value){audio.setMuted(value);ambience.setMuted(value);finale?.setMuted(value);ui.el('sound-toggle').textContent=audio.muted?'Sound off':'Sound on';ui.el('sound-toggle').setAttribute('aria-pressed',String(audio.muted));ui.el('sound-toggle').setAttribute('aria-label',audio.muted?'Unmute game sound':'Mute game sound');}
+ function toggleSound(){setSoundMuted(!audio.muted);}
  ui.el('torch-toggle').addEventListener('click',toggleTorch);ui.el('sound-toggle').hidden=!audio.configured;ui.el('sound-toggle').addEventListener('click',toggleSound);ui.el('pause-game').addEventListener('click',pause);
  document.addEventListener('keydown',event=>{
   if(event.repeat||event.target.closest?.('input'))return;
@@ -224,7 +225,7 @@ export function startCoopGame(container,{client,session}){
   const record=!isHost&&hostClock.ready?{...run.finale,elapsed:Math.max(run.finale.elapsed,hostClock.sample()-run.finale.startedAt)}:run.finale;
   finaleClock.sync(record);const elapsed=finaleClock.sample();
   try{
-   if(!finale&&!finaleFailed&&avatarAsset)finale=createFinalePlayer({container,renderer,asset:avatarAsset,...run.finale,muted:audio.muted});
+   if(!finale&&!finaleFailed&&avatarAsset)finale=createFinalePlayer({container,renderer,asset:avatarAsset,...run.finale,muted:audio.muted,onMuteChange:setSoundMuted});
    finale?.sample(finaleClock.sample());
   }catch(error){console.warn('Finale presentation unavailable',error);finale?.dispose();finale=null;finaleFailed=true;document.body.classList.remove('finale-active');}
   if(run.phase==='won'&&elapsed>=52){

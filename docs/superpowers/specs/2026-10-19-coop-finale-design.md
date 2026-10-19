@@ -1,6 +1,6 @@
 # Monochrome co-op finale
 
-Status: written design for review; cinematic implementation has not started.
+Status: approved design, implemented and verified; see `docs/verification/2026-10-19-coop-finale.md`.
 
 ## Goal and delivery order
 

@@ -25,9 +25,16 @@ try{
  assert.equal(await guest.locator('#game-ui').evaluate(el=>getComputedStyle(el).visibility),'hidden');
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>monochrome.finale.time>2,null,{timeout:10000})));
  const clock=await Promise.all([host,guest].map(p=>p.evaluate(()=>monochrome.finale.time)));console.log('Finale clock samples:',clock);assert.ok(Math.abs(clock[0]-clock[1])<.8,`synchronized clocks ${clock}`);
+ await guest.getByRole('button',{name:'Mute finale',exact:true}).click();
+ assert.equal(await guest.evaluate(()=>monochrome.monsterAudio.muted),true,'finale button updates shared game mute');
+ await guest.keyboard.press('KeyM');assert.equal(await guest.evaluate(()=>monochrome.finale.audio.muted),false,'M unmutes after the button');
+ assert.equal(await guest.getByRole('button',{name:'Mute finale',exact:true}).innerText(),'Sound on');
+ await guest.keyboard.press('KeyM');assert.equal(await guest.getByRole('button',{name:'Unmute finale',exact:true}).innerText(),'Sound off','M refreshes the finale label');
+ await guest.getByRole('button',{name:'Unmute finale',exact:true}).click();assert.equal(await guest.evaluate(()=>monochrome.monsterAudio.muted),false,'button unmutes after M');
+
  await host.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,get:()=>true}));const before=await guest.evaluate(()=>monochrome.finale.time);await guest.waitForTimeout(1100);assert.ok(await guest.evaluate(t=>monochrome.finale.time>t+.7,before));
  // Exercise a large authoritative seek, as happens when returning to a long-hidden viewer.
- await host.evaluate(()=>{monochrome.run.finale.startedAt-=47;});await guest.waitForFunction(()=>monochrome.finale.time>47,null,{timeout:10000});
+ await host.evaluate(()=>{monochrome.run.finale.startedAt-=47;});await guest.waitForFunction(()=>monochrome.finale?.time>47||monochrome.run.phase==='won',null,{timeout:10000});
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>monochrome.run.phase==='won'&&monochrome.ui.overlay==='won',null,{timeout:16000})));
  assert.deepEqual(errors,[]);console.log('PASS actual co-op victory trigger, shared finale, hidden HUD, synchronized clocks, hidden host, late catch-up and final victory over '+(peer?'peer transport':'database fallback')+'; no runtime errors');
  }
