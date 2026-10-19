@@ -3,12 +3,13 @@ import {sweepMove} from './navigation.js';
 import {huntActive} from './hunt-clock.js';
 export const MONSTER_SPEED={patrol:1.8,investigate:2.65,chase:3.95};
 export const SIGHT_RANGE=16;
+export const MAX_IDLE_SECONDS=2;
 export function createEnemy(layout){
  // The entrance is on the north edge. Use the farthest southern room in all
  // basement sizes, with a deterministic tie-break towards the opposite corner.
  const room=layout.rooms.reduce((far,next)=>next.z>far.z||next.z===far.z&&next.x>far.x?next:far);
  const spawn=worldPoint(room),entrance=layout.entrance?worldPoint(layout.entrance):{x:spawn.x,z:spawn.z-1};
- return {position:{...spawn},yaw:Math.atan2(entrance.x-spawn.x,entrance.z-spawn.z),mode:'patrol',path:[],repath:0,lastSeen:null,lastHeard:null,lostFor:0,patrolIndex:layout.rooms.indexOf(room),searchRemaining:0,sensedBy:null,released:false};
+ return {position:{...spawn},yaw:Math.atan2(entrance.x-spawn.x,entrance.z-spawn.z),mode:'patrol',path:[],repath:0,lastSeen:null,lastHeard:null,lostFor:0,patrolIndex:layout.rooms.indexOf(room),searchRemaining:0,sensedBy:null,released:false,idleFor:0,roamRemaining:0,areaOrigin:{...spawn},areaTime:0};
 }
 export function releaseMonster(run,enemy){
  if(!huntActive(run)||enemy.released)return;
@@ -33,6 +34,20 @@ function routeTo(enemy,layout,target,navigation){
  if(route.length>1)route.shift();
  if(route.length)route.push({x:target.x,z:target.z});
  return route;
+}
+// Commit to a reachable destination so a blocked clue or repeated sound cannot
+// pin the monster in place. Sight still interrupts roaming immediately.
+function resumeRoaming(enemy,layout,navigation){
+ enemy.mode='patrol';enemy.lastSeen=null;enemy.lastHeard=null;enemy.sensedBy=null;
+ enemy.searchRemaining=0;enemy.roamRemaining=8;enemy.path=[];enemy.repath=0;
+ for(let offset=1;offset<=layout.rooms.length;offset++){
+  const index=(enemy.patrolIndex+offset)%layout.rooms.length,target=worldPoint(layout.rooms[index]);
+  if(Math.hypot(target.x-enemy.position.x,target.z-enemy.position.z)<3)continue;
+  const route=routeTo(enemy,layout,target,navigation);
+  if(!route.length||Math.hypot(route.at(-1).x-target.x,route.at(-1).z-target.z)>1)continue;
+  enemy.patrolIndex=index;enemy.path=route;enemy.repath=.9;break;
+ }
+ enemy.idleFor=0;enemy.areaOrigin={...enemy.position};enemy.areaTime=0;
 }
 // A round gets one rare opportunity. Cover and a short real route are required;
 // this director only chooses a target, while tickEnemy owns movement and catches.
@@ -80,36 +95,55 @@ export function tickAmbush(state,{enemy,layout,player,delta,active=true,navigati
 }
 export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],navigation={}){
  if(!active)return {caught:false,distance:Infinity,visible:false,heard:false};
+ const before={...enemy.position};
+ enemy.roamRemaining=Math.max(0,(enemy.roamRemaining??0)-delta);
  const distance=Math.hypot(player.x-enemy.position.x,player.z-enemy.position.z);
  const direction=Math.atan2(player.x-enemy.position.x,player.z-enemy.position.z);
  const facing=Math.cos(direction-enemy.yaw)>.05;
  const visible=player.height<1.5&&!player.hidden&&distance<SIGHT_RANGE&&(facing||distance<3)&&lineOfSight(layout,enemy.position,player)&&(!navigation.canSee||navigation.canSee(enemy.position,player));
- const sound=heardNoise(enemy,layout,noises);
+ const sound=enemy.roamRemaining>0?null:heardNoise(enemy,layout,noises);
  if(visible){
+  enemy.roamRemaining=0;
   if(enemy.mode!=='chase')enemy.repath=0;
   enemy.mode='chase';enemy.lastSeen={x:player.x,z:player.z};enemy.lostFor=0;enemy.sensedBy='sight';
+ }else if(enemy.roamRemaining>0&&enemy.mode!=='chase'){
+  enemy.mode='patrol';
  }else if(sound){
   enemy.lastHeard={x:sound.x,z:sound.z};enemy.sensedBy='sound';enemy.repath=0;enemy.path=[];
   if(enemy.mode==='chase'){enemy.lastSeen={...enemy.lastHeard};enemy.lostFor=0;}
   else enemy.mode='investigate';
  }else if(enemy.mode==='chase'){
   enemy.lostFor+=delta;
-  if(enemy.lostFor>6.5){enemy.mode='search';enemy.searchRemaining=4.5;enemy.path=[];}
+  if(enemy.lostFor>6.5){enemy.mode='search';enemy.searchRemaining=MAX_IDLE_SECONDS;enemy.path=[];}
+ }
+ function finish(){
+  const moved=Math.hypot(enemy.position.x-before.x,enemy.position.z-before.z);
+  enemy.idleFor=moved<.001?(enemy.idleFor??0)+delta:0;
+  enemy.areaOrigin??={...before};
+  if(visible||Math.hypot(enemy.position.x-enemy.areaOrigin.x,enemy.position.z-enemy.areaOrigin.z)>4){
+   enemy.areaOrigin={...enemy.position};enemy.areaTime=0;
+  }else enemy.areaTime=(enemy.areaTime??0)+delta;
+  if(!visible&&(enemy.idleFor>=MAX_IDLE_SECONDS-1e-6||enemy.areaTime>=12))resumeRoaming(enemy,layout,navigation);
+  const nowDistance=Math.hypot(player.x-enemy.position.x,player.z-enemy.position.z);
+  return {caught:visible&&nowDistance<1.35,distance:nowDistance,visible,heard:!!sound};
  }
  if(enemy.mode==='search'){
+  enemy.searchRemaining=Math.min(enemy.searchRemaining,MAX_IDLE_SECONDS-(enemy.idleFor??0));
   enemy.yaw+=delta*.95;enemy.searchRemaining-=delta;
-  if(enemy.searchRemaining<=0){enemy.mode='patrol';enemy.lastSeen=null;enemy.lastHeard=null;enemy.sensedBy=null;enemy.patrolIndex++;enemy.repath=0;}
-  else return {caught:false,distance,visible,heard:!!sound};
+  if(enemy.searchRemaining<=0)resumeRoaming(enemy,layout,navigation);
+  else return finish();
  }
  const target=enemy.mode==='chase'?enemy.lastSeen:enemy.mode==='investigate'?enemy.lastHeard:worldPoint(layout.rooms[enemy.patrolIndex%layout.rooms.length]);
  const targetDistance=Math.hypot(target.x-enemy.position.x,target.z-enemy.position.z);
  if((targetDistance<.18||navigation.canMove&&!navigation.canMove(target.x,target.z)&&targetDistance<1.4)&&!visible){
   enemy.path=[];
-  if(enemy.mode==='patrol'){enemy.patrolIndex++;enemy.repath=0;}
-  else {enemy.mode='search';enemy.searchRemaining=4.5;}
+  if(enemy.mode==='patrol')resumeRoaming(enemy,layout,navigation);
+  else {enemy.mode='search';enemy.searchRemaining=MAX_IDLE_SECONDS;}
  }else{
   enemy.repath-=delta;
-  if(enemy.repath<=0||!enemy.path.length){enemy.path=routeTo(enemy,layout,target,navigation);enemy.repath=enemy.mode==='chase'?.25:enemy.mode==='investigate'?.55:.9;}
+  // Static destinations keep their collision-safe route; rebuilding a patrol
+  // mid-corner can repeatedly select a shortcut that fails the collision sweep.
+  if(!enemy.path.length||enemy.mode==='chase'&&enemy.repath<=0){enemy.path=routeTo(enemy,layout,target,navigation);enemy.repath=enemy.mode==='chase'?.25:enemy.mode==='investigate'?.55:.9;}
   let travel=delta*MONSTER_SPEED[enemy.mode];
   while(enemy.path.length&&travel>0){
    const next=enemy.path[0],dx=next.x-enemy.position.x,dz=next.z-enemy.position.z,d=Math.hypot(dx,dz);
@@ -121,6 +155,5 @@ export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],naviga
    if(moved<step-.001){enemy.path=[];enemy.repath=0;break;}if(step===d)enemy.path.shift();
   }
  }
- const nowDistance=Math.hypot(player.x-enemy.position.x,player.z-enemy.position.z);
- return {caught:visible&&nowDistance<1.35,distance:nowDistance,visible,heard:!!sound};
+ return finish();
 }

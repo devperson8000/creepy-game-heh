@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRun} from '../src/game-state.js';
-import {CELL,worldPoint} from '../src/level.js';
-import {createEnemy} from '../src/enemy.js';
+import * as THREE from 'three';
+import {CELL,worldPoint,gridPoint,walkable} from '../src/level.js';
+import {createEnemy,tickEnemy} from '../src/enemy.js';
 import {createWorld} from '../src/world.js';
 
 // Rendering is not needed to inspect real scene geometry and navigation. Only
@@ -85,4 +86,37 @@ test('drawer and elevator easing remain consistent at different render rates',()
  const sample=hz=>{const run=createRun(42),world=headlessWorld(run);run.drawers[0].opened=true;run.exitOpen=true;for(let i=0;i<hz/2;i++)world.update(1/hz,i/hz,{x:-2.6,z:-29},0);return {drawer:world.drawerViews[0].drawer.position.z,door:world.doorProgress};};
  const low=sample(20),high=sample(100);assert.ok(Math.abs(low.drawer-high.drawer)<1e-8);assert.ok(Math.abs(low.door-high.door)<1e-8);
  assert.ok(low.drawer>0&&low.drawer<.47);assert.ok(low.door>0&&low.door<1);
+});
+
+for(const playerCount of [1,3,4])test(`${playerCount}-player creepy writing sits on solid walls facing walkable rooms`,()=>{
+ const run=createRun(42,{playerCount}),world=headlessWorld(run);
+ assert.equal(world.wallNotes.length,run.layout.rooms.length);
+ assert.ok(world.wallNotes.some(note=>note.userData.noteText==='IT HEARS YOU'));
+ assert.equal(new Set(world.wallNotes.map(note=>note.userData.noteText)).size,world.wallNotes.length);
+ for(const note of world.wallNotes){
+  const normal=new THREE.Vector3(0,0,1).applyQuaternion(note.quaternion);
+  assert.equal(walkable(run.layout,note.userData.wallCell),false);
+  assert.equal(walkable(run.layout,gridPoint(note.position.clone().addScaledVector(normal,.25))),true);
+  assert.equal(walkable(run.layout,gridPoint(note.position.clone().addScaledVector(normal,-.25))),false);
+  assert.equal(note.material.isMeshStandardMaterial,true);
+  assert.equal(note.material.transparent,true);
+  assert.equal(world.rayMeshes.includes(note),false,'paint cannot obstruct drawer interactions');
+ }
+});
+
+for(const playerCount of [1,3,4])test(`${playerCount}-player furnished maze keeps Monochrome roaming without long pauses or wall clipping`,()=>{
+ for(const seed of [42,137,2026]){
+  const run=createRun(seed,{playerCount}),world=headlessWorld(run),enemy=createEnemy(run.layout);
+  const player={x:-2.6,z:-29,height:3.6,hidden:true},regions=new Set();let idle=0,maxIdle=0;
+  for(let i=0;i<3600;i++){
+   const before={...enemy.position};
+   tickEnemy(enemy,run.layout,player,1/30,true,[],world.enemyNavigation);
+   assert.ok(world.enemyNavigation.canMove(enemy.position.x,enemy.position.z),'monster clips a furnishing or wall');
+   const moved=Math.hypot(enemy.position.x-before.x,enemy.position.z-before.z);
+   idle=moved<.001?idle+1/30:0;maxIdle=Math.max(maxIdle,idle);
+   regions.add(`${Math.floor(enemy.position.x/6)},${Math.floor(enemy.position.z/6)}`);
+  }
+  assert.ok(maxIdle<=2.1,`seed ${seed}: idle ${maxIdle}s`);
+  assert.ok(regions.size>=5,`seed ${seed}: stayed in only ${regions.size} regions`);
+ }
 });

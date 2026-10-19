@@ -1,6 +1,7 @@
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {CELL,SIZE,worldPoint,gridPoint,walkable,groundHeight} from './level.js';
+import {createWallNotes} from './wall-notes.js';
 import {createNavigator} from './navigation.js';
 import {createProximityLighting} from './proximity-lighting.js';
 
@@ -121,6 +122,7 @@ export function createWorld(run){
   if(lamps.some(lamp=>Math.hypot(p.x-lamp.position.x,p.z-lamp.position.z)<7))continue;
   fixture(p.x,4.15,p.z,18);
  }
+ const wallNotes=createWallNotes(run.layout);scene.add(...wallNotes);
  const clueRoom=worldPoint(run.layout.rooms[run.clueRoom]);
  box(1.6,.08,.72,clueRoom.x,.9,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x-.65,.45,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x+.65,.45,clueRoom.z+2.3,wood);collider(clueRoom.x,clueRoom.z+2.3,1.6,.72);
  box(.84,.37,.04,clueRoom.x,1.25,clueRoom.z+2.42,wood);box(.045,.35,.045,clueRoom.x,1.08,clueRoom.z+2.4,wood);
@@ -192,5 +194,5 @@ export function createWorld(run){
    if(source)light.position.copy(source.position);
   });
  }
- return {scene,targets,rayMeshes,canMove,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:clueRoom.x,z:clueRoom.z+2.45},get doorProgress(){return doorProgress;}};
+ return {scene,targets,rayMeshes,wallNotes,canMove,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:clueRoom.x,z:clueRoom.z+2.45},get doorProgress(){return doorProgress;}};
 }
