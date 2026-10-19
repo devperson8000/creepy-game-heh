@@ -56,6 +56,8 @@ The original creature animation viewer remains available through **Creature stud
 
 ## Difficulty and atmosphere
 
+A digital clock starts at **12:00 AM** when the opening finishes. Every game minute takes half a real second, so **6:00 AM arrives after three minutes of active play**. Until then, Monochrome is hidden, silent and cannot catch anyone; opening the boards does not release him. At six, the HUD clock disappears, a large **6:00 / IT IS HUNTING** warning flashes briefly, and Monochrome begins approaching from a storage room on the opposite side of the basement. The warning respects reduced motion. Solo pause/keypad menus stop the clock. Co-op uses the host clock for everyone and keeps ticking through individual pause menus. A solo retry preserves the same clock and banked progress; starting a new run resets it.
+
 The creature sees farther, investigates nearby footsteps and noisy interactions, and pursues faster than your sprint. Walking has a shorter hearing range than sprinting; drawers and closet doors make noise. Walls soften sounds. Noise draws the creature to the sound’s last location, not a hidden player’s current position. Break sight and hide before it sees you enter. Standing still is quiet, and the HUD reports your recent noise level. Muting playback does not disable its hearing.
 
 Difficulty is eased slightly: chase speed is 4.15 units/s versus the player's 3.7-unit/s sprint, hearing reaches 92% of each noise event's nominal radius, and pursuit memory lasts seven seconds after losing sight. The creature has slimmer shoulder/hip joins and a matte black body that avoids round torch highlights.
@@ -92,6 +94,9 @@ npm run dev
 npm test
 npm run build
 npm run preview
+# With a server running (GAME_TEST_URL defaults to http://localhost:5173):
+npm run test:browser:hunt
+npm run test:browser:coop-hunt
 ```
 
 Database authorization and concurrent four-player approvals can also be checked against a temporary PostgreSQL 17 container:

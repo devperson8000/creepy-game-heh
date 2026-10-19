@@ -32,7 +32,7 @@ try{
  assert.match(await page.locator('#keypad-feedback').innerText(),/denied/);
  await page.keyboard.type(code);await page.keyboard.press('Enter');await page.waitForFunction(()=>monochrome.run.codeAccepted);
  // Place the actual enemy at an exposed player to exercise capture and the wired retry.
- await page.evaluate(()=>{const game=monochrome;game.run.boardsOpen=true;game.player.x=-2.6;game.player.z=-18.2;game.enemy().position={x:-2.6,z:-18};game.enemy().yaw=Math.PI;});
+ await page.evaluate(()=>{const game=monochrome;game.run.boardsOpen=true;game.run.huntElapsed=190;game.player.x=-2.6;game.player.z=-18.2;game.enemy().position={x:-2.6,z:-18};game.enemy().yaw=Math.PI;});
  await page.waitForFunction(()=>monochrome.ui.overlay==='dead',null,{timeout:30000});
  assert.match(await page.locator('#screen-content').innerText(),/banked keys are safe/);
  await page.locator('#screen-primary').click();await page.waitForFunction(()=>monochrome.run.phase==='playing'&&!monochrome.ui.overlay);

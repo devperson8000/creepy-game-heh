@@ -1,3 +1,4 @@
+import {advanceHuntClock,huntActive} from './hunt-clock.js';
 import {gamePreferences,createRenderQuality,reducedMotion} from './preferences.js';
 import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
@@ -5,7 +6,7 @@ import {createRun,searchDrawer,takeKey,bankKeys,enterCode,readClue,catchPlayer,r
 import {createWorld} from './world.js';
 import {createCreature,applyIdle,applyRunning} from './creature.js';
 import {idlePose} from './idle.js';
-import {createEnemy,tickEnemy,createAmbush,tickAmbush} from './enemy.js';
+import {createEnemy,tickEnemy,createAmbush,tickAmbush,releaseMonster} from './enemy.js';
 import {groundHeight,moveInWorld,worldPoint} from './level.js';
 import {createGameUI} from './game-ui.js';
 import {gameInput} from './game-input.js';
@@ -36,7 +37,7 @@ export function startGame(container,{seed,autostart=false}={}){
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void monsterAudio.resume();void ambience.resume();});
  let pendingNoise=[],noiseUntil=0;const footsteps={distance:0};
- function emitNoise(noise){if(!noise)return;monsterAudio.playNoise(noise.type);player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noiseUntil=performance.now()+1000;if(run.boardsOpen)pendingNoise.push(noise);}
+ function emitNoise(noise){if(!noise)return;monsterAudio.playNoise(noise.type);player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noiseUntil=performance.now()+1000;if(huntActive(run))pendingNoise.push(noise);}
  function resume(){ui.hideScreen();input.capture();void monsterAudio.resume();void ambience.resume();}
  function respawn(){if(hiddenCloset)hiddenCloset.mesh.visible=true;hiddenCloset=null;hideWitnessed=false;player={x:-2.6,z:-29,height:3.6};input.setView(Math.PI);enemy=createEnemy(run.layout);world.lighting.reset();pendingNoise=[];footsteps.distance=0;noiseUntil=0;threat=0;hold=0;latched=false;}
  function showScreen(kind){monsterAudio.pause();ambience.pause();ui.screen(kind,run);document.exitPointerLock?.();input.clear();ui.el('screen-primary').addEventListener('click',()=>{if(kind==='won'){location.reload();return;}if(kind==='dead'){retryRun(run);respawn();}resume();});ui.root.querySelector('#new-run')?.addEventListener('click',()=>location.reload());}
@@ -99,20 +100,21 @@ export function startGame(container,{seed,autostart=false}={}){
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();}resize();window.addEventListener('resize',resize);
  showScreen('menu');if(autostart){ui.hideScreen();ui.overlay='arrival';}let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
-  const now=performance.now(),frameDelta=Math.min((now-previous)/1000,.2);previous=now;
+  const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),frameDelta=Math.min(clockDelta,.2);previous=now;
   if(jumpscare.active){
    jumpscare.update(frameDelta);
    if(!jumpscare.active){ui.el('jumpscare-border').hidden=true;document.body.classList.remove('jumpscare-active');showScreen('dead');}
   }
   if(!ui.overlay&&run.phase==='playing'){
    time+=frameDelta;run.elapsed+=frameDelta;
+   advanceHuntClock(run,clockDelta);releaseMonster(run,enemy);
    // Small physics steps preserve wall collision and fair pursuit at lower frame rates.
    for(let remaining=frameDelta;remaining>0;remaining-=.025){
     const step=Math.min(.025,remaining);
     if(!run.hidden){const next=moveInWorld(player,input.movement,input.yaw,step,world.canMove,input.sprint?3.7:2.5);const moved=Math.hypot(next.x-player.x,next.z-player.z);player.x=next.x;player.z=next.z;emitNoise(footstepNoise(footsteps,moved,input.sprint,{x:player.x,z:player.z,height:groundHeight(player)}));}
     player.height=groundHeight(player);
-    ambushResult=tickAmbush(ambush,{enemy,layout:run.layout,player:{...player,hidden:run.hidden},delta:step,active:run.boardsOpen,navigation:world.enemyNavigation});
-    lastResult=tickEnemy(enemy,run.layout,{...player,hidden:run.hidden&&!hideWitnessed},step,run.boardsOpen,pendingNoise,world.enemyNavigation);pendingNoise=[];
+    ambushResult=tickAmbush(ambush,{enemy,layout:run.layout,player:{...player,hidden:run.hidden},delta:step,active:huntActive(run),navigation:world.enemyNavigation});
+    lastResult=tickEnemy(enemy,run.layout,{...player,hidden:run.hidden&&!hideWitnessed},step,huntActive(run),pendingNoise,world.enemyNavigation);pendingNoise=[];
     if(lastResult.caught||(run.hidden&&hideWitnessed&&lastResult.distance<1.8)){capturePlayer();break;}
    }
    input.updateView();camera.position.set(player.x,player.height+1.65,player.z);
@@ -125,13 +127,14 @@ export function startGame(container,{seed,autostart=false}={}){
    ui.update(run,player,target,hold);
    if(run.phase==='playing'&&run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
   }else{camera.position.set(player.x,player.height+1.65,player.z);input.updateView();ui.update(run,player,null,0);}
+  creature.root.visible=huntActive(run);
   applyIdle(creature,idlePose(time));if(enemy.path.length)applyRunning(creature,time*(enemy.mode==='chase'?1.2:enemy.mode==='investigate'?.8:.65),enemy.mode==='chase'?1:.6);
   creature.root.position.y+=groundHeight(enemy.position);creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
-  const soundDistance=run.boardsOpen?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height-groundHeight(enemy.position)):Infinity;
+  const soundDistance=huntActive(run)?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height-groundHeight(enemy.position)):Infinity;
   monsterAudio.update(ambushResult.silent?Infinity:soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
   const breathingFov=66+(reducedMotion()?0:Math.sin(time*1.4)*threat*.45);
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
-  world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:run.boardsOpen});
+  world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:huntActive(run)});
   torch.update({ceilingPower:world.lighting.visibility,time,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
   const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update();
   renderer.toneMappingExposure=torch.exposure*prefs.brightness;

@@ -1,3 +1,4 @@
+import {huntActive,sampleHuntElapsed} from './hunt-clock.js';
 import {createHostClock,needsHostClockSync} from './coop-clock.js';
 import {createFinalePlayer} from './finale-player.js';
 import {createFinaleClock} from './finale-state.js';
@@ -55,6 +56,7 @@ export function startCoopGame(container,{client,session}){
  let enemyView={position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
  let latestSequence=-1,lastNotice=0,scareStatus=null,lastStatus='alive',outcome=null,spectateId=null,lastSnapshotAt=performance.now(),leaving=false;
  let hold=0,holdId=null,latched=false,buffer='',inputClock=0,snapshotClock=0,disconnected=false;
+ let huntClockStamp=null;
  const avatars=new Map(),noiseSequences=new Map(),poseBuffers=new Map(),enemyBuffer=createPoseBuffer({adaptive:true});let avatarAsset;
  const prediction=createMovementPrediction(state.players.get(localId),world.canMove);
  let peerProofAt=0,proofSnapshotClock=0;
@@ -73,7 +75,10 @@ export function startCoopGame(container,{client,session}){
  const roster=team.querySelector('ul'),teamStatus=team.querySelector('#coop-status'),nextButton=team.querySelector('#coop-next');
  const rosterRows=new Map();
  function local(){return state.players.get(localId);}
- function viewRun(watched=local()){const own=local();return {...run,carried:own?.carried??new Set(),hidden:!!watched?.hidden,teamKeyCount:run.banked.size+[...state.players.values()].reduce((n,p)=>n+p.carried.size,0)};}
+ function viewRun(watched=local()){
+  const own=local(),huntElapsed=isHost||!hostClock.ready?run.huntElapsed:sampleHuntElapsed(run,{...huntClockStamp,hostNow:hostClock.sample()});
+  return {...run,huntElapsed,carried:own?.carried??new Set(),hidden:!!watched?.hidden,teamKeyCount:run.banked.size+[...state.players.values()].reduce((n,p)=>n+p.carried.size,0)};
+ }
  async function leave(){if(leaving)return;leaving=true;finale?.dispose();await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
  function resume(){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
  function screen(kind){
@@ -148,6 +153,7 @@ export function startCoopGame(container,{client,session}){
   hostClock.accept(snapshot.clockSync?.echoes?.[localId]);
   const before=local()?{...local()}:null;latestSequence=snapshot.sequence;lastSnapshotAt=performance.now();
   applyCoopSnapshot(state,snapshot.state);
+  huntClockStamp=snapshot.huntClock;
   const after=local();
   if(!after){disconnected=true;screen('lost');return;}
   const transition=before?.status!==after?.status||before?.hidden!==after?.hidden||before?.closetId!==after?.closetId;
@@ -234,12 +240,21 @@ export function startCoopGame(container,{client,session}){
   }
  }
  function frame(){
-  const now=performance.now(),wallDelta=Math.min(1,(now-previous)/1000),delta=Math.min(.2,wallDelta);previous=now;time+=delta;
+  const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),wallDelta=Math.min(1,clockDelta),delta=Math.min(.2,wallDelta);previous=now;time+=delta;
   avatarResume=wasHidden&&!document.hidden;wasHidden=document.hidden;
   let own=local();if(!own)return;
   const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||run.phase!=='playing'||own.status!=='alive'};
   if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:10000)){disconnected=true;screen('lost');}
-  if(isHost){simulation.setInput(localId,command);if(!disconnected){for(let left=document.hidden?wallDelta:delta;left>0;left-=.2)simulation.advance(Math.min(.2,left));}enemyView=simulation.enemySnapshot();}
+  if(isHost){
+   simulation.setInput(localId,command);
+   if(!disconnected){
+    let clockPending=clockDelta;
+    for(let left=document.hidden?wallDelta:delta;left>0;left-=.2){
+     simulation.advance(Math.min(.2,left),{clockRunning:!arrival.active,clockDelta:clockPending});clockPending=0;
+    }
+   }
+   enemyView=simulation.enemySnapshot();
+  }
   else if(!disconnected){
    const fingerprint=client.voice?.localFingerprint?.(session.ownerId);
    const direct=peerReady(session.ownerId);
@@ -283,16 +298,18 @@ export function startCoopGame(container,{client,session}){
   if(!input.interact){hold=0;holdId=null;latched=false;}
   else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+delta/target.duration);if(hold>=1){if(target.type==='keypad'&&!run.codeAccepted)openKeypad();else sendAction(target.id);latched=true;hold=0;}}
   else if(!target){hold=0;holdId=null;}
-  if(!document.hidden){ui.update(viewRun(watched),watched,target,hold);updateTeam();updateAvatars(delta);}
+  const renderedRun=viewRun(watched),hunting=huntActive(renderedRun);
+  if(!document.hidden){ui.update(renderedRun,watched,target,hold);updateTeam();updateAvatars(delta);}
+  creature.root.visible=hunting;
   applyIdle(creature,idlePose(time));if(enemyView.moving)applyRunning(creature,time*(enemyView.mode==='chase'?1.2:.7),enemyView.mode==='chase'?1:.65);
   const enemyPose=!isHost?enemyBuffer.sample(performance.now()/1000):null;
   const monsterPosition=enemyPose??enemyView.position;
   creature.root.position.set(monsterPosition.x,creature.root.position.y+groundHeight(monsterPosition),monsterPosition.z);creature.root.rotation.y=enemyPose?.yaw??enemyView.yaw;
-  const distance=run.boardsOpen?Math.hypot(enemyView.position.x-watched.x,enemyView.position.z-watched.z,watched.height-groundHeight(enemyView.position)):Infinity;
+  const distance=hunting?Math.hypot(enemyView.position.x-watched.x,enemyView.position.z-watched.z,watched.height-groundHeight(enemyView.position)):Infinity;
   const threat=watched.height<1.5?Math.max(0,1-distance/12):0;
   const silent=enemyView.silent&&enemyView.silentTargetId===watched.id;
   audio.update(silent?Infinity:distance,!ui.overlay&&!disconnected&&run.phase==='playing',delta);
-  world.update(disconnected?0:delta,time,watched,threat,hold,{position:{...enemyView.position,height:groundHeight(enemyView.position)},hunting:enemyView.mode==='chase',active:run.boardsOpen});
+  world.update(disconnected?0:delta,time,watched,threat,hold,{position:{...enemyView.position,height:groundHeight(enemyView.position)},hunting:enemyView.mode==='chase',active:hunting});
   torch.update({ceilingPower:world.lighting.visibility,time,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
   torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?140:0;
   const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update();

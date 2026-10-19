@@ -1,4 +1,5 @@
-import {gamePreferences,savePreferences} from './preferences.js';
+import {gamePreferences,savePreferences,reducedMotion} from './preferences.js';
+import {huntClockView,HUNT_START_SECONDS,HUNT_WARNING_SECONDS} from './hunt-clock.js';
 export function objectiveFor(run){
  if(!run.boardsOpen)return 'Open the boarded doorway';
  if(run.exitOpen)return 'Step into the open elevator';
@@ -10,6 +11,8 @@ export function objectiveFor(run){
 export function createGameUI(){
  const root=document.createElement('div');root.id='game-ui';root.innerHTML=`
  <div class="game-top"><div class="wordmark">MONOCHROME<small id="floor-name">ELEVATOR LOBBY</small><span id="current-objective"></span></div><div class="game-top-actions"><button id="torch-toggle" data-hotkey="F" aria-label="Turn torch off (F)" aria-pressed="true">Torch on</button><button id="sound-toggle" data-hotkey="M" aria-label="Mute game sound" aria-pressed="false" hidden>Sound on</button><button id="pause-game" aria-label="Pause game">Ⅱ</button></div></div>
+ <div id="hunt-clock" role="timer" aria-live="off" hidden><small>BASEMENT TIME</small><div><span id="hunt-clock-time">12:00</span><span class="clock-period">AM</span></div></div>
+ <div id="hunt-warning" role="status" hidden><div><strong>6:00</strong><span>IT IS HUNTING.</span></div></div>
  <div class="game-inventory"><small>EXIT LOCKS</small><div id="key-lights" aria-label="Banked keys"></div><p id="carried-keys"></p><p id="clue-note"></p><p id="player-noise"></p></div>
  <div id="interaction" hidden><div><kbd>E</kbd><span id="interaction-label"></span></div><div class="hold-track" role="progressbar" aria-label="Interaction progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="hold-fill"></i></div></div>
  <div class="game-controls-note">WASD move · Shift run<br>E interact · F torch · M mute · Esc pause</div>
@@ -48,6 +51,17 @@ export function createGameUI(){
  function toast(text){el('toast').textContent=text;el('toast').classList.add('show');toastUntil=performance.now()+3600;}
  function update(run,player,target,hold){
   document.body.classList.toggle('overlay-open',!!overlay);
+  const clock=huntClockView(run);
+  el('hunt-clock').hidden=!clock.visible||!!overlay;el('hunt-clock-time').textContent=clock.text;
+  el('hunt-clock').setAttribute('aria-label',`${clock.text} AM. Monochrome arrives at 6 AM.`);
+  const warning=el('hunt-warning');warning.hidden=!clock.warning||!!overlay;
+  if(clock.warning){
+   // Sample the shared clock, so a delayed snapshot joins the same flash/fade
+   // instead of replaying a whole warning on every client or after a pause.
+   const age=run.huntElapsed-HUNT_START_SECONDS;
+   const flash=age<.18||age>=.36&&age<.54?1:age<.36?.12:1;
+   warning.style.opacity=String((reducedMotion()?1:flash)*Math.min(1,(HUNT_WARNING_SECONDS-age)/1.4));
+  }
   el('floor-name').textContent=run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
   el('current-objective').textContent=objectiveFor(run);
   [...el('key-lights').children].forEach((e,i)=>e.classList.toggle('filled',i<run.banked.size));el('key-lights').setAttribute('aria-label',`${run.banked.size} of 4 keys banked`);

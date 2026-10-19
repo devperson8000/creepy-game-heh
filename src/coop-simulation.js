@@ -1,5 +1,6 @@
 import {beginFinale,advanceFinale} from './finale-state.js';
-import {createEnemy,tickEnemy,createAmbush,tickAmbush,SIGHT_RANGE} from './enemy.js';
+import {createEnemy,tickEnemy,createAmbush,tickAmbush,SIGHT_RANGE,releaseMonster} from './enemy.js';
+import {advanceHuntClock,huntActive} from './hunt-clock.js';
 import {groundHeight,moveInWorld,lineOfSight} from './level.js';
 import {coopInteract,downPlayer,expireDowned,markEscaped,removeCoopPlayer,serializeCoopState} from './coop-state.js';
 import {createRemoteMovement} from './coop-motion.js';
@@ -32,6 +33,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
  const remoteMovement=new Map(),remoteAt=new Map();
  const inputs=new Map(),footsteps=new Map(),noisyUntil=new Map(),notices=[];
  let pendingNoise=[],sequence=0,noticeId=0,ambushResult={silent:false,triggered:false,targetId:null},reveal=0;
+ let huntClockAt=now(),clockIsRunning=false;
  const navigation=world.enemyNavigation??{};
  function tell(playerId,message){notices.push({id:++noticeId,playerId,message});if(notices.length>24)notices.shift();}
  function setInput(id,input){
@@ -48,7 +50,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
  function emit(player,noise){
   if(!noise)return;noise.playerId=player.id;player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noisyUntil.set(player.id,state.run.elapsed+.9);
   player.noiseSequence=(player.noiseSequence??0)+1;player.noiseType=noise.type;player.noiseAt=state.run.elapsed;
-  if(state.run.boardsOpen)pendingNoise.push(noise);
+  if(huntActive(state.run))pendingNoise.push(noise);
  }
  function interact(id,action){
   const player=state.players.get(id);
@@ -56,7 +58,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
   const targetId=typeof action?.targetId==='string'?action.targetId:undefined,target=world.targets.get(targetId);
   const type=targetId==='leave'?'leave':targetId?.startsWith('revive:')?'revive':target?.type;
   const wasTaken=type==='drawer'&&state.run.drawers[target.drawerId]?.opened&&state.run.drawers[target.drawerId]?.key&&!state.run.drawers[target.drawerId]?.taken;
-  const witnessed=type==='closet'&&visible(enemy,state,player,navigation);
+  const witnessed=type==='closet'&&huntActive(state.run)&&visible(enemy,state,player,navigation);
   const result=coopInteract(state,id,{type,targetId,code:action?.code},{targets:world.targets,canSee:world.canSeeInteraction,now:state.run.elapsed});
   if(result.ok){
    if(type==='closet')player.hideWitnessed=witnessed;
@@ -66,10 +68,16 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
   }else tell(id,reasons[result.reason]??'You cannot do that right now.');
   return result;
  }
- function advance(delta){
+ function advance(delta,{clockRunning=true,clockDelta=Math.min(.2,Math.max(0,delta))}={}){
   beginFinale(state,now());
   if(state.run.phase==='finale'){advanceFinale(state,now());return;}
   if(state.run.phase!=='playing')return;
+  huntClockAt=now();clockIsRunning=clockRunning;
+  // Time follows the host's real elapsed interval; bounded physics work must
+  // not make the clock run slowly on devices rendering fewer frames.
+  if(clockRunning)advanceHuntClock(state.run,clockDelta);
+  releaseMonster(state.run,enemy);
+  const hunting=huntActive(state.run);
   for(let remaining=Math.min(.2,Math.max(0,delta));remaining>0;remaining-=.025){
    const step=Math.min(.025,remaining);state.run.elapsed+=step;
    for(const player of state.players.values()){
@@ -96,10 +104,10 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
    const target=chooseMonsterTarget(enemy,state,navigation);
    if(target){
     enemy.targetId=target.id;
-    ambushResult=tickAmbush(ambush,{enemy,layout:state.run.layout,player:target,delta:step,active:state.run.boardsOpen,navigation});
+    ambushResult=tickAmbush(ambush,{enemy,layout:state.run.layout,player:target,delta:step,active:hunting,navigation});
     if(ambushResult.triggered)reveal++;
-    tickEnemy(enemy,state.run.layout,observedPosition(target),step,state.run.boardsOpen,pendingNoise,navigation);
-    if(state.run.boardsOpen)for(const player of state.players.values()){
+    tickEnemy(enemy,state.run.layout,observedPosition(target),step,hunting,pendingNoise,navigation);
+    if(hunting)for(const player of state.players.values()){
      const observed=observedPosition(player),d=Math.hypot(observed.x-enemy.position.x,observed.z-enemy.position.z);
      if(d<(player.hidden?1.8:1.35)&&visible(enemy,state,player,navigation))downPlayer(state,player.id,state.run.elapsed);
     }
@@ -109,8 +117,8 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
    if(state.run.phase!=='playing')break;
   }
  }
- function enemySnapshot(){return {position:{...enemy.position},yaw:enemy.yaw,mode:enemy.mode,moving:enemy.path.length>0,targetId:enemy.targetId,silent:ambushResult.silent,silentTargetId:ambushResult.targetId,reveal};}
- function snapshot(){return {sequence:++sequence,state:serializeCoopState(state),enemy:enemySnapshot(),notices:[...notices]};}
+ function enemySnapshot(){return {position:{...enemy.position},yaw:enemy.yaw,mode:enemy.mode,active:huntActive(state.run),moving:enemy.path.length>0,targetId:enemy.targetId,silent:ambushResult.silent,silentTargetId:ambushResult.targetId,reveal};}
+ function snapshot(){return {sequence:++sequence,state:serializeCoopState(state),enemy:enemySnapshot(),huntClock:{hostAt:huntClockAt,running:clockIsRunning&&state.run.phase==='playing'},notices:[...notices]};}
  function removePlayer(id){inputs.delete(id);remoteMovement.delete(id);remoteAt.delete(id);footsteps.delete(id);noisyUntil.delete(id);removeCoopPlayer(state,id);}
  return {state,enemy,setInput,interact,advance,snapshot,enemySnapshot,removePlayer};
 }

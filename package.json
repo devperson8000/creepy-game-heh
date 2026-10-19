@@ -9,6 +9,8 @@
     "preview": "vite preview --host 0.0.0.0",
     "test": "node --test",
     "test:browser": "node scripts/check-two-tab-browser.mjs",
+    "test:browser:hunt": "node scripts/check-hunt-clock-browser.mjs",
+    "test:browser:coop-hunt": "node scripts/check-coop-hunt-browser.mjs",
     "test:browser:polish": "node scripts/check-polish-browser.mjs",
     "test:browser:movement": "node scripts/check-coop-movement-browser.mjs",
     "test:browser:finale": "node scripts/check-finale-browser.mjs",

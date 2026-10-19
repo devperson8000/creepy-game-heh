@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRun} from '../src/game-state.js';
 import {CELL,worldPoint} from '../src/level.js';
+import {createEnemy} from '../src/enemy.js';
 import {createWorld} from '../src/world.js';
 
 // Rendering is not needed to inspect real scene geometry and navigation. Only
@@ -29,7 +30,7 @@ for(const playerCount of [1,3,4])test(`${playerCount}-player basement geometry c
  }
  const wallMesh=world.scene.children.find(mesh=>mesh.isInstancedMesh);
  assert.equal(wallMesh.count,run.layout.grid.flat().filter(cell=>!cell).length);
- const start=worldPoint(run.layout.rooms[3]);
+ const start=createEnemy(run.layout).position;
  for(const room of run.layout.rooms){
   const goal=worldPoint(room),route=world.enemyNavigation.findPath(start,goal);
   assert.ok(route.length,`no enemy route to room ${room.x},${room.z}`);

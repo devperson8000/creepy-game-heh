@@ -1,10 +1,18 @@
 import {gridPoint,worldPoint,pathBetween,lineOfSight,walkable,randomSource} from './level.js';
 import {sweepMove} from './navigation.js';
+import {huntActive} from './hunt-clock.js';
 export const MONSTER_SPEED={patrol:1.8,investigate:2.65,chase:4.15};
 export const SIGHT_RANGE=16;
 export function createEnemy(layout){
- const spawn=worldPoint(layout.rooms[3]);
- return {position:{...spawn},yaw:Math.PI,mode:'patrol',path:[],repath:0,lastSeen:null,lastHeard:null,lostFor:0,patrolIndex:3,searchRemaining:0,sensedBy:null};
+ // The entrance is on the north edge. Use the farthest southern room in all
+ // basement sizes, with a deterministic tie-break towards the opposite corner.
+ const room=layout.rooms.reduce((far,next)=>next.z>far.z||next.z===far.z&&next.x>far.x?next:far);
+ const spawn=worldPoint(room),entrance=layout.entrance?worldPoint(layout.entrance):{x:spawn.x,z:spawn.z-1};
+ return {position:{...spawn},yaw:Math.atan2(entrance.x-spawn.x,entrance.z-spawn.z),mode:'patrol',path:[],repath:0,lastSeen:null,lastHeard:null,lostFor:0,patrolIndex:layout.rooms.indexOf(room),searchRemaining:0,sensedBy:null,released:false};
+}
+export function releaseMonster(run,enemy){
+ if(!huntActive(run)||enemy.released)return;
+ enemy.released=true;enemy.mode='investigate';enemy.lastHeard=worldPoint(run.layout.entrance);enemy.path=[];enemy.repath=0;
 }
 function heardNoise(enemy,layout,noises){
  let best=null,bestStrength=-Infinity;

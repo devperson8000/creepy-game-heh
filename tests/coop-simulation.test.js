@@ -24,7 +24,7 @@ test('monster chooses actual visible players without tracking unseen positions',
  b.hidden=true;assert.equal(chooseMonsterTarget(simulation.enemy,state,world.enemyNavigation).id,'host');
 });
 test('one shared monster can catch a non-target player but never someone through a wall',()=>{
- const {state,world,simulation}=fixture();state.run.boardsOpen=true;
+ const {state,world,simulation}=fixture();state.run.boardsOpen=true;state.run.huntElapsed=190;simulation.enemy.released=true;
  const host=state.players.get('host'),guest=state.players.get('guest');
  Object.assign(host,{x:0,z:.7,height:0});Object.assign(guest,{x:0,z:.8,height:0});
  Object.assign(simulation.enemy,{position:{x:0,z:0},yaw:0,targetId:'host'});
@@ -46,7 +46,7 @@ test('interaction uses trusted world target and validates proximity',()=>{
 
 function closetFixture(){
  const result=fixture(),{state,world,simulation}=result;
- state.run.boardsOpen=true;
+ state.run.boardsOpen=true;state.run.huntElapsed=190;simulation.enemy.released=true;
  Object.assign(state.players.get('guest'),{x:0,z:5,height:0});
  Object.assign(simulation.enemy,{position:{x:0,z:0},yaw:0,targetId:'guest'});
  world.targets.set('closet',{id:'closet',type:'closet',position:{x:0,z:4,height:0},hide:{x:0,z:4.1,height:0},exit:{x:0,z:4.8,height:0}});
@@ -105,7 +105,7 @@ test('proximity to a concealed body cannot replace proximity to the known entran
 });
 
 test('a moving unseen target cannot update the monster last-seen destination',()=>{
- const {state,world,simulation}=fixture(),player=state.players.get('host');state.run.boardsOpen=true;
+ const {state,world,simulation}=fixture(),player=state.players.get('host');state.run.boardsOpen=true;state.run.huntElapsed=190;simulation.enemy.released=true;
  Object.assign(player,{x:0,z:5,height:0});Object.assign(simulation.enemy,{position:{x:0,z:0},yaw:0,targetId:'host'});
  simulation.advance(.025);assert.deepEqual(simulation.enemy.lastSeen,{x:0,z:5});
  world.enemyNavigation.canSee=()=>false;player.x=4;player.z=8;
