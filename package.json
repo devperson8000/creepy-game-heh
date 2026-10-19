@@ -21,7 +21,8 @@
     "test:browser:sounds": "node scripts/check-interaction-audio-browser.mjs",
     "test:browser:closet": "node scripts/check-closet-browser.mjs",
     "test:browser:ambience": "node scripts/check-ambience-browser.mjs",
-    "test:browser:wall-notes": "node scripts/check-wall-notes-browser.mjs"
+    "test:browser:wall-notes": "node scripts/check-wall-notes-browser.mjs",
+    "test:browser:halloween": "node scripts/check-halloween-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

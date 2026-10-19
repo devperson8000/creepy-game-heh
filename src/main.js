@@ -10,6 +10,7 @@ import './voice-chat.css';
 import './two-tab-test.css';
 import './polish.css';
 import './hunt-clock.css';
+import './halloween-countdown.css';
 import {createTwoTabTest,readTestSession} from './two-tab-test.js';
 import {createVoiceChat} from './voice-chat.js';
 import {startScene} from './scene.js';
