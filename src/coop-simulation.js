@@ -1,3 +1,4 @@
+import {drawerOperation} from './drawer-interaction.js';
 import {beginFinale,advanceFinale} from './finale-state.js';
 import {createEnemy,tickEnemy,createAmbush,tickAmbush,SIGHT_RANGE,releaseMonster} from './enemy.js';
 import {advanceHuntClock,huntActive} from './hunt-clock.js';
@@ -31,6 +32,7 @@ const reasons={'wrong-code':'Access denied. Check the four-digit clue.','locked'
 export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.now()/1000}={}){
  const enemy=createEnemy(state.run.layout),ambush=createAmbush(state.seed,{chance:ambushChance});
  const remoteMovement=new Map(),remoteAt=new Map();
+ const drawerRequests=new Map();
  const inputs=new Map(),footsteps=new Map(),noisyUntil=new Map(),notices=[];
  let pendingNoise=[],sequence=0,noticeId=0,ambushResult={silent:false,triggered:false,targetId:null},reveal=0;
  let huntClockAt=now(),clockIsRunning=false;
@@ -57,15 +59,23 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
   if(!player)return {ok:false,reason:'unavailable'};
   const targetId=typeof action?.targetId==='string'?action.targetId:undefined,target=world.targets.get(targetId);
   const type=targetId==='leave'?'leave':targetId?.startsWith('revive:')?'revive':target?.type;
-  const wasTaken=type==='drawer'&&state.run.drawers[target.drawerId]?.opened&&state.run.drawers[target.drawerId]?.key&&!state.run.drawers[target.drawerId]?.taken;
+  const drawerRequest=(type==='drawer'||targetId?.startsWith('drawer-'))&&drawerOperation(action?.code);
+  let completed;
+  if(drawerRequest){
+   player.drawerActionCode=action.code;
+   if(!drawerRequests.has(id))drawerRequests.set(id,new Map());
+   completed=drawerRequests.get(id);
+   if(completed.has(action.code))return completed.get(action.code);
+  }
   const witnessed=type==='closet'&&huntActive(state.run)&&visible(enemy,state,player,navigation);
   const result=coopInteract(state,id,{type,targetId,code:action?.code},{targets:world.targets,canSee:world.canSeeInteraction,now:state.run.elapsed});
+  if(completed){completed.set(action.code,result);if(completed.size>64)completed.delete(completed.keys().next().value);}
   if(result.ok){
    if(type==='closet')player.hideWitnessed=witnessed;
-   emit(player,interactionNoise(type,player,{takingKey:wasTaken}));
+   emit(player,interactionNoise(type,player,{takingKey:result.type==='key'}));
    tell(id,instructions[result.type]??'Done.');
    beginFinale(state,now());
-  }else if(!(type==='drawer'&&result.reason==='blocked'))tell(id,reasons[result.reason]??'You cannot do that right now.');
+  }else if(type!=='drawer'&&!targetId?.startsWith('drawer-'))tell(id,reasons[result.reason]??'You cannot do that right now.');
   return result;
  }
  function advance(delta,{clockRunning=true,clockDelta=Math.min(.2,Math.max(0,delta))}={}){

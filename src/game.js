@@ -1,3 +1,4 @@
+import {drawerTargetFromHit,retainDrawerTarget} from './drawer-interaction.js';
 import {advanceHuntClock,huntActive} from './hunt-clock.js';
 import {gamePreferences,createRenderQuality,reducedMotion} from './preferences.js';
 import {createRoomAmbience} from './room-ambience.js';
@@ -68,7 +69,7 @@ export function startGame(container,{seed,autostart=false}={}){
  function targetInfo(t){
   if(!t)return null;let label='',duration=.35;
   if(t.type==='boards'){if(run.boardsOpen)return null;label='Pry away the boards';duration=1.8;}
-  if(t.type==='drawer'){const d=run.drawers[t.drawerId];label=d.opened?(d.key&&!d.taken?'Take the key':'Close searched drawer'):'Search drawer';duration=d.opened?.15:.45;}
+  if(t.type==='drawer'){const d=run.drawers[t.drawerId];label=d.opened?(d.key&&!d.taken?'Take the key':'Close searched drawer'):'Search drawer';duration=d.opened?.15:.3;}
   if(t.type==='closet'){label='Hide in closet';duration=.25;}
   if(t.type==='clue'){label='Read the four-digit clue';duration=.2;}
   if(t.type==='locks'){label=run.carried.size?`Insert ${run.carried.size} ${run.carried.size===1?'key':'keys'}`:`Key panel · ${run.banked.size} / 4 filled`;duration=.6;}
@@ -79,8 +80,8 @@ export function startGame(container,{seed,autostart=false}={}){
  function currentTarget(){
   if(run.hidden)return {id:'leave',type:'leave',label:'Leave the closet',duration:.2};
   camera.updateMatrixWorld();raycaster.setFromCamera(center,camera);raycaster.far=2.5;
-  const visible=world.rayMeshes.filter(mesh=>{for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
-  const hit=raycaster.intersectObjects(visible,false)[0];return hit?targetInfo(world.targets.get(hit.object.userData.interactId)):null;
+  const visible=world.rayMeshes.filter(mesh=>{if(mesh.userData.drawerPart)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
+  const hit=raycaster.intersectObjects(visible,false)[0];return targetInfo(drawerTargetFromHit(world.targets,hit));
  }
  function perform(t){
   const takingKey=t.type==='drawer'&&run.drawers[t.drawerId].opened&&run.drawers[t.drawerId].key&&!run.drawers[t.drawerId].taken;
@@ -119,7 +120,8 @@ export function startGame(container,{seed,autostart=false}={}){
    }
    input.updateView();camera.position.set(player.x,player.height+1.65,player.z);
    threat=THREE.MathUtils.lerp(threat,player.height<1.5?Math.max(0,1-lastResult.distance/12):0,frameDelta*3);
-   const target=run.phase==='playing'?currentTarget():null;
+   let target=run.phase==='playing'?currentTarget():null;
+   const held=retainDrawerTarget(target,holdId,world.targets,input.interact);if(held!==target)target=targetInfo(held);
    if(!input.interact){hold=0;holdId=null;latched=false;}
    else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+frameDelta/target.duration);if(hold>=1){perform(target);latched=true;hold=0;}}
    else if(!target){hold=0;holdId=null;}

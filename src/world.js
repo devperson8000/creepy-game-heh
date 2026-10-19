@@ -88,6 +88,7 @@ export function createWorld(run){
  for(let r=0;r<3;r++)for(let c=0;c<3;c++){const button=box(.095,.085,.035,-1.17+c*.14,5.12-r*.13,-32.67,metal);button.userData.interactId='keypad';}
  sign('CODE',.6,.2,-1.03,5.75,-32.65,{size:72});
  function keyMesh(){const key=new THREE.Group();const ring=new THREE.Mesh(new THREE.TorusGeometry(.068,.018,8,16),white);ring.rotation.x=Math.PI/2;key.add(ring);const shaft=new THREE.Mesh(new THREE.CylinderGeometry(.015,.015,.18,8),white);shaft.rotation.x=Math.PI/2;shaft.position.z=.13;key.add(shaft);for(let i=0;i<2;i++){const tooth=new THREE.Mesh(boxGeometry,white);tooth.scale.set(.065,.025,.022);tooth.position.set(.025,0,.18+i*.04);key.add(tooth);}return key;}
+ const drawerHitMaterial=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false});
  function cabinet(x,z,index){
   const group=new THREE.Group();group.position.set(x,0,z);scene.add(group);
   box(1.04,1.45,.12,0,.725,-.3,wood,group);box(.09,1.45,.72,-.51,.725,0,wood,group);box(.09,1.45,.72,.51,.725,0,wood,group);box(1.12,.1,.8,0,1.5,0,wood,group);box(1.05,.08,.72,0,.05,0,wood,group);
@@ -98,8 +99,12 @@ export function createWorld(run){
    const handle=box(.23,.025,.05,0,.025,.42,metal,drawer);handle.userData.interactId=`drawer-${id}`;
    box(.84,.045,.58,0,-.155,.02,wood,drawer);box(.035,.2,.58,-.44,-.05,.02,wood,drawer);box(.035,.2,.58,.44,-.05,.02,wood,drawer);
    const key=keyMesh();key.position.set(0,-.08,.07);drawer.add(key);key.traverse(m=>{if(m.isMesh){m.userData.interactId=`drawer-${id}`;rayMeshes.push(m);}});
+   // Keep selection on the slot while open geometry moves in front of lower drawers.
+   drawer.traverse(mesh=>{if(mesh.isMesh)mesh.userData.drawerPart=true;});
+   const hitbox=box(1.12,.4,.02,0,.25+i*.42,.46,drawerHitMaterial,group);hitbox.userData.interactId=`drawer-${id}`;hitbox.userData.interactionProxy=true;
    targets.set(`drawer-${id}`,{id:`drawer-${id}`,type:'drawer',drawerId:id,mesh:face});drawerViews.push({drawer,key,id});
   }
+  group.traverse(mesh=>{if(mesh.isMesh&&!mesh.userData.interactId)mesh.userData.cabinetIndex=index;});
  }
  run.layout.rooms.forEach((room,index)=>{
   const p=worldPoint(room);cabinet(p.x-1.65,p.z-1.25,index*2);cabinet(p.x+1.65,p.z-1.25,index*2+1);
@@ -161,13 +166,13 @@ export function createWorld(run){
  function canSee(from,to){
   sightStart.set(from.x,groundHeight(from)+3.25,from.z);sightEnd.set(to.x,to.height+1.65,to.z);
   const length=sightStart.distanceTo(sightEnd);sightRay.set(sightStart,sightEnd.sub(sightStart).normalize());sightRay.far=length-.05;
-  const solids=rayMeshes.filter(mesh=>{if(mesh.userData.actor)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
+  const solids=rayMeshes.filter(mesh=>{if(mesh.userData.actor||mesh.userData.interactionProxy)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
   return !sightRay.intersectObjects(solids,false).length;
  }
  const enemyCanMove=(x,z)=>canMove(x,z,.6,1.1);
  const navigator=createNavigator(enemyCanMove,{minX:firstCell.x-CELL/2,maxX:lastCell.x+CELL/2,minZ:firstCell.z-CELL/2,maxZ:lastCell.z+CELL/2});
  function update(delta,time,player,threat,hold=0,monster){
-  for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,1-Math.exp(-Math.max(0,delta)*12));view.key.visible=d.key&&!d.taken&&d.opened;if(view.key.visible){view.key.rotation.y=Math.sin(time*.7+view.id)*.08;}}
+  for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,1-Math.exp(-Math.max(0,delta)*18));view.key.visible=d.key&&!d.taken&&d.opened;if(view.key.visible){view.key.rotation.y=Math.sin(time*.7+view.id)*.08;}}
   boardHitbox.visible=!run.boardsOpen;
   boards.forEach((b,i)=>{b.visible=!run.boardsOpen;b.position.z=-25-(hold>0?.1*Math.sin(hold*20+i):0);});
   indicators.forEach((m,i)=>m.material.color.setHex(i<run.banked.size?0xe2e2d4:0x3b3c3c));screen.material.color.setHex(run.codeAccepted?0xc6cec3:0x525953);

@@ -153,15 +153,26 @@ test('actual co-op movement replicates fresh footstep events and blocked movemen
  assert.equal(simulation.snapshot().state.players.find(p=>p.id==='guest').noiseSequence,sequence);
 });
 
-test('blocked drawers stay closed without an obstruction toast; visible drawers still open',()=>{
+test('nearby drawers open despite cabinet occlusion and all drawer failures stay quiet',()=>{
  const {state,world,simulation}=fixture(),player=state.players.get('host');
  const id='drawer-0';world.targets.set(id,{id,type:'drawer',drawerId:0,position:{x:player.x,z:player.z,height:player.height}});
  world.canSeeInteraction=()=>false;
- assert.deepEqual(simulation.interact('host',{targetId:id}),{ok:false,reason:'blocked'});
- assert.equal(state.run.drawers[0].opened,false);
- assert.deepEqual(simulation.snapshot().notices,[]);
- world.canSeeInteraction=()=>true;
- assert.equal(simulation.interact('host',{targetId:id}).ok,true);
+ assert.equal(simulation.interact('host',{targetId:id,code:'drawer:open:1'}).ok,true);
  assert.equal(state.run.drawers[0].opened,true);
- assert.equal(simulation.snapshot().notices.at(-1).message,'Drawer searched.');
+ player.x+=10;const before=simulation.snapshot().notices.length;
+ assert.equal(simulation.interact('host',{targetId:id,code:'drawer:open:2'}).ok,false);
+ assert.equal(simulation.snapshot().notices.length,before);
+ assert.equal(player.drawerActionCode,'drawer:open:2');
+});
+
+test('repeated or delayed drawer requests cannot toggle it shut or award a key twice',()=>{
+ const {state,world,simulation}=fixture(),p=state.players.get('host'),id='drawer-0';
+ world.targets.set(id,{id,type:'drawer',drawerId:0,position:{x:p.x,z:p.z,height:p.height}});
+ const drawer=state.run.drawers[0];drawer.key=true;
+ const act=code=>simulation.interact('host',{targetId:id,code});
+ act('drawer:open:1');act('drawer:open:1');
+ assert.equal(drawer.opened,true);assert.equal(drawer.taken,false);assert.equal(p.carried.size,0);
+ act('drawer:key:2');act('drawer:key:2');assert.deepEqual([...p.carried],[0]);
+ act('drawer:close:3');act('drawer:open:1');assert.equal(drawer.opened,false);
+ assert.equal(simulation.snapshot().notices.length,3);
 });

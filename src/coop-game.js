@@ -1,3 +1,4 @@
+import {createDrawerRequests,drawerTargetFromHit,retainDrawerTarget} from './drawer-interaction.js';
 import {createRevivePrompts} from './revive-prompts.js';
 import {huntActive,sampleHuntElapsed} from './hunt-clock.js';
 import {createHostClock,needsHostClockSync} from './coop-clock.js';
@@ -44,7 +45,7 @@ export function startCoopGame(container,{client,session}){
   if(target.hide)target.hide.height=groundHeight(target.hide);
   if(target.exit)target.exit.height=groundHeight(target.exit);
  }
- const solids=()=>world.rayMeshes.filter(mesh=>{if(mesh.userData.actor)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
+ const solids=()=>world.rayMeshes.filter(mesh=>{if(mesh.userData.actor||mesh.userData.interactionProxy)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
  world.canSeeInteraction=(player,target)=>{
   const at=target.position;if(!at)return false;
   const start=new THREE.Vector3(player.x,player.height+1.65,player.z);
@@ -54,6 +55,7 @@ export function startCoopGame(container,{client,session}){
   return !first||first.object.userData.interactId===target.id||first.distance>length-.08;
  };
  const simulation=isHost?createCoopSimulation(state,world):null;
+ const drawerRequests=createDrawerRequests({send:action=>client.send('action',{action})});
  let enemyView={position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
  let latestSequence=-1,lastNotice=0,scareStatus=null,lastStatus='alive',outcome=null,spectateId=null,lastSnapshotAt=performance.now(),leaving=false;
  let hold=0,holdId=null,latched=false,buffer='',inputClock=0,snapshotClock=0,disconnected=false;
@@ -126,7 +128,7 @@ export function startCoopGame(container,{client,session}){
  ui.root.querySelectorAll('[data-digit]').forEach(button=>button.addEventListener('click',()=>digit(button.dataset.digit)));ui.el('close-keypad').addEventListener('click',closeKeypad);
  function targetInfo(target){
   if(!target)return null;const labels={boards:['Pry away the boards',1.8],closet:['Hide in closet',.25],clue:['Read the four-digit clue',.2],locks:[`Bank your keys · ${run.banked.size} / 4 filled`,.6],keypad:[run.codeAccepted?'Keypad · code accepted':'Enter elevator code',.15],elevator:[run.exitOpen?'Step into the elevator':'Open elevator · four keys + code',.6]};
-  if(target.type==='drawer'){const drawer=run.drawers[target.drawerId];return {...target,label:drawer.opened?(drawer.key&&!drawer.taken?'Take the key':'Close searched drawer'):'Search drawer',duration:drawer.opened?.15:.45};}
+  if(target.type==='drawer'){const drawer=run.drawers[target.drawerId];return {...target,label:drawer.opened?(drawer.key&&!drawer.taken?'Take the key':'Close searched drawer'):'Search drawer',duration:drawer.opened?.15:.3};}
   if(target.type==='boards'&&run.boardsOpen)return null;
   if(!labels[target.type])return null;return {...target,label:labels[target.type][0],duration:labels[target.type][1]};
  }
@@ -140,8 +142,8 @@ export function startCoopGame(container,{client,session}){
    const target={id:`revive:${player.id}`,type:'revive',position:player};
    if(point.dot(looking)>.65&&world.canSeeInteraction(own,target))return {...target,label:`Revive ${player.name}`,duration:2.5};
   }
-  raycaster.setFromCamera(new THREE.Vector2(),camera);raycaster.far=2.5;const hit=raycaster.intersectObjects(world.rayMeshes.filter(mesh=>{if(mesh.userData.actor)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;}),false)[0];
-  return hit?targetInfo(world.targets.get(hit.object.userData.interactId)):null;
+  raycaster.setFromCamera(new THREE.Vector2(),camera);raycaster.far=2.5;const hit=raycaster.intersectObjects(world.rayMeshes.filter(mesh=>{if(mesh.userData.actor||mesh.userData.drawerPart)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;}),false)[0];
+  return targetInfo(drawerTargetFromHit(world.targets,hit));
  }
  function startScare(){
   if(jumpscare.active)return;ui.overlay='jumpscare';ui.el('game-screen').hidden=true;ui.el('keypad-dialog').hidden=true;ui.el('jumpscare-border').hidden=false;document.body.classList.add('jumpscare-active');input.clear();document.exitPointerLock?.();jumpscare.start();audio.playJumpscare();scareStatus=true;
@@ -154,6 +156,7 @@ export function startCoopGame(container,{client,session}){
   hostClock.accept(snapshot.clockSync?.echoes?.[localId]);
   const before=local()?{...local()}:null;latestSequence=snapshot.sequence;lastSnapshotAt=performance.now();
   applyCoopSnapshot(state,snapshot.state);
+  drawerRequests.reconcile(run,local()?.drawerActionCode);
   huntClockStamp=snapshot.huntClock;
   const after=local();
   if(!after){disconnected=true;screen('lost');return;}
@@ -178,7 +181,7 @@ export function startCoopGame(container,{client,session}){
   }
   if(isHost&&event.type==='lobby'&&event.lobby){const ids=new Set(event.lobby.members.map(p=>p.id));for(const id of state.players.keys())if(!ids.has(id))simulation.removePlayer(id);}
   if(!leaving&&(event.type==='roomClosed'||event.type==='connection'&&event.status==='closed'||event.type==='error'&&event.code==='REALTIME_ERROR')){disconnected=true;screen('lost');}
-  if(event.type==='error'&&event.code!=='RATE_LIMIT')ui.toast(event.message);
+  if(event.type==='error'&&event.code!=='RATE_LIMIT'&&!drawerRequests.pending)ui.toast(event.message);
  });
  void loadPlayerAvatarAsset().then(asset=>{
   avatarAsset=asset;
@@ -205,7 +208,7 @@ export function startCoopGame(container,{client,session}){
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);finale?.resize();}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ window.addEventListener('pagehide',()=>{drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
  screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
  function broadcast(wallDelta){
   if(isHost&&!disconnected){
@@ -296,10 +299,12 @@ export function startCoopGame(container,{client,session}){
   }
   if(watched.hidden&&watched.closetId){world.targets.get(watched.closetId).mesh.visible=false;}
   for(const closet of world.closets)if(!(watched.hidden&&watched.closetId===closet.id))closet.mesh.visible=true;
-  const target=!ui.overlay&&!document.hidden?currentTarget():null;
+  let target=!ui.overlay&&!document.hidden?currentTarget():null;
+  const held=retainDrawerTarget(target,holdId,world.targets,input.interact);if(held!==target)target=targetInfo(held);
   if(!input.interact){hold=0;holdId=null;latched=false;}
-  else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+delta/target.duration);if(hold>=1){if(target.type==='keypad'&&!run.codeAccepted)openKeypad();else sendAction(target.id);latched=true;hold=0;}}
+  else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+delta/target.duration);if(hold>=1){if(target.type==='keypad'&&!run.codeAccepted)openKeypad();else if(target.type==='drawer'&&!isHost)drawerRequests.request(run,target.drawerId);else sendAction(target.id);latched=true;hold=0;}}
   else if(!target){hold=0;holdId=null;}
+  if(!isHost){if(run.phase!=='playing'||own.status!=='alive')drawerRequests.clear();else if(!disconnected)drawerRequests.tick(now/1000);}
   revivePrompts.update({players:state.players.values(),own,camera,elapsed:run.elapsed,targetId:target?.id,progress:latched&&holdId===target?.id?1:hold,active:!ui.overlay&&!document.hidden&&!disconnected&&run.phase==='playing',canSee:world.canSeeInteraction});
   const renderedRun=viewRun(watched),hunting=huntActive(renderedRun);
   if(!document.hidden){ui.update(renderedRun,watched,target,hold);updateTeam();updateAvatars(delta);}

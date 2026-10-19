@@ -1,3 +1,4 @@
+import {drawerOperation} from './drawer-interaction.js';
 import {createRun,enterCode,openExit} from './game-state.js';
 
 export const REVIVE_WINDOW_SECONDS=45;
@@ -54,13 +55,16 @@ export function coopInteract(state,playerId,action,{targets=new Map(),canSee,now
  if(action?.type==='revive'&&typeof action.targetId==='string'&&action.targetId.startsWith('revive:'))return revivePlayer(state,playerId,action.targetId.slice(7),now,{canSee});
  const target=targets.get(action?.targetId),at=position(target);
  if(!target||target.type!==action?.type||!at)return fail('invalid-target');
- if(!Number.isFinite(distance(player,at))||distance(player,at)>2.6)return fail('too-far');
- if(canSee&&!canSee(player,target))return fail('blocked');
+ if(!Number.isFinite(distance(player,at))||distance(player,at)>(target.type==='drawer'?3.2:2.6))return fail('too-far');
+ if(target.type!=='drawer'&&canSee&&!canSee(player,target))return fail('blocked');
  const run=state.run;
  switch(target.type){
   case 'drawer':{
    const drawer=run.drawers[target.drawerId];if(!drawer)return fail('invalid-drawer');
+   const operation=drawerOperation(action.code);
+   if(operation==='open'||operation==='close'){drawer.opened=operation==='open';return {ok:true,type:'drawer',opened:drawer.opened,drawerId:drawer.id};}
    if(drawer.opened&&drawer.key&&!drawer.taken){drawer.taken=true;player.carried.add(drawer.id);return {ok:true,type:'key',drawerId:drawer.id};}
+   if(operation==='key')return {ok:true,type:'drawer',opened:drawer.opened,drawerId:drawer.id};
    drawer.opened=!drawer.opened;return {ok:true,type:'drawer',opened:drawer.opened,drawerId:drawer.id};
   }
   case 'clue':run.clueRead=true;return {ok:true,type:'clue',code:run.code};

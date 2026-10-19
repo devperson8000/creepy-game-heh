@@ -23,7 +23,7 @@ try{
   Object.assign(p,{x:at.x+1.65,z:at.z+2.5,height:at.height});
   return {visible,opened,blocked,before,after};
  });
- assert.equal(drawer.visible,true);assert.equal(drawer.opened.ok,true);assert.equal(drawer.blocked.reason,'blocked');assert.equal(drawer.after,drawer.before);
+ assert.equal(drawer.visible,true);assert.equal(drawer.opened.ok,true);assert.equal(drawer.blocked.ok,true);assert.equal(drawer.after,drawer.before+1);
  const guestId=await guest.evaluate(()=>monochrome.client.id);
  const deadline=await host.evaluate(async id=>{
   const {downPlayer}=await import('/src/coop-state.js'),g=monochrome,p=g.state.players.get(id),rescuer=g.state.players.get(g.client.id);
@@ -41,6 +41,6 @@ try{
  const partial=Number(await bar.getAttribute('aria-valuenow'));assert.ok(partial>0&&partial<100);
  await host.keyboard.up('KeyE');await host.waitForFunction(()=>document.querySelector('.revive-marker [role="progressbar"]')?.getAttribute('aria-valuenow')==='0');
  await host.keyboard.down('KeyE');await guest.waitForFunction(()=>monochrome.state.players.get(monochrome.client.id)?.status==='alive');await host.keyboard.up('KeyE');await marker.waitFor({state:'detached'});
- assert.deepEqual(errors,[]);console.log('PASS real cabinet opens from the front, occluded drawer stays blocked without warning, 45-second deadline reaches guest HUD, over-player revive prompt fills on E, resets on release, and successful late rescue removes it on both clients');
+ assert.deepEqual(errors,[]);console.log('PASS real cabinet opens from the front, cabinet occlusion no longer blocks nearby drawers, 45-second deadline reaches guest HUD, over-player revive prompt fills on E, resets on release, and successful late rescue removes it on both clients');
 }catch(e){console.error(e);console.log(errors);process.exitCode=1;}
 finally{await Promise.all(context.pages().map(p=>p.evaluate(()=>window.monochromeTest?.client?.close()).catch(()=>{})));await browser.close();}
