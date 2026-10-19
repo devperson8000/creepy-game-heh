@@ -18,7 +18,7 @@ export function createFinalePlayer({container,renderer:borrowedRenderer,asset,ca
  const top=node('div','finale-top'),brand=node('span','','MONOCHROME');top.append(brand,node('span','',preview?'FINALE PREVIEW':'THE LAST ASCENT'));
  const controls=node('div','finale-controls'),sound=node('button','finale-button');sound.type='button';
  function soundLabel(){sound.textContent=audio.muted?'Sound off':audio.unlocked?'Sound on':'Enable sound';sound.setAttribute('aria-label',audio.muted?'Unmute finale':audio.unlocked?'Mute finale':'Enable finale sound');sound.setAttribute('aria-pressed',String(audio.muted));}soundLabel();sound.addEventListener('click',()=>{if(audio.unlocked||audio.muted){setMuted(!audio.muted);onMuteChange(audio.muted);}void audio.resume().then(()=>{if(!disposed)soundLabel();});soundLabel();});void audio.resume().then(()=>{if(!disposed)soundLabel();});
- const progress=node('div','finale-progress'),bar=node('i','');progress.append(bar);root.append(grain,fade,title,top,controls,progress);document.body.append(root);document.body.classList.add('finale-active');
+ const progress=node('div','finale-progress'),bar=node('i','');progress.hidden=!preview;progress.append(bar);root.append(grain,fade,title,top,controls,progress);document.body.append(root);document.body.classList.add('finale-active');
  function setMuted(value){if(disposed)return;audio.setMuted(value);soundLabel();}
  function exit(){dispose();onExit();}
  if(preview){

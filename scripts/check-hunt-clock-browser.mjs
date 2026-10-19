@@ -10,9 +10,10 @@ try{
  await page.goto(process.env.GAME_TEST_URL||'http://localhost:5173');
  await page.locator('#lobby-singleplayer').click();await page.waitForFunction(()=>!!window.monochrome);
  await page.evaluate(()=>{monochrome.renderer.setPixelRatio(.5);monochrome.renderer.setSize(innerWidth,innerHeight);});
- await page.locator('.arrival-skip').click();await page.waitForFunction(()=>!monochrome.arrival.active);
+ await page.evaluate(()=>document.querySelector('.arrival-skip')?.click());await page.waitForFunction(()=>!monochrome.arrival.active);
  await page.waitForSelector('#hunt-clock:not([hidden])',{timeout:15000});
- assert.match(await page.locator('#hunt-clock').innerText(),/3:0/);
+ const initial=await page.evaluate(()=>({text:document.querySelector('#hunt-clock-time').textContent,elapsed:monochrome.run.huntElapsed}));
+ const [hour,minute]=initial.text.split(':').map(Number);assert.ok(Math.abs(hour*60+minute-(180+Math.floor(initial.elapsed*2)))<=2,'HUD follows active time even if GPU startup delayed the first observation');
  await page.evaluate(()=>{monochrome.run.boardsOpen=true;monochrome.run.huntElapsed=30;});
  await page.waitForFunction(()=>document.querySelector('#hunt-clock-time').textContent.startsWith('4:'));
  assert.equal(await page.evaluate(()=>monochrome.enemy().released),false);

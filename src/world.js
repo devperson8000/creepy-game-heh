@@ -165,11 +165,11 @@ export function createWorld(run){
  const enemyCanMove=(x,z)=>canMove(x,z,.6,1.1);
  const navigator=createNavigator(enemyCanMove,{minX:firstCell.x-CELL/2,maxX:lastCell.x+CELL/2,minZ:firstCell.z-CELL/2,maxZ:lastCell.z+CELL/2});
  function update(delta,time,player,threat,hold=0,monster){
-  for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,Math.min(1,delta*12));view.key.visible=d.key&&!d.taken&&d.opened;}
+  for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,1-Math.exp(-Math.max(0,delta)*12));view.key.visible=d.key&&!d.taken&&d.opened;if(view.key.visible){view.key.rotation.y=Math.sin(time*.7+view.id)*.08;}}
   boardHitbox.visible=!run.boardsOpen;
   boards.forEach((b,i)=>{b.visible=!run.boardsOpen;b.position.z=-25-(hold>0?.1*Math.sin(hold*20+i):0);});
   indicators.forEach((m,i)=>m.material.color.setHex(i<run.banked.size?0xe2e2d4:0x3b3c3c));screen.material.color.setHex(run.codeAccepted?0xc6cec3:0x525953);
-  doorProgress=THREE.MathUtils.lerp(doorProgress,run.exitOpen?1:0,Math.min(1,delta*2));
+  doorProgress=THREE.MathUtils.lerp(doorProgress,run.exitOpen?1:0,1-Math.exp(-Math.max(0,delta)*2));
   elevatorDoors[0].position.x=-3.1-doorProgress*.96;elevatorDoors[1].position.x=-2.1+doorProgress*.96;
   fill.position.set(player.x,groundHeight(player)+1.7,player.z);
   const power=lighting.update(delta,{monster:monster?.position,player:{...player,height:groundHeight(player)},hunting:monster?.hunting,active:!!monster?.active,reducedMotion:reducedMotion()});

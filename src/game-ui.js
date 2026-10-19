@@ -22,7 +22,11 @@ export function createGameUI(){
  <div id="game-screen" class="game-screen"><div class="screen-card" id="screen-content" role="dialog" aria-modal="true" aria-labelledby="screen-title"></div></div>
  <div id="keypad-dialog" class="game-screen" hidden><section class="keypad-card" role="dialog" aria-modal="true" aria-labelledby="keypad-title"><small>ELEVATOR / SECURITY</small><h2 id="keypad-title">Enter access code</h2><p>Use the four digits you found downstairs.</p><output id="code-display" aria-live="polite">— — — —</output><div id="number-pad">${['1','2','3','4','5','6','7','8','9','←','0','✓'].map(n=>`<button data-digit="${n}" aria-label="${n==='←'?'Delete':n==='✓'?'Submit code':n}">${n}</button>`).join('')}</div><p id="keypad-feedback" role="status"></p><button class="text-button" id="close-keypad">Back to the room</button></section></div>`;
  document.body.append(root);
- const elements=new Map();const el=id=>{if(!elements.has(id)||!root.contains(elements.get(id)))elements.set(id,root.querySelector(`#${id}`));return elements.get(id);};let overlay='menu',toastUntil=0;
+ const elements=new Map();const el=id=>{if(!elements.has(id)||!root.contains(elements.get(id)))elements.set(id,root.querySelector(`#${id}`));return elements.get(id);};let overlay='menu',toastUntil=0,previousKeys=0,lastObjective='';
+ const crosshair=document.querySelector('#crosshair');
+ function text(id,value){const node=el(id);if(node.textContent!==value)node.textContent=value;}
+ function highlight(node){if(!reducedMotion())node.animate?.([{filter:'brightness(1.7)'},{filter:'brightness(1)'}],{duration:650,easing:'ease-out'});}
+ function feedback(message,state='error'){const node=el('keypad-feedback');node.textContent=message;node.dataset.state=state;if(state==='error'&&!reducedMotion())node.closest('.keypad-card')?.animate?.([{transform:'translateX(0)'},{transform:'translateX(-5px)'},{transform:'translateX(4px)'},{transform:'translateX(0)'}],{duration:220});}
  el('key-lights').innerHTML=Array.from({length:4},()=>'<i></i>').join('');
  function screen(kind,run){
   overlay=kind;el('game-screen').hidden=false;
@@ -52,7 +56,7 @@ export function createGameUI(){
  function update(run,player,target,hold){
   document.body.classList.toggle('overlay-open',!!overlay);
   const clock=huntClockView(run);
-  el('hunt-clock').hidden=!clock.visible||!!overlay;el('hunt-clock-time').textContent=clock.text;
+  el('hunt-clock').hidden=!clock.visible||!!overlay;text('hunt-clock-time',clock.text);
   el('hunt-clock').setAttribute('aria-label',`${clock.text} AM. Monochrome arrives at 6 AM.`);
   const warning=el('hunt-warning');warning.hidden=!clock.warning||!!overlay;
   if(clock.warning){
@@ -63,12 +67,14 @@ export function createGameUI(){
    warning.style.opacity=String((reducedMotion()?1:flash)*Math.min(1,(HUNT_WARNING_SECONDS-age)/1.4));
   }
   el('floor-name').textContent=run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
-  el('current-objective').textContent=objectiveFor(run);
+  const objective=objectiveFor(run);if(objective!==lastObjective){text('current-objective',objective);if(lastObjective&&!overlay)highlight(el('current-objective'));lastObjective=objective;}
+  const keys=run.banked.size+run.carried.size;if(keys>previousKeys&&!overlay)highlight(el('key-lights'));previousKeys=keys;
   [...el('key-lights').children].forEach((e,i)=>e.classList.toggle('filled',i<run.banked.size));el('key-lights').setAttribute('aria-label',`${run.banked.size} of 4 keys banked`);
   el('carried-keys').textContent=run.carried.size?`Carrying ${run.carried.size} ${run.carried.size===1?'key':'keys'} · return to the lobby`:`${run.banked.size} / 4 keys banked`;
   el('player-noise').textContent=`Noise: ${player.noise||'Quiet'}`;
   el('player-noise').classList.toggle('noisy',player.noise==='Loud');
   el('clue-note').textContent=run.clueRead?`Clue: ${run.code}${run.codeAccepted?' · accepted':''}`:'Four-digit clue not yet found';
+  crosshair?.classList.toggle('has-target',!!target&&!overlay);const interactionState=target&&!overlay?(hold>0?'holding':'ready'):'none';if(root.dataset.interacting!==interactionState)root.dataset.interacting=interactionState;
   el('interaction').hidden=!target||!!overlay;el('interaction-label').textContent=target?.label||'';el('hold-fill').style.width=`${Math.max(0,Math.min(1,hold))*100}%`;
   el('hold-fill').parentElement.setAttribute('aria-valuenow',String(Math.round(Math.max(0,Math.min(1,hold))*100)));
   el('hide-mask').hidden=!run.hidden;document.body.classList.toggle('in-closet',run.hidden);
@@ -82,5 +88,5 @@ export function createGameUI(){
   if(event.shiftKey&&document.activeElement===items[0]){event.preventDefault();items.at(-1).focus();}
   else if(!event.shiftKey&&document.activeElement===items.at(-1)){event.preventDefault();items[0].focus();}
  });
- return {root,el,screen,hideScreen,toast,update,get overlay(){return overlay;},set overlay(value){overlay=value;}};
+ return {root,el,screen,hideScreen,toast,feedback,update,get overlay(){return overlay;},set overlay(value){overlay=value;}};
 }

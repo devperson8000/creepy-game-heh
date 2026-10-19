@@ -95,3 +95,15 @@ export function applyRunning(c,time,weight=1) {
   c.elbows[i].rotation.x=(-.45-.2*Math.max(0,-Math.cos(p)))*weight;
  }
 }
+
+// Ease the procedural gait around actual travel; authoritative positions stay untouched.
+export function createCreatureMotion(){
+ let previous=null,weight=0,time=0,pace=.65;
+ return {update(position,mode,delta,active=true,movingOverride){
+  const dt=Math.max(0,Math.min(.2,Number.isFinite(delta)?delta:0));
+  const distance=previous?Math.hypot(position.x-previous.x,position.z-previous.z):0;previous={x:position.x,z:position.z};
+  const moving=active&&(typeof movingOverride==='boolean'?movingOverride:distance>.002&&distance<3),blend=1-Math.exp(-dt*10);
+  weight+=(Number(moving)-weight)*blend;pace+=((mode==='chase'?1.2:mode==='investigate'?.8:.65)-pace)*blend;
+  time+=dt*pace*weight;return {weight,time};
+ }};
+}

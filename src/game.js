@@ -4,7 +4,7 @@ import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
 import {createRun,searchDrawer,takeKey,bankKeys,enterCode,readClue,catchPlayer,retryRun,openExit} from './game-state.js';
 import {createWorld} from './world.js';
-import {createCreature,applyIdle,applyRunning} from './creature.js';
+import {createCreature,applyIdle,applyRunning,createCreatureMotion} from './creature.js';
 import {idlePose} from './idle.js';
 import {createEnemy,tickEnemy,createAmbush,tickAmbush,releaseMonster} from './enemy.js';
 import {groundHeight,moveInWorld,worldPoint} from './level.js';
@@ -28,7 +28,7 @@ export function startGame(container,{seed,autostart=false}={}){
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
- const torch=createTorch(world.scene,camera);
+ const torch=createTorch(world.scene,camera),creatureMotion=createCreatureMotion();
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
  const jumpscare=createJumpscare({mouthTexture});
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
@@ -52,19 +52,19 @@ export function startGame(container,{seed,autostart=false}={}){
  function toggleSound(){monsterAudio.setMuted(!monsterAudio.muted);ambience.setMuted(monsterAudio.muted);soundButton.textContent=monsterAudio.muted?'Sound off':'Sound on';soundButton.setAttribute('aria-pressed',String(monsterAudio.muted));soundButton.setAttribute('aria-label',monsterAudio.muted?'Unmute game sound':'Mute game sound');}
  soundButton.addEventListener('click',toggleSound);
  const torchButton=ui.el('torch-toggle');
- function toggleTorch(){if(ui.overlay||run.phase!=='playing')return;torch.toggle();torchButton.textContent=torch.on?'Torch on':'Torch off';torchButton.setAttribute('aria-pressed',String(torch.on));torchButton.setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
+ function toggleTorch(){if(ui.overlay||run.phase!=='playing')return;torch.toggle();monsterAudio.playNoise('torch');torchButton.textContent=torch.on?'Torch on':'Torch off';torchButton.setAttribute('aria-pressed',String(torch.on));torchButton.setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
  torchButton.addEventListener('click',toggleTorch);
  document.addEventListener('keydown',event=>{if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}});
  document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'))toggleSound();});
  window.addEventListener('pagehide',()=>{monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
  function closeKeypad(){void monsterAudio.resume();void ambience.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
- function submitCode(){if(enterCode(run,buffer)){ui.el('keypad-feedback').textContent='Code accepted. Complete the four key locks to open the elevator.';ui.toast('Code accepted.');closeKeypad();}else{ui.el('keypad-feedback').textContent='Access denied. Read the four digits from this run.';buffer='';ui.el('code-display').textContent='— — — —';}}
+ function submitCode(){if(enterCode(run,buffer)){ui.feedback('Code accepted. Complete the four key locks to open the elevator.','success');monsterAudio.playNoise('keypad');ui.toast('Code accepted.');closeKeypad();}else{ui.feedback('Access denied. Read the four digits from this run.');buffer='';ui.el('code-display').textContent='— — — —';}}
  function digit(value){if(value==='✓'){submitCode();return;}if(value==='←')buffer=buffer.slice(0,-1);else if(buffer.length<4)buffer+=value;ui.el('code-display').textContent=buffer.padEnd(4,'—').split('').join(' ');}
  ui.root.querySelectorAll('[data-digit]').forEach(b=>b.addEventListener('click',()=>digit(b.dataset.digit)));
  ui.el('close-keypad').addEventListener('click',closeKeypad);
  document.addEventListener('keydown',e=>{if(ui.overlay!=='keypad')return;if(/^\d$/.test(e.key)){e.preventDefault();digit(e.key);}else if(e.key==='Backspace'){e.preventDefault();digit('←');}else if(e.key==='Enter'){e.preventDefault();submitCode();}});
- function openKeypad(){monsterAudio.pause();ambience.pause();buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.el('keypad-feedback').textContent='';ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
+ function openKeypad(){monsterAudio.pause();ambience.pause();buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.feedback('','');ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
  function targetInfo(t){
   if(!t)return null;let label='',duration=.35;
   if(t.type==='boards'){if(run.boardsOpen)return null;label='Pry away the boards';duration=1.8;}
@@ -128,15 +128,15 @@ export function startGame(container,{seed,autostart=false}={}){
    if(run.phase==='playing'&&run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
   }else{camera.position.set(player.x,player.height+1.65,player.z);input.updateView();ui.update(run,player,null,0);}
   creature.root.visible=huntActive(run);
-  applyIdle(creature,idlePose(time));if(enemy.path.length)applyRunning(creature,time*(enemy.mode==='chase'?1.2:enemy.mode==='investigate'?.8:.65),enemy.mode==='chase'?1:.6);
+  applyIdle(creature,idlePose(time));const gait=creatureMotion.update(enemy.position,enemy.mode,ui.overlay?0:frameDelta,huntActive(run));if(gait.weight>.001)applyRunning(creature,gait.time,gait.weight*(enemy.mode==='chase'?1:.6));
   creature.root.position.y+=groundHeight(enemy.position);creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
   const soundDistance=huntActive(run)?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height-groundHeight(enemy.position)):Infinity;
   monsterAudio.update(ambushResult.silent?Infinity:soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
   const breathingFov=66+(reducedMotion()?0:Math.sin(time*1.4)*threat*.45);
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:huntActive(run)});
-  torch.update({ceilingPower:world.lighting.visibility,time,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
-  const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update();
+  torch.update({ceilingPower:world.lighting.visibility,time,delta:frameDelta,sprinting:input.sprint,hold,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
+  const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update({huntElapsed:run.huntElapsed,threat:ambushResult.silent?0:threat,hidden:run.hidden,sprinting:!run.hidden&&input.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta:frameDelta});
   renderer.toneMappingExposure=torch.exposure*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));

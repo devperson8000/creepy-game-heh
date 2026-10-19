@@ -5,3 +5,8 @@ function fixture(t){const originals={document:globalThis.document,window:globalT
 test('holding Escape pauses once rather than repeatedly toggling overlays',t=>{const f=fixture(t);f.document.dispatchEvent(event('keydown',{code:'Escape',repeat:false,target:f.canvas}));f.document.dispatchEvent(event('keydown',{code:'Escape',repeat:true,target:f.canvas}));assert.equal(f.pauses,1);});
 test('touch sprint is held, releases safely, and ignores touches through an overlay',t=>{const f=fixture(t);f.run.dispatchEvent(event('pointerdown',{pointerId:1}));assert.equal(f.input.sprint,true);assert.equal(f.run.attrs['aria-pressed'],'true');f.run.dispatchEvent(event('lostpointercapture',{}));assert.equal(f.input.sprint,false);assert.equal(f.run.attrs['aria-pressed'],'false');f.ui.overlay='pause';f.run.dispatchEvent(event('pointerdown',{pointerId:1}));assert.equal(f.input.sprint,false);});
 test('clicking into play unlocks audio and focus through the capture callback',t=>{const f=fixture(t);f.canvas.dispatchEvent(event('click',{}));assert.equal(f.captures,1);f.ui.overlay='arrival';f.canvas.dispatchEvent(event('click',{}));assert.equal(f.captures,1);});
+test('losing a look-drag capture cannot turn the camera after release or pause',t=>{
+ const f=fixture(t);f.canvas.dispatchEvent(event('pointerdown',{clientX:10,clientY:10,pointerId:1}));f.canvas.dispatchEvent(event('lostpointercapture',{}));const yaw=f.input.yaw;
+ f.canvas.dispatchEvent(event('pointermove',{clientX:80,clientY:40,pointerId:1}));assert.equal(f.input.yaw,yaw);
+ f.canvas.dispatchEvent(event('pointerdown',{clientX:10,clientY:10,pointerId:1}));f.input.clear();f.canvas.dispatchEvent(event('pointermove',{clientX:90,clientY:10,pointerId:1}));assert.equal(f.input.yaw,yaw);
+});

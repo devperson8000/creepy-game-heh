@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import {createCoopState,applyCoopSnapshot,REVIVE_WINDOW_SECONDS} from './coop-state.js';
 import {createCoopSimulation} from './coop-simulation.js';
 import {createWorld} from './world.js';
-import {createCreature,applyIdle,applyRunning} from './creature.js';
+import {createCreature,applyIdle,applyRunning,createCreatureMotion} from './creature.js';
 import {idlePose} from './idle.js';
 import {groundHeight} from './level.js';
 import {createGameUI} from './game-ui.js';
@@ -33,7 +33,7 @@ export function startCoopGame(container,{client,session}){
  const quality=createRenderQuality(renderer,{pixelRatio:Math.min(devicePixelRatio,1.4)});
  const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();world.scene.add(creature.root);
  creature.root.traverse(mesh=>{if(mesh.isMesh){mesh.userData.actor=true;world.rayMeshes.push(mesh);}});
- const torch=createTorch(world.scene,camera);
+ const torch=createTorch(world.scene,camera),creatureMotion=createCreatureMotion();
  const audio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL);
  const jumpscare=createJumpscare({mouthTexture});
@@ -103,7 +103,7 @@ export function startCoopGame(container,{client,session}){
  input.setView(local().yaw);
  function cycleSpectator(){const available=[...state.players.values()].filter(p=>p.id!==localId&&p.status==='alive');if(!available.length){spectateId=null;return;}const at=available.findIndex(p=>p.id===spectateId);spectateId=available[(at+1)%available.length].id;}
  nextButton.addEventListener('click',cycleSpectator);team.querySelector('#coop-leave').addEventListener('click',leave);
- function toggleTorch(){if(ui.overlay||local()?.status!=='alive')return;torch.toggle();ui.el('torch-toggle').textContent=torch.on?'Torch on':'Torch off';ui.el('torch-toggle').setAttribute('aria-pressed',String(torch.on));ui.el('torch-toggle').setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
+ function toggleTorch(){if(ui.overlay||local()?.status!=='alive')return;torch.toggle();audio.playNoise('torch');ui.el('torch-toggle').textContent=torch.on?'Torch on':'Torch off';ui.el('torch-toggle').setAttribute('aria-pressed',String(torch.on));ui.el('torch-toggle').setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
  function setSoundMuted(value){audio.setMuted(value);ambience.setMuted(value);finale?.setMuted(value);ui.el('sound-toggle').textContent=audio.muted?'Sound off':'Sound on';ui.el('sound-toggle').setAttribute('aria-pressed',String(audio.muted));ui.el('sound-toggle').setAttribute('aria-label',audio.muted?'Unmute game sound':'Mute game sound');}
  function toggleSound(){setSoundMuted(!audio.muted);}
  ui.el('torch-toggle').addEventListener('click',toggleTorch);ui.el('sound-toggle').hidden=!audio.configured;ui.el('sound-toggle').addEventListener('click',toggleSound);ui.el('pause-game').addEventListener('click',pause);
@@ -119,10 +119,10 @@ export function startCoopGame(container,{client,session}){
  }
  function closeKeypad(){ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();void audio.resume();void ambience.resume();}
  function digit(value){
-  if(value==='✓'){if(buffer.length!==4){ui.el('keypad-feedback').textContent='Enter four digits.';return;}sendAction('keypad',buffer);closeKeypad();return;}
+  if(value==='✓'){if(buffer.length!==4){ui.feedback('Enter four digits.');return;}sendAction('keypad',buffer);closeKeypad();return;}
   buffer=value==='←'?buffer.slice(0,-1):buffer.length<4?buffer+value:buffer;ui.el('code-display').textContent=buffer.padEnd(4,'—').split('').join(' ');
  }
- function openKeypad(){buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.el('keypad-feedback').textContent='';ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
+ function openKeypad(){buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.feedback('','');ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
  ui.root.querySelectorAll('[data-digit]').forEach(button=>button.addEventListener('click',()=>digit(button.dataset.digit)));ui.el('close-keypad').addEventListener('click',closeKeypad);
  function targetInfo(target){
   if(!target)return null;const labels={boards:['Pry away the boards',1.8],closet:['Hide in closet',.25],clue:['Read the four-digit clue',.2],locks:[`Bank your keys · ${run.banked.size} / 4 filled`,.6],keypad:[run.codeAccepted?'Keypad · code accepted':'Enter elevator code',.15],elevator:[run.exitOpen?'Step into the elevator':'Open elevator · four keys + code',.6]};
@@ -304,7 +304,7 @@ export function startCoopGame(container,{client,session}){
   const renderedRun=viewRun(watched),hunting=huntActive(renderedRun);
   if(!document.hidden){ui.update(renderedRun,watched,target,hold);updateTeam();updateAvatars(delta);}
   creature.root.visible=hunting;
-  applyIdle(creature,idlePose(time));if(enemyView.moving)applyRunning(creature,time*(enemyView.mode==='chase'?1.2:.7),enemyView.mode==='chase'?1:.65);
+  applyIdle(creature,idlePose(time));const gait=creatureMotion.update(enemyView.position,enemyView.mode,delta,huntActive(run),enemyView.moving);if(gait.weight>.001)applyRunning(creature,gait.time,gait.weight*(enemyView.mode==='chase'?1:.65));
   const enemyPose=!isHost?enemyBuffer.sample(performance.now()/1000):null;
   const monsterPosition=enemyPose??enemyView.position;
   creature.root.position.set(monsterPosition.x,creature.root.position.y+groundHeight(monsterPosition),monsterPosition.z);creature.root.rotation.y=enemyPose?.yaw??enemyView.yaw;
@@ -313,9 +313,9 @@ export function startCoopGame(container,{client,session}){
   const silent=enemyView.silent&&enemyView.silentTargetId===watched.id;
   audio.update(silent?Infinity:distance,!ui.overlay&&!disconnected&&run.phase==='playing',delta);
   world.update(disconnected?0:delta,time,watched,threat,hold,{position:{...enemyView.position,height:groundHeight(enemyView.position)},hunting:enemyView.mode==='chase',active:hunting});
-  torch.update({ceilingPower:world.lighting.visibility,time,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
+  torch.update({ceilingPower:world.lighting.visibility,time,delta,sprinting:input.sprint,hold,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
   torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?140:0;
-  const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update();
+  const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update({huntElapsed:renderedRun.huntElapsed,threat:silent?0:threat,hidden:watched.hidden,sprinting:own.status==='alive'&&input.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta});
   renderer.toneMappingExposure=(own.status==='alive'?torch.exposure:.95*(watched.torch?1:world.lighting.visibility))*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(arrival.active){

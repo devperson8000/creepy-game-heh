@@ -63,7 +63,7 @@ test('cloned rigs animate independently, hold their fallen pose, and revive',()=
  a.update({status:'downed'},.05);
  for(let i=0;i<35;i++)a.update({status:'downed'},.05);
  assert.ok(Math.abs(first.position.y-.1)<.001);
- for(let i=0;i<8;i++)a.update({status:'alive'},.05);
+ for(let i=0;i<18;i++)a.update({status:'alive'},.05);
  assert.ok(Math.abs(first.position.y-1)<.001);
  a.dispose();b.dispose();
 });
@@ -168,4 +168,22 @@ test('late buffered poses cannot make a walking avatar jump across a frame',()=>
  assert.ok(avatar.root.position.x>0&&avatar.root.position.x<=.07);
  avatar.update({x:3,z:1,interpolated:true,resetPose:true},1/60);
  assert.deepEqual(avatar.root.position.toArray(),[3,0,1]);avatar.dispose();
+});
+
+test('a revived survivor rises from the fallen clip before returning to locomotion',()=>{
+ const avatar=createPlayerAvatar(fixture(),{}),spine=avatar.root.getObjectByName('spine003');
+ for(let i=0;i<30;i++)avatar.update({status:'downed'},.05);
+ avatar.update({status:'alive'},.05);const first=spine.position.y;
+ for(let i=0;i<3;i++)avatar.update({status:'alive'},.05);
+ assert.ok(spine.position.y>first);assert.ok(spine.position.y<.8,'the rise has a visible intermediate pose');
+ for(let i=0;i<18;i++)avatar.update({status:'alive',forward:1},.05);
+ assert.ok(spine.position.y>=1);avatar.dispose();
+});
+
+test('the real survivor get-up remains above the floor and completes with the torch reattached',async()=>{
+ const bytes=await readFile(new URL('../public/models/hazmat-survivor.glb',import.meta.url)),loader=new GLTFLoader();loader.register(()=>({name:'CPUTextureDecoder',loadTexture:async()=>new THREE.Texture()}));
+ const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),''),avatar=createPlayerAvatar(asset,{}),head=avatar.root.getObjectByName('spine006'),beam=avatar.root.getObjectByName('player-beam');
+ for(let i=0;i<50;i++)avatar.update({status:'downed'},.05);
+ const heights=[];for(let i=0;i<25;i++){avatar.update({status:'alive',torch:true},.04);heights.push(head.getWorldPosition(new THREE.Vector3()).y);}
+ assert.ok(heights[0]<.4);assert.ok(heights.some(y=>y>.6&&y<1.3));assert.ok(heights.every(y=>Number.isFinite(y)&&y>0));assert.ok(heights.at(-1)>1.5);assert.ok(beam.intensity>0);avatar.dispose();
 });

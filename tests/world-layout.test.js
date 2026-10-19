@@ -80,3 +80,9 @@ test('the ceiling light pool follows nearest fixtures and preserves their indivi
   world.lighting.reset();
  }
 });
+
+test('drawer and elevator easing remain consistent at different render rates',()=>{
+ const sample=hz=>{const run=createRun(42),world=headlessWorld(run);run.drawers[0].opened=true;run.exitOpen=true;for(let i=0;i<hz/2;i++)world.update(1/hz,i/hz,{x:-2.6,z:-29},0);return {drawer:world.drawerViews[0].drawer.position.z,door:world.doorProgress};};
+ const low=sample(20),high=sample(100);assert.ok(Math.abs(low.drawer-high.drawer)<1e-8);assert.ok(Math.abs(low.door-high.door)<1e-8);
+ assert.ok(low.drawer>0&&low.drawer<.47);assert.ok(low.door>0&&low.door<1);
+});

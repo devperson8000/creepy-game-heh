@@ -150,7 +150,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
 
  const mixer=new THREE.AnimationMixer(model),actions=new Map();
  for(const clip of asset.animations??[]){const action=mixer.clipAction(clip);actions.set(clip.name.toLowerCase(),action);}
- let activeAction,spawned=false,disposed=false,lastFallen=false;
+ let activeAction,spawned=false,disposed=false,lastFallen=false,recovering=0;
  const goal=new THREE.Vector3(),orientation=new THREE.Quaternion(),pitchRotation=new THREE.Quaternion(),pitchAxis=new THREE.Vector3(1,0,0);
  const inverseGrip=gripRotation.clone().invert(),roll=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),Math.PI);
  const parentRotation=new THREE.Quaternion(),rotation=new THREE.Quaternion(),from=new THREE.Vector3(),to=new THREE.Vector3();
@@ -210,15 +210,22 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   root.visible=!pose.hidden&&status!=='escaped';
   speakingIcon.visible=!!pose.speaking&&root.visible;
   const moving=pose.moving??(Math.hypot(finite(pose.forward),finite(pose.right))>.05||finite(pose.speed)>.1);
-  animate(fallen?'death':moving?(pose.sprint?'run':'walk'):'idle',fallen);
+  if(!fallen&&lastFallen&&actions.has('death')){
+   const rise=actions.get('death'),duration=rise.getClip().duration;
+   recovering=.65;rise.reset().setEffectiveWeight(1).setEffectiveTimeScale(-duration/recovering).setLoop(THREE.LoopOnce,1);rise.time=Math.max(0,duration-.001);rise.clampWhenFinished=true;rise.play();activeAction=rise;lastFallen=false;
+  }
+  if(fallen)recovering=0;
+  if(recovering<=0)animate(fallen?'death':moving?(pose.sprint?'run':'walk'):'idle',fallen);
+  else recovering=Math.max(0,recovering-dt);
+  if(!fallen&&activeAction&&activeAction!==actions.get('death')&&moving){const rate=Number.isFinite(pose.speed)&&pose.speed>.1?THREE.MathUtils.clamp(pose.speed/(pose.sprint?3.7:2.5),.65,1.35):1;activeAction.setEffectiveTimeScale(rate);}
   // Restore the mixer pose before each evaluation so an additive holding pose
   // never accumulates on bones omitted by a clip (or during a crossfade).
   for(const saved of animatedArm)saved.bone.quaternion.copy(saved.quaternion);
   mixer.update(dt);
   for(const saved of animatedArm)saved.quaternion.copy(saved.bone.quaternion);
   root.updateMatrixWorld(true);
-  if(!fallen)holdTorch(THREE.MathUtils.clamp(finite(pose.pitch),-1.4,1.4));
-  const lit=Boolean(pose.torch)&&root.visible&&!fallen;
+  if(!fallen&&!recovering)holdTorch(THREE.MathUtils.clamp(finite(pose.pitch),-1.4,1.4));
+  const lit=Boolean(pose.torch)&&root.visible&&!fallen&&!recovering;
   beam.intensity=lit?72:0;glow.intensity=lit?.65:0;lensMaterial.color.setHex(lit?0xdfe8d6:0x313832);
  }
 

@@ -19,7 +19,8 @@
     "test:browser:coop-rescue": "node scripts/check-coop-rescue-browser.mjs",
     "test:browser:release-menu": "node scripts/check-release-menu-browser.mjs",
     "test:browser:sounds": "node scripts/check-interaction-audio-browser.mjs",
-    "test:browser:closet": "node scripts/check-closet-browser.mjs"
+    "test:browser:closet": "node scripts/check-closet-browser.mjs",
+    "test:browser:ambience": "node scripts/check-ambience-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

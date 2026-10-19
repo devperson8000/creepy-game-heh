@@ -47,13 +47,22 @@ export function createTorch(scene,camera){
  const switchLever=new THREE.Mesh(new THREE.BoxGeometry(.022,.009,.028),metal);switchLever.position.set(0,.062,-.05);model.add(switchLever);
  for(const x of [-.06,.06]){const bolt=new THREE.Mesh(new THREE.SphereGeometry(.007,8,6),metal);bolt.position.set(x,.036,-.11);model.add(bolt);}
  const seam=new THREE.Mesh(new THREE.TorusGeometry(.071,.004,6,24),glove);seam.rotation.x=Math.PI/2-.55;seam.position.set(.014,-.14,.125);model.add(seam);
- let on=true,exposure=.95;
- function toggle(){on=!on;beam.intensity=on?140:0;lens.material.color.setHex(on?0xcbd5c7:0x171b1a);switchLever.position.z=on?-.05:-.02;return on;}
- function update({ceilingPower=1,time=0,moving=false}={}){
+ let on=true,exposure=.95,motion=0,swayX=0,swayY=0,lastYaw=null,lastPitch=null;
+ function toggle(){on=!on;beam.intensity=on?140:0;lens.material.color.setHex(on?0xcbd5c7:0x171b1a);return on;}
+ function update({ceilingPower=1,time=0,moving=false,sprinting=false,hold=0,delta=1/60}={}){
   exposure=.95*(on?1:ceilingPower);
   for(const material of reactive.values()){material.emissive.copy(material.color);material.emissiveIntensity=.35*ceilingPower;}
-  moving=moving&&!reducedMotion();
-  const bob=moving?.009:0;model.rotation.z=-.06+(reducedMotion()?0:Math.sin(time*1.7)*.003)+(moving?Math.sin(time*8)*.006:0);model.position.y=-.28+Math.sin(time*8)*bob;model.position.x=Math.min(.27,.2*camera.aspect)+Math.cos(time*4)*bob*.5;
+  const reduced=reducedMotion(),dt=Math.max(0,Math.min(.1,delta)),blend=1-Math.exp(-dt*12),yaw=camera.rotation.y,pitch=camera.rotation.x;
+  motion+=(Number(moving&&!reduced)-motion)*blend;
+  const turn=lastYaw===null?0:Math.atan2(Math.sin(yaw-lastYaw),Math.cos(yaw-lastYaw));
+  const tilt=lastPitch===null?0:pitch-lastPitch;lastYaw=yaw;lastPitch=pitch;
+  swayX+=(THREE.MathUtils.clamp(-turn*.35,-.04,.04)-swayX)*blend;swayY+=(THREE.MathUtils.clamp(-tilt*.3,-.025,.025)-swayY)*blend;
+  const pace=sprinting?10:8,bob=reduced?0:motion*(sprinting?.012:.009),effort=reduced?0:Math.sin(Math.min(1,hold)*Math.PI)*.012;
+  model.rotation.z=-.06+(reduced?0:Math.sin(time*1.7)*.003+Math.sin(time*pace)*motion*.006+swayX);
+  model.rotation.x=-.12+(reduced?0:swayY);model.rotation.y=-.16+(reduced?0:swayX);
+  model.position.y=-.28+Math.sin(time*pace)*bob-effort;model.position.x=Math.min(.27,.2*camera.aspect)+Math.cos(time*pace*.5)*bob*.5;
+  switchLever.position.z=THREE.MathUtils.lerp(switchLever.position.z,on?-.05:-.02,blend);
+
  }
  function render(renderer){
   viewCamera.projectionMatrix.copy(camera.projectionMatrix);viewCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse);

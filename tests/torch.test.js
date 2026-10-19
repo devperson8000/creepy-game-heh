@@ -35,3 +35,11 @@ test('the held torch remains in view on portrait phones',()=>{
  const head=torch.model.children[1].getWorldPosition(new THREE.Vector3()).project(camera);
  assert.ok(head.x>0&&head.x<.85,`Torch head is outside portrait view: ${head.x}`);
 });
+
+test('starting and stopping movement settles the held torch instead of snapping its bob',()=>{
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(),torch=createTorch(scene,camera);
+ torch.update({time:.1,moving:false,delta:1/60});const resting=torch.model.position.y;
+ torch.update({time:.1,moving:true,delta:1/60});assert.ok(Math.abs(torch.model.position.y-resting)<.004);
+ for(let i=0;i<30;i++)torch.update({time:.1,moving:true,delta:1/60});const moving=torch.model.position.y;
+ torch.update({time:.1,moving:false,delta:1/60});assert.ok(Math.abs(torch.model.position.y-moving)<.004);
+});

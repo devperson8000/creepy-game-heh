@@ -3,14 +3,14 @@ export function gameInput(camera,canvas,ui,onPause,onCapture=()=>{}){
  const keys=new Set();let yaw=Math.PI,pitch=0,drag=null;
  camera.rotation.order='YXZ';
  const touchButtons=[...ui.root.querySelectorAll('[data-walk]')];
- function clearKeys(){keys.clear();for(const button of touchButtons)button.setAttribute('aria-pressed','false');}
+ function clearKeys(){keys.clear();drag=null;for(const button of touchButtons)button.setAttribute('aria-pressed','false');}
  function capture(){canvas.tabIndex=0;canvas.focus();if(matchMedia('(pointer:fine)').matches){const p=canvas.requestPointerLock?.();p?.catch?.(()=>{});}clearKeys();onCapture();}
  canvas.addEventListener('click',()=>{if(!ui.overlay&&!document.pointerLockElement)capture();});
  function look(dx,dy){yaw-=dx*.0021*gamePreferences().sensitivity;pitch=Math.max(-1.3,Math.min(1.3,pitch-dy*.0021*gamePreferences().sensitivity));}
  document.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas&&!ui.overlay)look(e.movementX,e.movementY);});
  canvas.addEventListener('pointerdown',e=>{if(!ui.overlay&&!document.pointerLockElement){drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);}});
  canvas.addEventListener('pointermove',e=>{if(drag&&!ui.overlay&&!document.pointerLockElement){look(e.clientX-drag.x,e.clientY-drag.y);drag={x:e.clientX,y:e.clientY};}});
- for(const event of ['pointerup','pointercancel'])canvas.addEventListener(event,()=>{drag=null;});
+ for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{drag=null;});
  document.addEventListener('keydown',e=>{if(e.code==='Escape'){if(e.repeat)return;clearKeys();onPause();return;}if(ui.overlay||e.target.closest?.('button,input,textarea,select,[contenteditable="true"]'))return;if(['KeyW','KeyA','KeyS','KeyD','KeyE','ShiftLeft','ShiftRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
  document.addEventListener('keyup',e=>keys.delete(e.code));
  document.addEventListener('pointerlockchange',()=>{clearKeys();drag=null;if(!document.pointerLockElement&&!ui.overlay&&matchMedia('(pointer:fine)').matches)onPause();});

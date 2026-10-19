@@ -11,7 +11,9 @@ export function playInteractionSound(context,destination,noiseBuffer,type,source
  }
  function noise(duration,volume,frequency,filterType='lowpass',q=.7){const source=context.createBufferSource();source.buffer=noiseBuffer;source.playbackRate.value=variation;layer(source,{duration,volume,frequency:frequency*variation,filterType,q});}
  function tone(frequency,endFrequency,duration,volume,wave='sine',delay=0){const source=context.createOscillator();source.type=wave;source.frequency.setValueAtTime(frequency*variation,now+delay);source.frequency.exponentialRampToValueAtTime(endFrequency*variation,now+delay+duration);layer(source,{duration,volume,frequency:4000,delay});}
- if(type==='walk'||type==='sprint'){
+ if(type==='torch'){noise(.025,.06,2300,'highpass');tone(240,110,.05,.025);
+ }else if(type==='keypad'){tone(680,680,.08,.025);tone(920,920,.1,.018,'sine',.065);
+ }else if(type==='walk'||type==='sprint'){
   const running=type==='sprint';noise(.14,running?.14:.09,running?850:580);tone(running?115:90,48,.12,running?.075:.05);noise(.055,.025,2000,'highpass');
  }else if(type==='drawer'){
   noise(.34,.09,1350,'bandpass',1.4);tone(230,95,.3,.035,'triangle');tone(140,65,.075,.045,'sine',.27);
