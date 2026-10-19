@@ -1,5 +1,7 @@
 import {createRun,enterCode,openExit} from './game-state.js';
 
+export const REVIVE_WINDOW_SECONDS=45;
+
 const fail=reason=>({ok:false,reason});
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z,(a.height??0)-(b.height??0));
 const position=t=>t?.position;
@@ -81,7 +83,7 @@ export function coopInteract(state,playerId,action,{targets=new Map(),canSee,now
 export function downPlayer(state,playerId,now=state.run.elapsed){
  const player=state.players.get(playerId);
  if(!playing(state,player)||now<player.invulnerableUntil)return false;
- dropKeys(state,player);releaseCloset(state,player);player.status='downed';player.downedUntil=now+12;state.run.deaths++;updateOutcome(state);return true;
+ dropKeys(state,player);releaseCloset(state,player);player.status='downed';player.downedUntil=now+REVIVE_WINDOW_SECONDS;state.run.deaths++;updateOutcome(state);return true;
 }
 export function revivePlayer(state,rescuerId,targetId,now=state.run.elapsed,{canSee}={}){
  const rescuer=state.players.get(rescuerId),player=state.players.get(targetId);

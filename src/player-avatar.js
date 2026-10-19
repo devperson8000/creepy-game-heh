@@ -224,14 +224,22 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
 
  function sampleCinematic({clip='Idle',time=0,position=[0,0,0],yaw=0,action='none',progress=0,handTarget=null}={}){
   if(disposed)return;
+  const p=THREE.MathUtils.clamp(progress,0,1);
   mixer.stopAllAction();
   const animation=actions.get(clip.toLowerCase())??actions.get('idle');
-  if(animation){animation.reset().setEffectiveWeight(1).play();mixer.setTime(Math.max(0,finite(time))%animation.getClip().duration);}
+  if(animation){
+   animation.reset().setEffectiveWeight(1).play();const duration=animation.getClip().duration;
+   // Death ends face-down. Hold that final pose, then sample it backwards for
+   // getting up, without looping through its upright first frame.
+   const end=Math.max(0,duration-.001);
+   // Bring the forward extension early enough to read as a dive in midair.
+   const sampleTime=action==='prone'?end:action==='get-up'?(1-p)*end:action==='dive'&&clip.toLowerCase()==='death'?Math.pow(p,.4)*end:Math.max(0,finite(time))%duration;
+   mixer.setTime(sampleTime);
+  }
   root.visible=true;root.position.fromArray(position);root.rotation.set(0,yaw+Math.PI,0);model.rotation.set(0,0,0);
   speakingIcon.visible=false;torch.visible=false;beam.intensity=0;glow.intensity=0;
   const label=root.getObjectByName('player-name');if(label)label.visible=false;
-  const p=THREE.MathUtils.clamp(progress,0,1);
-  if(action==='dive'){
+  if(action==='dive'&&clip.toLowerCase()!=='death'){
    root.rotation.x=-Math.sin(p*Math.PI)*1.35;
    // Turn around the pelvis, keeping the airborne body centred on its flight
    // path instead of tipping its head below the frame around planted feet.

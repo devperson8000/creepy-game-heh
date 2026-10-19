@@ -20,29 +20,31 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,mouthTexture,red
   if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
   const cabY=set.cab.position.y,epilogue=t>=44,rise=epilogue?0:cabY-3.6;
   scene.background.setHex(epilogue?0xb9c5bd:0x070c0e);scene.fog.color.copy(scene.background);scene.fog.density=epilogue?.018:.027;sun.intensity=epilogue?2.5:0;ambient.intensity=epilogue?2.2:.5;
-  let z=40-3.2*Math.max(0,t-2),height=0,action='none',progress=0,clip='Run',animationTime=t,yaw=0,x=0;
+  let z=26-1.8*Math.max(0,t-2),height=0,action='none',progress=0,clip='Run',animationTime=t*.55,yaw=0,x=0;
   if(t>=12){z=mix(8,.7,T.MathUtils.clamp((t-12)/7,0,1));height=stairHeight(z);}
-  if(t>=19){const d=T.MathUtils.clamp((t-19)/2.2,0,1);z=mix(.7,-2.25,d);height=3.6+Math.sin(d*Math.PI)*.45;x=-1.05*d;action='dive';progress=d;clip='Jump';animationTime=.04+d*.74;}
-  if(t>=21.2){z=-2.25;height=cabY;x=-1.05;action=t>=30?'brace':'none';clip='Idle';}
-  if(epilogue){const walk=Math.max(0,t-45.5);z=-2.25+walk*.9;height=0;x=-.48;action='none';clip=walk>0?'Walk':'Idle';yaw=Math.PI;}
-  const runner=actors.get(runnerId);runner?.sample({clip,time:clip==='Jump'?animationTime:t,position:[x,height,z],yaw,action,progress});
+  if(t>=19){const d=T.MathUtils.clamp((t-19)/2.2,0,1);z=mix(.7,-1.6,d);height=3.6+Math.sin(d*Math.PI)*.6;x=-1.05*d;action='dive';progress=d;clip='Death';}
+  if(t>=21.2){z=-1.6;height=cabY;x=-1.05;action='prone';clip='Death';}
+  if(epilogue){
+   const walk=Math.max(0,t-46);z=-1.6+walk*.9;height=0;x=-1.05;progress=smooth(44.7,46,t);
+   action=t<44.7?'prone':t<46?'get-up':'none';clip=t>=46?'Walk':'Death';yaw=walk>0?-Math.PI:-Math.PI*smooth(.7,1,progress);
+  }
+  const runner=actors.get(runnerId);runner?.sample({clip,time:clip==='Run'?animationTime:t,position:[x,height,z],yaw,action,progress});
   let extra=0;
   for(const [id,a] of actors){if(id===runnerId)continue;
-   let p=id===buttonId?[1.2,cabY,-.95]:[extra++%2? .65:-.98,cabY,-2.6];let role='none',contact=null,w=0,face=id===buttonId?-Math.PI/2:Math.PI,actorClip='Idle';
+   let p=id===buttonId?[1.2,cabY,-.95]:[extra++%2?1.1:.4,cabY,-2.7];let role='none',contact=null,w=0,face=id===buttonId?-Math.PI/2:Math.PI,actorClip='Idle';
    if(id===buttonId&&t>=21.2&&t<23.4){role='press';w=smooth(21.3,22.1,t)*(1-smooth(22.7,23.4,t));contact=[1.515,cabY+1.3,-.65];}
    else if(t>=30&&!epilogue)role='brace';
-   if(epilogue){const index=cast.findIndex(member=>member.id===id),walk=Math.max(0,t-45.5-index*.15);p=[index%2?.52:-.6,0,-2.5+walk*.9-Math.floor(index/2)*.6];face=Math.PI;actorClip=walk>0?'Walk':'Idle';role='none';}
+   if(epilogue){const index=[...actors.keys()].filter(key=>key!==runnerId).indexOf(id),walk=Math.max(0,t-45.5-index*.15);p=[[-.25,.5,1.1][index]??.5,0,-2.5+walk*.9-Math.floor(index/2)*.6];face=Math.PI;actorClip=walk>0?'Walk':'Idle';role='none';}
    a.sample({clip:actorClip,time:t,position:p,yaw:face,action:role,progress:w,handTarget:contact});
   }
-  if(buttonId===runnerId&&t>=21.2&&t<23.4)runner?.sample({clip:'Idle',time:t,position:[1.2,cabY,-.95],yaw:-Math.PI/2,action:'press',progress:smooth(21.3,22.1,t)*(1-smooth(22.7,23.4,t)),handTarget:[1.515,cabY+1.3,-.65]});
   let monsterZ=z+mix(3.3,1.8,smooth(2,12,t)),monsterHeight=stairHeight(monsterZ);
   const mode=t<23?'chase':t<35.3?'trapped':t<39.3?'severed':'dead';
   if(t>=19){monsterZ=mix(2.5,.65,smooth(19,23,t));monsterHeight=mix(3.6,3.1,smooth(21,23,t))+rise;}
-  creature.sample({time:t,mode,position:[0,monsterHeight,monsterZ],yaw:Math.PI,neckPosition:[0,cabY+1.72,-.08],deathTime:Math.max(0,t-35.3)});creature.root.visible=!epilogue;
+  creature.sample({time:t,runTime:t*.55,mode,position:[0,monsterHeight,monsterZ],yaw:Math.PI,neckPosition:[0,cabY+1.72,-.08],deathTime:Math.max(0,t-35.3)});creature.root.visible=!epilogue;
   if(t<12){camera.position.set(3.2,.95,z-4.5);target.set(0,1.65,z+1.4);key.position.set(-2.4,3.6,z-2);key.target.position.set(0,1.2,z+1);rim.position.set(0,2.8,monsterZ+1);}
   else if(t<19){camera.position.set(-1.1,5.08,-2.7);target.set(0,height+1.2,z+.7);key.position.set(-1.2,6,1);key.target.position.set(0,4,4);rim.position.set(0,5.6,4);}
-  else if(t<21.35){camera.position.set(1.05,5.1,-3.35);target.set(x,4.75,z+.15);key.position.set(-1.2,6,1);key.target.position.set(0,4.8,0);rim.position.set(0,6,1);}
-  else if(t<23){camera.position.set(.05,cabY+1.4,-.12);target.set(1.48,cabY+1.31,-.65);key.position.set(.2,cabY+2.5,-1.5);key.target.position.copy(target);}
+  else if(t<21.35){camera.position.set(-1.4,5.4,-3.35);target.set(x,height+mix(1,.2,progress),z-.45);key.position.set(-1.2,6,1);key.target.position.set(0,4.8,0);rim.position.set(0,6,1);}
+  else if(t<23){if(buttonId===runnerId){camera.position.set(1.05,cabY+1.2,-3.35);target.set(-1.05,cabY+.25,-2);}else{camera.position.set(.05,cabY+1.4,-.12);target.set(1.48,cabY+1.31,-.65);}key.position.set(.2,cabY+2.5,-1.5);key.target.position.copy(target);}
   else if(t<35.3){camera.position.set(-.12,cabY+1.7,-2.65);target.set(0,cabY+2.05,-.08);key.position.set(-1,cabY+2.7,-1.9);key.target.position.copy(target);rim.position.set(0,cabY+2.2,.8);}
   else if(t<39){const drop=smooth(35.4,37,t);camera.position.set(-.85,cabY+mix(1.6,.7,drop),-2.35);target.copy(creature.head.position);target.y+=.15;key.position.set(-1,cabY+2.7,-1.9);key.target.position.copy(target);}
   else if(t<44){const lift=smooth(41,44,t);camera.position.set(-.85,cabY+mix(.75,1.65,lift),-1.9);target.set(.28,cabY+mix(.18,1.55,lift),mix(-.6,-2.6,lift));key.position.set(-1,cabY+2.7,-1.9);key.target.position.copy(target);}

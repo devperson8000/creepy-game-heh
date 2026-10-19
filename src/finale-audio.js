@@ -1,7 +1,7 @@
 import {MONSTER_SOUND_URL} from './monster-audio.js';
 import {finalePlaybackTime,finaleChoreographyTime} from './finale-state.js';
 const EVENTS=[{time:21.3,type:'dive'},{time:22.25,type:'button'},{time:23,type:'doors'},{time:30,type:'motor'},{time:35.3,type:'cut'},{time:35.95,type:'head'},{time:36.4,type:'head'},{time:45,type:'arrival'}];
-for(let t=.8;t<19;t+=.31)EVENTS.push({time:t,type:'step'});
+for(let t=.8;t<19;t+=.31/.55)EVENTS.push({time:t,type:'step'});
 for(let t=.4;t<20;t+=.72)EVENTS.push({time:t,type:'breath'});
 for(let t=46;t<52;t+=.56)EVENTS.push({time:t,type:'exit-step'});
 EVENTS.sort((a,b)=>a.time-b.time);

@@ -65,7 +65,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
    emit(player,interactionNoise(type,player,{takingKey:wasTaken}));
    tell(id,instructions[result.type]??'Done.');
    beginFinale(state,now());
-  }else tell(id,reasons[result.reason]??'You cannot do that right now.');
+  }else if(!(type==='drawer'&&result.reason==='blocked'))tell(id,reasons[result.reason]??'You cannot do that right now.');
   return result;
  }
  function advance(delta,{clockRunning=true,clockDelta=Math.min(.2,Math.max(0,delta))}={}){

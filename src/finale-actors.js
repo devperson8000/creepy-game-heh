@@ -14,10 +14,10 @@ export function createFinaleCreature({mouthTexture}={}){
  const inner=new THREE.MeshBasicMaterial({color:0x080309});
  const neck=new THREE.Mesh(new THREE.CircleGeometry(.115,24),inner);neck.rotation.x=Math.PI/2;neck.position.y=.005;head.add(neck);
  const anchor=new THREE.Vector3(),orientation=new THREE.Quaternion();let disposed=false;
- function sample({time=0,mode='chase',position=[0,0,0],yaw=0,neckPosition=[0,2,0],deathTime=0}={}){
+ function sample({time=0,runTime=time,mode='chase',position=[0,0,0],yaw=0,neckPosition=[0,2,0],deathTime=0}={}){
   let opening=.55;
   applyIdle(body,{sway:0,pitch:0,yaw:0,arm:0});body.torso.rotation.set(0,0,0);body.root.rotation.set(0,yaw,0);
-  if(mode==='chase')applyRunning(body,time,1);
+  if(mode==='chase')applyRunning(body,runTime,1);
   body.root.position.x=0;body.root.position.z=0;body.root.position.add(new THREE.Vector3().fromArray(position));body.root.visible=mode==='chase'||mode==='trapped';
   if(mode==='chase'){
    body.root.updateMatrixWorld(true);anchor.set(0,1.39,0);body.torso.localToWorld(anchor);root.worldToLocal(anchor);head.position.copy(anchor);

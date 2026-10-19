@@ -5,7 +5,7 @@ import {createFinaleClock,FINALE_DURATION} from './finale-state.js';
 import {gamePreferences,createRenderQuality} from './preferences.js';
 import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
-import {createCoopState,applyCoopSnapshot} from './coop-state.js';
+import {createCoopState,applyCoopSnapshot,REVIVE_WINDOW_SECONDS} from './coop-state.js';
 import {createCoopSimulation} from './coop-simulation.js';
 import {createWorld} from './world.js';
 import {createCreature,applyIdle,applyRunning} from './creature.js';
@@ -88,7 +88,7 @@ export function startCoopGame(container,{client,session}){
   if(kind==='menu'){heading.textContent='STAY TOGETHER';description.textContent=`${session.players.length} survivors. Shared keys. One creature that sees and hears every one of you.`;primary.firstChild.textContent='Enter with your team';}
   if(kind==='pause'){description.textContent='Your teammates and the creature keep moving while this menu is open.';primary.firstChild.textContent='Return to your team';}
   if(kind==='spectate'){
-   const own=local();heading.textContent=own?.status==='downed'?'HOLD ON':own?.status==='escaped'?'YOU MADE IT':'KEEP WATCHING';description.textContent=own?.status==='downed'?'A teammate can rescue you for a short time. Your unbanked keys returned to their drawers.':own?.status==='escaped'?'Wait for the remaining survivors to reach the elevator.':'Watch a teammate. The round ends when the team escapes or no one remains standing.';primary.firstChild.textContent='Watch your team';
+   const own=local();heading.textContent=own?.status==='downed'?'HOLD ON':own?.status==='escaped'?'YOU MADE IT':'KEEP WATCHING';description.textContent=own?.status==='downed'?`A teammate has ${REVIVE_WINDOW_SECONDS} seconds to rescue you. Your unbanked keys returned to their drawers.`:own?.status==='escaped'?'Wait for the remaining survivors to reach the elevator.':'Watch a teammate. The round ends when the team escapes or no one remains standing.';primary.firstChild.textContent='Watch your team';
   }
   if(kind==='dead'){heading.textContent='THE SIGNAL IS GONE';description.textContent='No survivor remains standing. Return to the menu and create a new lobby.';primary.firstChild.textContent='Return to menu';}
   if(kind==='won'){description.textContent=`The surviving team escaped in ${Math.floor(run.elapsed/60)}:${String(Math.floor(run.elapsed%60)).padStart(2,'0')}.`;primary.firstChild.textContent='Return to menu';}

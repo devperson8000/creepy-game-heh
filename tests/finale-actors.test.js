@@ -62,3 +62,30 @@ test('finale uses the exact jumpscare mouth texture and keeps borrowed texture o
 test('an undecoded finale mouth cannot show a white rectangle',()=>{
  const a=createFinaleCreature({mouthTexture:new T.Texture()});a.sample({mode:'trapped',time:26});assert.equal(a.mouth?.visible,false);a.dispose();
 });
+
+test('the diver lies face-down throughout the cab sequence and stands for walkout',async()=>{
+ const {createFinaleScene}=await import('../src/finale-scene.js'),{finalePlaybackTime:at}=await import('../src/finale-state.js');
+ const source=await asset();
+ for(const count of [1,2,4]){
+  const cast=Array.from({length:count},(_,slot)=>({id:String(slot),slot}));
+  const a=createFinaleScene({asset:source,cast,runnerId:'0',buttonId:count>1?'1':'0',reducedMotion:true}),runner=a.actors.get('0');
+  for(const time of [21.3,22.2,27,34,40,43,44.5]){
+   a.sample(at(time));const floor=a.set.cab.position.y,head=runner.root.getObjectByName('spine006').getWorldPosition(new T.Vector3()),hip=runner.root.getObjectByName('spine').getWorldPosition(new T.Vector3());
+   assert.ok(head.y<floor+.4&&hip.y<floor+.4,`${count} cast: survivor stood up at ${time}`);
+   assert.ok(head.y>=floor&&hip.y>=floor,'body stays above the cab floor');
+  }
+  a.sample(at(46));assert.ok(runner.root.getObjectByName('spine006').getWorldPosition(new T.Vector3()).y>1.4,'stand-up joins the walk without dropping back into the fall clip');
+  a.sample(at(47));assert.ok(runner.root.getObjectByName('spine006').getWorldPosition(new T.Vector3()).y>1.4);
+  a.sample(at(27));const first=runner.root.getObjectByName('spine006').getWorldPosition(new T.Vector3());a.sample(at(48));a.sample(at(27));assert.ok(runner.root.getObjectByName('spine006').getWorldPosition(new T.Vector3()).distanceTo(first)<1e-8);
+  a.dispose();
+ }
+});
+
+test('the survivor is visibly stretched forward in midair before the belly landing',async()=>{
+ const {createFinaleScene}=await import('../src/finale-scene.js'),{finalePlaybackTime:at}=await import('../src/finale-state.js');
+ const a=createFinaleScene({asset:await asset(),cast:[{id:'a'},{id:'b'}],runnerId:'a',buttonId:'b'});
+ a.sample(at(20.1));const runner=a.actors.get('a').root,head=runner.getObjectByName('spine006').getWorldPosition(new T.Vector3()),hip=runner.getObjectByName('spine').getWorldPosition(new T.Vector3());
+ assert.ok(head.y-hip.y<.3,'torso extends forward rather than staying upright');
+ assert.ok(head.z<hip.z-.35,'head leads the dive into the cab');
+ assert.ok(hip.y>a.set.cab.position.y+.5,'the dive is airborne');a.dispose();
+});

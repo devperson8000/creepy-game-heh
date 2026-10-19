@@ -44,14 +44,14 @@ export function startMenuHallway(container) {
  // Eyes remain a suggestion at distance, without bright round pupils.
  creature.head.children.filter(child=>child.isMesh&&child.geometry.type==='SphereGeometry').forEach(eye=>{eye.visible=false;});
  let lastDraw=0;
- let elapsed=0,previous=performance.now(),next=4+Math.random()*3,event=null,disposed=false;
+ let elapsed=0,previous=performance.now(),next=.8+Math.random()*1.2,event=null,disposed=false;
  const observer=new ResizeObserver(()=>{
   const w=container.clientWidth,h=container.clientHeight;
   if(!w||!h)return;
   renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();
  });observer.observe(container);
  renderer.setAnimationLoop(()=>{
-  const now=performance.now(),dt=Math.min((now-previous)/1000,.05);previous=now;
+  const now=performance.now(),dt=Math.min((now-previous)/1000,.25);previous=now;
   if(document.hidden||container.closest('.in-waiting-room'))return;
   elapsed+=dt;
   if(!reducedMotion()&&elapsed>=next&&!event){
@@ -70,7 +70,7 @@ export function startMenuHallway(container) {
    }
    const flicker=age>.8&&age<1.06&&!reducedMotion();
    lamps[1].intensity=flicker?2:15;
-   if(age>1.2){event=null;next=elapsed+11+Math.random()*16;}
+   if(age>1.2){event=null;next=elapsed+1+Math.random()*2;}
   }
   if(!event&&now-lastDraw<1000/24)return;
   lastDraw=now;renderer.render(scene,camera);

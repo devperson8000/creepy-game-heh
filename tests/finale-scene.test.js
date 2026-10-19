@@ -24,3 +24,8 @@ test('transition fades smoothly around the surface cut and floor readout changes
 });
 test('stair chase has clear headroom above the rising flight',()=>{const a=make();a.scene.updateMatrixWorld(true);const ray=new T.Raycaster(new T.Vector3(0,3.5,5),new T.Vector3(0,1,0),0,.7);assert.equal(ray.intersectObject(a.set.basement,true).length,0);a.dispose();});
 test('portrait framing keeps camera inside the corridor and fits the trapped horns',()=>{const a=make(true);a.resize(390/844);a.sample(at(6));assert.ok(Math.abs(a.camera.position.x)<3.4);a.sample(at(27));for(const x of [-1.2,1.2]){const p=a.creature.head.localToWorld(new T.Vector3(x,.83,0)).project(a.camera);assert.ok(Math.abs(p.x)<1);}a.dispose();});
+
+test('chase covers a shorter distance at a slower pace within the same shot timing',()=>{
+ const a=make(true);a.sample(at(2));const start=a.actors.get('a').root.position.z;a.sample(at(12));const end=a.actors.get('a').root.position.z;
+ const speed=(start-end)/(at(12)-at(2));assert.ok(speed>=2.5&&speed<3.4,`corridor pace ${speed}`);assert.equal(end,8);assert.equal(a.sample(30).complete,true);a.dispose();
+});

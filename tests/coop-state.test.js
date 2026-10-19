@@ -46,22 +46,22 @@ test('downing drops only personal unbanked keys and rescue grants a short catch 
  const s=make(),[one,two,three]=s.run.drawers.filter(d=>d.key);acquire(s,'a',one);act(s,'a','locks',target(s,'locks'));
  acquire(s,'a',two);acquire(s,'b',three);coop.downPlayer(s,'a',10);
  assert.equal(two.taken,false);assert.equal(one.taken,true);assert.equal(three.taken,true);
- assert.equal(s.players.get('a').downedUntil,22);assert.equal(s.run.phase,'playing');
+ assert.equal(s.players.get('a').downedUntil,55);assert.equal(s.run.phase,'playing');
  const p=s.players.get('a'),rescuer=s.players.get('b');rescuer.x=p.x;rescuer.z=p.z;
  assert.equal(coop.revivePlayer(s,'b','a',11).ok,true);assert.equal(p.status,'alive');assert.equal(p.invulnerableUntil,14);
  assert.equal(coop.downPlayer(s,'a',12),false);assert.equal(coop.downPlayer(s,'a',15),true);
- coop.expireDowned(s,28);assert.equal(p.status,'dead');
+ coop.expireDowned(s,60);assert.equal(p.status,'dead');
 });
 test('a full downed team loses immediately and cannot be revived after expiry',()=>{
  const s=make();coop.downPlayer(s,'a',1);assert.equal(s.run.phase,'playing');
  coop.downPlayer(s,'b',1);assert.equal(s.run.phase,'dead');assert.equal(coop.revivePlayer(s,'b','a',2).ok,false);
- const t=make();coop.downPlayer(t,'a',1);coop.expireDowned(t,13);assert.equal(coop.revivePlayer(t,'b','a',14).ok,false);
+ const t=make();coop.downPlayer(t,'a',1);coop.expireDowned(t,46);assert.equal(coop.revivePlayer(t,'b','a',47).ok,false);
 });
 test('rescue requires a living nearby visible rescuer and an unexpired target',()=>{
  const s=make();coop.downPlayer(s,'a',1);const b=s.players.get('b');b.x+=8;
  assert.equal(coop.revivePlayer(s,'b','a',2).ok,false);b.x=s.players.get('a').x;b.z=s.players.get('a').z;
  assert.equal(coop.revivePlayer(s,'b','a',2,{canSee:()=>false}).ok,false);
- assert.equal(coop.revivePlayer(s,'b','a',13).ok,false);
+ assert.equal(coop.revivePlayer(s,'b','a',46).ok,false);
 });
 test('wrong codes leave the elevator locked and escape waits for every surviving teammate',()=>{
  const s=make();assert.equal(act(s,'a','keypad',target(s,'keypad'),{code:'wrong'}).ok,false);
@@ -100,4 +100,15 @@ test('a player caught inside a closet falls outside so rescue never revives them
 test('revive rejects invalid positions rather than allowing distance checks to fail open',()=>{
  const s=make();coop.downPlayer(s,'a',1);s.players.get('b').x=NaN;
  assert.equal(coop.revivePlayer(s,'b','a',2).ok,false);
+});
+
+test('teammates can rescue well after twelve seconds, until the full 45-second deadline',()=>{
+ const s=make();coop.downPlayer(s,'a',10);
+ assert.equal(coop.expireDowned(s,54.999),0);
+ assert.equal(s.players.get('a').status,'downed');
+ assert.equal(coop.serializeCoopState(s).players.find(p=>p.id==='a').downedUntil,55);
+ assert.equal(coop.revivePlayer(s,'b','a',54.999).ok,true);
+ const expired=make();coop.downPlayer(expired,'a',10);
+ assert.equal(coop.revivePlayer(expired,'b','a',55).ok,false);
+ assert.equal(coop.expireDowned(expired,55),1);assert.equal(expired.players.get('a').status,'dead');
 });

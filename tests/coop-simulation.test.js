@@ -152,3 +152,16 @@ test('actual co-op movement replicates fresh footstep events and blocked movemen
  assert.equal(player.noiseSequence,sequence);
  assert.equal(simulation.snapshot().state.players.find(p=>p.id==='guest').noiseSequence,sequence);
 });
+
+test('blocked drawers stay closed without an obstruction toast; visible drawers still open',()=>{
+ const {state,world,simulation}=fixture(),player=state.players.get('host');
+ const id='drawer-0';world.targets.set(id,{id,type:'drawer',drawerId:0,position:{x:player.x,z:player.z,height:player.height}});
+ world.canSeeInteraction=()=>false;
+ assert.deepEqual(simulation.interact('host',{targetId:id}),{ok:false,reason:'blocked'});
+ assert.equal(state.run.drawers[0].opened,false);
+ assert.deepEqual(simulation.snapshot().notices,[]);
+ world.canSeeInteraction=()=>true;
+ assert.equal(simulation.interact('host',{targetId:id}).ok,true);
+ assert.equal(state.run.drawers[0].opened,true);
+ assert.equal(simulation.snapshot().notices.at(-1).message,'Drawer searched.');
+});
