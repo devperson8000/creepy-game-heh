@@ -15,7 +15,7 @@ function storedName() {
 }
 
 /** Owns its connection until a started session is handed to onMultiplayer. */
-export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () => {}, onTestFinale = () => {}, createClient, initialPlayerName, onClient} = {}) {
+export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () => {}, createClient, initialPlayerName, onClient} = {}) {
  const root = element('main', 'lobby-menu');
  root.id = 'lobby-menu';
  root.setAttribute('aria-label', 'Monochrome game menu');
@@ -103,11 +103,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
   const multiplayer = button('', 'lobby-multiplayer', openMultiplayer);
   multiplayer.classList.add('lobby-mode-card');
   multiplayer.append(element('span', 'lobby-mode-number', '02 / SHARED DESCENT'), element('strong', '', 'Multiplayer'), element('span', 'lobby-mode-detail', '2–4 players · Private entry · Host approval'), element('span', 'lobby-mode-arrow'));
-  const study = element('a', 'lobby-study', 'Creature study');
-  study.href = '?mode=study';
-  const test=element('a','lobby-study','Two-tab co-op test');test.href='?mode=coop-test';
-  const finale=button('Test finale animation','lobby-test-finale',()=>{dispose();onTestFinale();});finale.className='lobby-study';
-  options.append(solo, multiplayer, study,test,finale);
+  options.append(solo, multiplayer);
   content.append(intro, options);
  }
 

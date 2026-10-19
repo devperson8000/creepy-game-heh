@@ -24,7 +24,7 @@ function failed(error){
 }
 try {
  document.documentElement.classList.toggle('reduce-motion',gamePreferences().reducedMotion);
- const study=new URLSearchParams(location.search).get('mode')==='study';
+ const study=import.meta.env.DEV&&new URLSearchParams(location.search).get('mode')==='study';
  document.body.classList.toggle('study-mode',study);
  document.querySelector('#scene').setAttribute('aria-label',study?'An animated black horned creature':'First-person basement escape game');
  if(study)startScene(document.querySelector('#scene'));
@@ -33,16 +33,15 @@ try {
   function makeMenu(options={}){
    return createLobbyMenu({
     ...options,
-    onTestFinale:()=>{void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{window.monochromeFinale=null;makeMenu();}}).then(value=>{window.monochromeFinale=value;});},
     createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});return client;},
     onSingleplayer:()=>{try{window.monochrome=startGame(document.querySelector('#scene'),{autostart:true});}catch(error){failed(error);}},
     onMultiplayer:({client,session})=>{try{window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}}
    });
   }
-  const testSession=readTestSession(location.search);
+  const testSession=import.meta.env.DEV?readTestSession(location.search):null;
   document.body.classList.toggle('two-tab-mode',!!testSession);
   if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
-  else if(new URLSearchParams(location.search).get('mode')==='finale'){void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{history.replaceState({},'',location.pathname);makeMenu();}}).then(value=>{window.monochromeFinale=value;});}
+  else if(import.meta.env.DEV&&new URLSearchParams(location.search).get('mode')==='finale'){void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{history.replaceState({},'',location.pathname);makeMenu();}}).then(value=>{window.monochromeFinale=value;});}
   else makeMenu();
  }
 }
