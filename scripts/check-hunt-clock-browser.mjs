@@ -12,9 +12,9 @@ try{
  await page.evaluate(()=>{monochrome.renderer.setPixelRatio(.5);monochrome.renderer.setSize(innerWidth,innerHeight);});
  await page.locator('.arrival-skip').click();await page.waitForFunction(()=>!monochrome.arrival.active);
  await page.waitForSelector('#hunt-clock:not([hidden])',{timeout:15000});
- assert.match(await page.locator('#hunt-clock').innerText(),/12:0/);
+ assert.match(await page.locator('#hunt-clock').innerText(),/3:0/);
  await page.evaluate(()=>{monochrome.run.boardsOpen=true;monochrome.run.huntElapsed=30;});
- await page.waitForFunction(()=>document.querySelector('#hunt-clock-time').textContent.startsWith('1:'));
+ await page.waitForFunction(()=>document.querySelector('#hunt-clock-time').textContent.startsWith('4:'));
  assert.equal(await page.evaluate(()=>monochrome.enemy().released),false);
  const hidden=await page.evaluate(()=>{const actors=[];monochrome.world.scene.traverse(o=>{if(o.userData.actor)actors.push(o);});return actors.every(o=>{for(let p=o;p;p=p.parent)if(!p.visible)return true;return false;});});
  assert.equal(hidden,true,'all monster meshes are hidden until six');
@@ -29,7 +29,7 @@ try{
  const paused=await page.evaluate(()=>monochrome.run.huntElapsed);await page.waitForTimeout(650);
  assert.equal(await page.evaluate(()=>monochrome.run.huntElapsed),paused,'solo pause freezes the clock');
  await page.locator('#screen-primary').click();await page.waitForFunction(()=>monochrome.ui.overlay===null);
- await page.evaluate(()=>{monochrome.run.huntElapsed=179.85;});
+ await page.evaluate(()=>{monochrome.run.huntElapsed=89.85;});
  await page.waitForSelector('#hunt-warning:not([hidden])',{timeout:15000});
  assert.equal(await page.locator('#hunt-clock').isVisible(),false);
  assert.equal(await page.evaluate(()=>monochrome.enemy().released),true);

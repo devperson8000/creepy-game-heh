@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {finaleShot,FINALE_DURATION} from './finale-state.js';
+import {finaleShot,FINALE_DURATION,finaleChoreographyTime} from './finale-state.js';
 import {createFinaleSet} from './finale-set.js';
 import {createFinaleSurvivor,createFinaleCreature} from './finale-actors.js';
 const smooth=(a,b,t)=>T.MathUtils.smoothstep(t,a,b),mix=T.MathUtils.lerp;
@@ -15,15 +15,17 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=fa
  let aspect=1,disposed=false;const target=new T.Vector3();
  function resize(value){aspect=Math.max(.2,value);camera.aspect=aspect;camera.fov=aspect<.8?82:58;camera.updateProjectionMatrix();}
  function sample(seconds){
-  const t=Math.max(0,Math.min(FINALE_DURATION,Number.isFinite(seconds)?seconds:0)),shot=finaleShot(t).name;set.sample(t);
+  const elapsed=Math.max(0,Math.min(FINALE_DURATION,Number.isFinite(seconds)?seconds:0)),t=finaleChoreographyTime(elapsed),shot=finaleShot(elapsed).name;set.sample(t);
+  const fov=aspect<.8?(t>=19&&t<21.35?98:82):58;
+  if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
   const cabY=set.cab.position.y,epilogue=t>=44,rise=epilogue?0:cabY-3.6;
   scene.background.setHex(epilogue?0xb9c5bd:0x070c0e);scene.fog.color.copy(scene.background);scene.fog.density=epilogue?.018:.027;sun.intensity=epilogue?2.5:0;ambient.intensity=epilogue?2.2:.5;
-  let z=40-3.2*Math.max(0,t-2),height=0,action='none',progress=0,clip='Run',yaw=0,x=0;
+  let z=40-3.2*Math.max(0,t-2),height=0,action='none',progress=0,clip='Run',animationTime=t,yaw=0,x=0;
   if(t>=12){z=mix(8,.7,T.MathUtils.clamp((t-12)/7,0,1));height=stairHeight(z);}
-  if(t>=19){const d=T.MathUtils.clamp((t-19)/2.2,0,1);z=mix(.7,-2.25,d);height=3.6+Math.sin(d*Math.PI)*.5;x=-1.05*d;action='dive';progress=d;}
+  if(t>=19){const d=T.MathUtils.clamp((t-19)/2.2,0,1);z=mix(.7,-2.25,d);height=3.6+Math.sin(d*Math.PI)*.45;x=-1.05*d;action='dive';progress=d;clip='Jump';animationTime=.04+d*.74;}
   if(t>=21.2){z=-2.25;height=cabY;x=-1.05;action=t>=30?'brace':'none';clip='Idle';}
   if(epilogue){const walk=Math.max(0,t-45.5);z=-2.25+walk*.9;height=0;x=-.48;action='none';clip=walk>0?'Walk':'Idle';yaw=Math.PI;}
-  const runner=actors.get(runnerId);runner?.sample({clip,time:t,position:[x,height,z],yaw,action,progress});
+  const runner=actors.get(runnerId);runner?.sample({clip,time:clip==='Jump'?animationTime:t,position:[x,height,z],yaw,action,progress});
   let extra=0;
   for(const [id,a] of actors){if(id===runnerId)continue;
    let p=id===buttonId?[1.2,cabY,-.95]:[extra++%2? .65:-.98,cabY,-2.6];let role='none',contact=null,w=0,face=id===buttonId?-Math.PI/2:Math.PI,actorClip='Idle';
@@ -39,7 +41,7 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=fa
   creature.sample({time:t,mode,position:[0,monsterHeight,monsterZ],yaw:Math.PI,neckPosition:[0,cabY+1.72,-.08],deathTime:Math.max(0,t-35.3)});creature.root.visible=!epilogue;
   if(t<12){camera.position.set(3.2,.95,z-4.5);target.set(0,1.65,z+1.4);key.position.set(-2.4,3.6,z-2);key.target.position.set(0,1.2,z+1);rim.position.set(0,2.8,monsterZ+1);}
   else if(t<19){camera.position.set(-1.1,5.08,-2.7);target.set(0,height+1.2,z+.7);key.position.set(-1.2,6,1);key.target.position.set(0,4,4);rim.position.set(0,5.6,4);}
-  else if(t<21.2){camera.position.set(-1.22,5.05,-3.1);target.set(0,4.9,z+.4);key.position.set(-1.2,6,1);key.target.position.set(0,4.8,0);rim.position.set(0,6,1);}
+  else if(t<21.35){camera.position.set(1.05,5.1,-3.35);target.set(x,4.75,z+.15);key.position.set(-1.2,6,1);key.target.position.set(0,4.8,0);rim.position.set(0,6,1);}
   else if(t<23){camera.position.set(.05,cabY+1.4,-.12);target.set(1.48,cabY+1.31,-.65);key.position.set(.2,cabY+2.5,-1.5);key.target.position.copy(target);}
   else if(t<35.3){camera.position.set(-.12,cabY+1.7,-2.65);target.set(0,cabY+2.05,-.08);key.position.set(-1,cabY+2.7,-1.9);key.target.position.copy(target);rim.position.set(0,cabY+2.2,.8);}
   else if(t<39){const drop=smooth(35.4,37,t);camera.position.set(-.85,cabY+mix(1.6,.7,drop),-2.35);target.copy(creature.head.position);target.y+=.15;key.position.set(-1,cabY+2.7,-1.9);key.target.position.copy(target);}
@@ -52,7 +54,7 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=fa
   if(!reducedMotion&&t>=23&&t<35.6)camera.position.x+=Math.sin(t*39)*.008*(t<24?2:1);
   camera.lookAt(target);camera.updateMatrixWorld(true);scene.updateMatrixWorld(true);
   const fade=t<2?1-smooth(.4,2,t):t>42.5&&t<45.2?(t<44?smooth(42.5,44,t):1-smooth(44,45.2,t)):0;
-  return {shot,fade,title:t>=49?['YOU ESCAPED.',...(t>=50.2?['TOGETHER.']:[])]:[],complete:t>=52};
+  return {shot,fade,title:t>=49?['YOU ESCAPED.',...(t>=50.2?['TOGETHER.']:[])]:[],complete:elapsed>=FINALE_DURATION};
  }
  function dispose(){if(disposed)return;disposed=true;for(const a of actors.values())a.dispose();creature.dispose();set.dispose();key.dispose();scene.clear();}
  return {scene,camera,set,creature,actors,sample,resize,dispose};

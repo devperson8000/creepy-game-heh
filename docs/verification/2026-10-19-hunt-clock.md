@@ -1,5 +1,7 @@
 # Six o'clock hunt verification
 
+Later changes are recorded in [the faster finale and 3 AM start verification](2026-10-19-faster-finale.md).
+
 The finale and preceding polish were pushed to `main` in `6fcc043` before this gameplay change began.
 
 ## Behavior

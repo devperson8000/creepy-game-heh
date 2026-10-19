@@ -231,7 +231,13 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   speakingIcon.visible=false;torch.visible=false;beam.intensity=0;glow.intensity=0;
   const label=root.getObjectByName('player-name');if(label)label.visible=false;
   const p=THREE.MathUtils.clamp(progress,0,1);
-  if(action==='dive')root.rotation.x=-Math.sin(p*Math.PI)*1.35;
+  if(action==='dive'){
+   root.rotation.x=-Math.sin(p*Math.PI)*1.35;
+   // Turn around the pelvis, keeping the airborne body centred on its flight
+   // path instead of tipping its head below the frame around planted feet.
+   const pivot=new THREE.Vector3(0,.95,0),turned=pivot.clone().applyQuaternion(root.quaternion);
+   root.position.add(pivot.sub(turned));
+  }
   if(action==='brace'&&chest)chest.rotation.x+=.14;
   root.updateMatrixWorld(true);
   if(handTarget&&hand&&forearm&&upperArm){

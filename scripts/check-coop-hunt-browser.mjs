@@ -23,7 +23,7 @@ try{
  await Promise.all([host,guest].map(page=>page.evaluate(()=>{monochrome.ui.hideScreen();monochrome.input.clear();})));
  await host.evaluate(()=>{monochrome.run.huntElapsed=30;monochrome.run.boardsOpen=true;});
  await guest.waitForFunction(()=>monochrome.run.huntElapsed>=30,null,{timeout:10000});
- assert.match(await guest.locator('#hunt-clock-time').innerText(),/^1:/);
+ assert.match(await guest.locator('#hunt-clock-time').innerText(),/^4:/);
  assert.equal(await host.evaluate(()=>monochrome.simulation.enemySnapshot().active),false);
  const displayed=await Promise.all([host,guest].map(page=>page.locator('#hunt-clock-time').innerText()));
  console.log('Displayed host / guest times:',displayed);
@@ -35,7 +35,7 @@ try{
  await guest.waitForFunction(value=>monochrome.run.huntElapsed>value+.5,before,{timeout:5000});
  await guest.locator('#screen-primary').click();
  await Promise.all([host,guest].map(page=>page.evaluate(()=>monochrome.ui.hideScreen())));
- await host.evaluate(()=>{monochrome.run.huntElapsed=179.4;monochrome.run.boardsOpen=false;});
+ await host.evaluate(()=>{monochrome.run.huntElapsed=89.4;monochrome.run.boardsOpen=false;});
  await Promise.all([host,guest].map(page=>page.waitForSelector('#hunt-warning:not([hidden])',{timeout:10000})));
  const clocks=await Promise.all([host,guest].map(page=>page.evaluate(()=>monochrome.run.huntElapsed)));
  console.log('Host / guest authoritative clock samples:',clocks);assert.ok(Math.abs(clocks[0]-clocks[1])<2,'snapshot delivery remains current');

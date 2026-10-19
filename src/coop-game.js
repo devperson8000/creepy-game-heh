@@ -1,7 +1,7 @@
 import {huntActive,sampleHuntElapsed} from './hunt-clock.js';
 import {createHostClock,needsHostClockSync} from './coop-clock.js';
 import {createFinalePlayer} from './finale-player.js';
-import {createFinaleClock} from './finale-state.js';
+import {createFinaleClock,FINALE_DURATION} from './finale-state.js';
 import {gamePreferences,createRenderQuality} from './preferences.js';
 import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
@@ -234,7 +234,7 @@ export function startCoopGame(container,{client,session}){
    if(!finale&&!finaleFailed&&avatarAsset)finale=createFinalePlayer({container,renderer,asset:avatarAsset,...run.finale,muted:audio.muted,onMuteChange:setSoundMuted});
    finale?.sample(finaleClock.sample());
   }catch(error){console.warn('Finale presentation unavailable',error);finale?.dispose();finale=null;finaleFailed=true;document.body.classList.remove('finale-active');}
-  if(run.phase==='won'&&elapsed>=52){
+  if(run.phase==='won'&&elapsed>=FINALE_DURATION){
    finaleCompleteAt??=now;
    if(finaleFailed||now-finaleCompleteAt>=1500){finale?.dispose();finale=null;finaleFinished=true;outcome='won';lastStatus=local()?.status;screen('won');}
   }

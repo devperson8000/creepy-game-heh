@@ -1,11 +1,13 @@
 import {MONSTER_SOUND_URL} from './monster-audio.js';
+import {finalePlaybackTime,finaleChoreographyTime} from './finale-state.js';
 const EVENTS=[{time:21.3,type:'dive'},{time:22.25,type:'button'},{time:23,type:'doors'},{time:30,type:'motor'},{time:35.3,type:'cut'},{time:35.95,type:'head'},{time:36.4,type:'head'},{time:45,type:'arrival'}];
-for(let t=.8;t<21;t+=.31)EVENTS.push({time:t,type:'step'});
+for(let t=.8;t<19;t+=.31)EVENTS.push({time:t,type:'step'});
 for(let t=.4;t<20;t+=.72)EVENTS.push({time:t,type:'breath'});
 for(let t=46;t<52;t+=.56)EVENTS.push({time:t,type:'exit-step'});
 EVENTS.sort((a,b)=>a.time-b.time);
+for(const event of EVENTS)event.time=finalePlaybackTime(event.time);
 export function finaleAudioEvents(previous,time){return time>=previous&&time-previous<=.6?EVENTS.filter(e=>e.time>previous&&e.time<=time):[];}
-export function finaleMonsterGain(time){if(time<.5||time>=39.3)return 0;if(time<23)return .15+.55*Math.min(1,time/12);if(time<35.3)return .9;return .8*Math.exp(-(time-35.3)*2);}
+export function finaleMonsterGain(seconds){const time=finaleChoreographyTime(seconds);if(time<.5||time>=39.3)return 0;if(time<23)return .15+.55*Math.min(1,time/12);if(time<35.3)return .9;return .8*Math.exp(-(time-35.3)*2);}
 export function createFinaleAudio({volume=.8,muted=false}={}){
  let context,master,monsterGain,monster,noise,loading,disposed=false,last=0,level=Math.max(0,Math.min(1,volume)),quiet=muted;
  const abort=new AbortController(),sounds=new Set();

@@ -1,7 +1,17 @@
-export const FINALE_DURATION=52;
-const SHOTS=[['black',0,2],['chase',2,12],['stairs',12,19],['dive',19,23],['trapped',23,30],['ascent',30,35],['sever',35,39],['death',39,44],['escape',44,52]];
+export const FINALE_DURATION=27;
+// Playback seconds and original choreography seconds. Retiming these beats in
+// one place keeps poses, cameras, audio and authoritative victory in step.
+const SHOTS=[['black',0,1,0,2],['chase',1,6,2,12],['stairs',6,9.5,12,19],['dive',9.5,11.5,19,23],['trapped',11.5,12.7,23,30],['ascent',12.7,14.7,30,35],['sever',14.7,16.9,35,39],['death',16.9,20,39,44],['escape',20,27,44,52]];
 const clamp=value=>Math.max(0,Math.min(FINALE_DURATION,Number.isFinite(value)?value:0));
 export function finaleShot(seconds){const t=clamp(seconds),[name,start,end]=SHOTS.find(([,a,b])=>t>=a&&t<b)??SHOTS.at(-1);return {name,start,end};}
+export function finaleChoreographyTime(seconds){
+ const t=clamp(seconds),[,start,end,from,to]=SHOTS.find(([,a,b])=>t>=a&&t<b)??SHOTS.at(-1);
+ return from+(to-from)*(t-start)/(end-start);
+}
+export function finalePlaybackTime(seconds){
+ const t=Math.max(0,Math.min(52,Number.isFinite(seconds)?seconds:0)),[,start,end,from,to]=SHOTS.find(([, , ,a,b])=>t>=a&&t<b)??SHOTS.at(-1);
+ return start+(end-start)*(t-from)/(to-from);
+}
 export function beginFinale(state,nowSeconds){
  const run=state.run;
  if(run.phase!=='playing'||run.finale||(run.initialPlayerCount??state.players.size)<2||run.banked.size!==4||!run.codeAccepted||!Number.isFinite(nowSeconds))return false;

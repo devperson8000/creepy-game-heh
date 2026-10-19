@@ -1,7 +1,7 @@
 import {gridPoint,worldPoint,pathBetween,lineOfSight,walkable,randomSource} from './level.js';
 import {sweepMove} from './navigation.js';
 import {huntActive} from './hunt-clock.js';
-export const MONSTER_SPEED={patrol:1.8,investigate:2.65,chase:4.15};
+export const MONSTER_SPEED={patrol:1.8,investigate:2.65,chase:3.95};
 export const SIGHT_RANGE=16;
 export function createEnemy(layout){
  // The entrance is on the north edge. Use the farthest southern room in all
@@ -94,7 +94,7 @@ export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],naviga
   else enemy.mode='investigate';
  }else if(enemy.mode==='chase'){
   enemy.lostFor+=delta;
-  if(enemy.lostFor>7){enemy.mode='search';enemy.searchRemaining=4.5;enemy.path=[];}
+  if(enemy.lostFor>6.5){enemy.mode='search';enemy.searchRemaining=4.5;enemy.path=[];}
  }
  if(enemy.mode==='search'){
   enemy.yaw+=delta*.95;enemy.searchRemaining-=delta;

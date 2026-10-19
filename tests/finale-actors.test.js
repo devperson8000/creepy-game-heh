@@ -25,3 +25,27 @@ test('chase creature returns to the same absolute position after a seek',()=>{
  const a=createFinaleCreature(),pose={time:6,mode:'chase',position:[0,0,30],yaw:Math.PI};a.sample(pose);const first=a.body.root.position.clone();a.sample({...pose,time:8,position:[0,0,20]});a.sample(pose);assert.ok(a.body.root.position.distanceTo(first)<1e-8);a.dispose();
 });
 test('severed head falls inward onto the elevator floor',()=>{const a=createFinaleCreature();a.sample({time:38,mode:'severed',neckPosition:[0,2,-.08],deathTime:2.7});assert.ok(a.head.position.z<-.7);a.dispose();});
+
+test('dive rotates around the body rather than tipping at the feet',async()=>{
+ const a=createFinaleSurvivor(await asset(),{id:'a'});
+ a.sample({clip:'Jump',time:.4,position:[0,3.6,-.7],yaw:0,action:'dive',progress:.5});
+ assert.ok(a.root.position.y>4.1,'pelvis pivot lifts the root during the horizontal dive');
+ const before=a.root.position.clone();a.sample({clip:'Idle',time:1,position:[0,3.6,-2.25],yaw:0});
+ assert.equal(a.root.rotation.x,0);assert.equal(a.root.position.y,3.6);assert.ok(before.distanceTo(a.root.position)>0);a.dispose();
+});
+
+test('the airborne survivor stays in frame throughout the dive on desktop and portrait',async()=>{
+ const {createFinaleScene}=await import('../src/finale-scene.js'),{finalePlaybackTime}=await import('../src/finale-state.js');
+ const a=createFinaleScene({asset:await asset(),cast:[{id:'a',slot:0},{id:'b',slot:1}],runnerId:'a',buttonId:'b',reducedMotion:true});
+ for(const aspect of [1.5,390/844]){
+  a.resize(aspect);
+  for(const progress of [.2,.5,.8]){
+   a.sample(finalePlaybackTime(19+2.2*progress));
+   for(const name of ['spine','spine006','footL','footR','handL','handR']){
+    const point=a.actors.get('a').root.getObjectByName(name).getWorldPosition(new T.Vector3()).project(a.camera);
+    assert.ok(Math.abs(point.x)<.9&&Math.abs(point.y)<.9&&Math.abs(point.z)<1,`${aspect}, ${progress}: ${name} outside frame ${point.toArray()}`);
+   }
+  }
+ }
+ a.dispose();
+});

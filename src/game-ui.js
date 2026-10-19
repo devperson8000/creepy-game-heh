@@ -1,5 +1,5 @@
 import {gamePreferences,savePreferences,reducedMotion} from './preferences.js';
-import {huntClockView,HUNT_START_SECONDS,HUNT_WARNING_SECONDS} from './hunt-clock.js';
+import {huntClockView,CLOCK_START_HOUR,HUNT_START_SECONDS,HUNT_WARNING_SECONDS} from './hunt-clock.js';
 export function objectiveFor(run){
  if(!run.boardsOpen)return 'Open the boarded doorway';
  if(run.exitOpen)return 'Step into the open elevator';
@@ -11,7 +11,7 @@ export function objectiveFor(run){
 export function createGameUI(){
  const root=document.createElement('div');root.id='game-ui';root.innerHTML=`
  <div class="game-top"><div class="wordmark">MONOCHROME<small id="floor-name">ELEVATOR LOBBY</small><span id="current-objective"></span></div><div class="game-top-actions"><button id="torch-toggle" data-hotkey="F" aria-label="Turn torch off (F)" aria-pressed="true">Torch on</button><button id="sound-toggle" data-hotkey="M" aria-label="Mute game sound" aria-pressed="false" hidden>Sound on</button><button id="pause-game" aria-label="Pause game">Ⅱ</button></div></div>
- <div id="hunt-clock" role="timer" aria-live="off" hidden><small>BASEMENT TIME</small><div><span id="hunt-clock-time">12:00</span><span class="clock-period">AM</span></div></div>
+ <div id="hunt-clock" role="timer" aria-live="off" hidden><small>BASEMENT TIME</small><div><span id="hunt-clock-time">${CLOCK_START_HOUR}:00</span><span class="clock-period">AM</span></div></div>
  <div id="hunt-warning" role="status" hidden><div><strong>6:00</strong><span>IT IS HUNTING.</span></div></div>
  <div class="game-inventory"><small>EXIT LOCKS</small><div id="key-lights" aria-label="Banked keys"></div><p id="carried-keys"></p><p id="clue-note"></p><p id="player-noise"></p></div>
  <div id="interaction" hidden><div><kbd>E</kbd><span id="interaction-label"></span></div><div class="hold-track" role="progressbar" aria-label="Interaction progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="hold-fill"></i></div></div>

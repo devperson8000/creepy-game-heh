@@ -1,3 +1,4 @@
+import {FINALE_DURATION} from '../src/finale-state.js';
 import {chromium} from 'playwright';import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
 const context=await browser.newContext({viewport:{width:800,height:600}}),errors=[],peer=!!process.env.VOICE_TEST_ICE_SERVERS,failure=!!process.env.FINALE_TEST_RENDER_FAILURE;
@@ -17,7 +18,7 @@ try{
  if(failure){
   await Promise.all([host,guest].map(p=>p.waitForFunction(()=>monochrome.ui.overlay==='finale',null,{timeout:10000})));
   assert.equal(await guest.locator('.finale-ui').count(),0,'failed initialization removes the cinematic overlay');
-  await host.evaluate(()=>{monochrome.run.finale.startedAt-=55;});
+  await host.evaluate(duration=>{monochrome.run.finale.startedAt-=duration+3;},FINALE_DURATION);
   await Promise.all([host,guest].map(p=>p.waitForFunction(()=>monochrome.run.phase==='won'&&monochrome.ui.overlay==='won',null,{timeout:15000})));assert.deepEqual(errors,[]);console.log('PASS cinematic renderer failure releases overlays and still shows authoritative co-op victory');
  }else{
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>!!monochrome.finale?.ready,null,{timeout:10000})));
@@ -34,7 +35,7 @@ try{
 
  await host.evaluate(()=>Object.defineProperty(document,'hidden',{configurable:true,get:()=>true}));const before=await guest.evaluate(()=>monochrome.finale.time);await guest.waitForTimeout(1100);assert.ok(await guest.evaluate(t=>monochrome.finale.time>t+.7,before));
  // Exercise a large authoritative seek, as happens when returning to a long-hidden viewer.
- await host.evaluate(()=>{monochrome.run.finale.startedAt-=47;});await guest.waitForFunction(()=>monochrome.finale?.time>47||monochrome.run.phase==='won',null,{timeout:10000});
+ await host.evaluate(duration=>{monochrome.run.finale.startedAt-=duration-5;},FINALE_DURATION);await guest.waitForFunction(duration=>monochrome.finale?.time>duration-5||monochrome.run.phase==='won',FINALE_DURATION,{timeout:10000});
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>monochrome.run.phase==='won'&&monochrome.ui.overlay==='won',null,{timeout:16000})));
  assert.deepEqual(errors,[]);console.log('PASS actual co-op victory trigger, shared finale, hidden HUD, synchronized clocks, hidden host, late catch-up and final victory over '+(peer?'peer transport':'database fallback')+'; no runtime errors');
  }

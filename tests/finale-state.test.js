@@ -19,7 +19,7 @@ test('fixed cast excludes missing/dead teammates and rescues downed teammates',(
  const s=ready();Object.assign(s.players.get('a'),{x:0,z:0,height:0});s.players.get('b').status='downed';s.players.get('c').status='dead';
  assert.ok(beginFinale(s,100));assert.deepEqual(s.run.finale.cast.map(p=>p.id),['a','b']);assert.equal(s.run.finale.runnerId,'a');assert.equal(s.run.finale.buttonId,'b');
  s.players.get('b').name='Changed';assert.equal(s.run.finale.cast[1].name,'Ben');
- assert.equal(advanceFinale(s,151.9),false);assert.equal(s.run.phase,'finale');assert.equal(advanceFinale(s,152),true);assert.equal(s.run.phase,'won');assert.equal(s.players.get('b').status,'escaped');assert.equal(s.players.get('c').status,'dead');assert.equal(advanceFinale(s,200),false);
+ assert.equal(advanceFinale(s,126.9),false);assert.equal(s.run.phase,'finale');assert.equal(advanceFinale(s,127),true);assert.equal(s.run.phase,'won');assert.equal(s.players.get('b').status,'escaped');assert.equal(s.players.get('c').status,'dead');assert.equal(advanceFinale(s,200),false);
 });
 test('runner is farthest living survivor with deterministic ties; single survivor presses button',()=>{
  const s=ready();Object.assign(s.players.get('a'),{x:0,z:0,height:0});Object.assign(s.players.get('c'),{x:0,z:0,height:0});
@@ -31,24 +31,24 @@ test('cinematic metadata roundtrips without leaking layout or replacing fallen r
  const s=ready();beginFinale(s,100);advanceFinale(s,115);const copy=createCoopState(42,team);
  applyCoopSnapshot(copy,JSON.parse(JSON.stringify(serializeCoopState(s))));assert.deepEqual(copy.run.finale,s.run.finale);assert.equal(copy.run.finale.elapsed,15);assert.equal(serializeCoopState(s).run.layout,undefined);
 });
-test('shots follow the approved 52 second sequence',()=>{
- assert.equal(FINALE_DURATION,52);
- assert.deepEqual([0,2,12,19,23,30,35,39,44,52].map(t=>finaleShot(t).name),['black','chase','stairs','dive','trapped','ascent','sever','death','escape','escape']);
+test('faster shots halve the run and keep the trapped-head hold brief',()=>{
+ assert.equal(FINALE_DURATION,27);
+ assert.deepEqual([0,1,6,9.5,11.5,12.7,14.7,16.9,20,27].map(t=>finaleShot(t).name),['black','chase','stairs','dive','trapped','ascent','sever','death','escape','escape']);
  assert.equal(finaleShot(NaN).name,'black');
 });
 test('viewer clock catches up after hidden tab, ignores stale updates and resets for replay',()=>{
  let now=0;const clock=createFinaleClock({now:()=>now});clock.sync({id:'one',elapsed:5});assert.equal(clock.sample(),5);now=10;assert.equal(clock.sample(),15);
  clock.sync({id:'one',elapsed:6});assert.ok(clock.sample()>=15);
- clock.sync({id:'one',elapsed:30});assert.equal(clock.sample(),30);now=40;assert.equal(clock.sample(),52);clock.sync({id:'one',elapsed:2});assert.equal(clock.sample(),52);
+ clock.sync({id:'one',elapsed:20});assert.equal(clock.sample(),20);now=40;assert.equal(clock.sample(),27);clock.sync({id:'one',elapsed:2});assert.equal(clock.sample(),27);
  clock.sync({id:'two',elapsed:0});assert.equal(clock.sample(),0);clock.reset();assert.equal(clock.sample(),0);
 });
 test('authority freezes movement, enemy and downed timers while wall clock advances finale',()=>{
  let now=100;const s=ready(),world={canMove:()=>true,targets:new Map()};s.players.get('b').status='downed';s.players.get('b').downedUntil=1;
  const sim=createCoopSimulation(s,world,{ambushChance:0,now:()=>now});sim.advance(.1);assert.equal(s.run.phase,'finale');
  const before=JSON.stringify([...s.players.values()]),enemy=JSON.stringify(sim.enemy),elapsed=s.run.elapsed;
- sim.setInput('a',{forward:1,right:0,yaw:0,pitch:0});now=140;sim.advance(.1);
- assert.equal(s.run.finale.elapsed,40);assert.equal(s.run.elapsed,elapsed);assert.equal(JSON.stringify([...s.players.values()]),before);assert.equal(JSON.stringify(sim.enemy),enemy);assert.equal(sim.interact('a',{targetId:'keypad',code:s.run.code}).ok,false);
- now=152;sim.advance(.1);assert.equal(s.run.phase,'won');
+ sim.setInput('a',{forward:1,right:0,yaw:0,pitch:0});now=120;sim.advance(.1);
+ assert.equal(s.run.finale.elapsed,20);assert.equal(s.run.elapsed,elapsed);assert.equal(JSON.stringify([...s.players.values()]),before);assert.equal(JSON.stringify(sim.enemy),enemy);assert.equal(sim.interact('a',{targetId:'keypad',code:s.run.code}).ok,false);
+ now=127;sim.advance(.1);assert.equal(s.run.phase,'won');
 });
 test('the final trusted interaction starts the cinematic before another enemy tick',()=>{
  for(const last of ['locks','keypad']){
@@ -56,5 +56,13 @@ test('the final trusted interaction starts the cinematic before another enemy ti
   if(last==='locks'){s.run.banked.delete(4);p.carried.add(4);}else s.run.codeAccepted=false;
   const simulation=createCoopSimulation(s,{targets,canMove:()=>true},{now:()=>100});
   assert.equal(simulation.interact('a',{targetId:last,code:s.run.code}).ok,true);assert.equal(s.run.phase,'finale');assert.equal(s.run.elapsed,0);assert.equal(simulation.setInput('a',{forward:1,right:0,yaw:0,pitch:0}),false);
+ }
+});
+
+test('shared retiming keeps choreography and sound cues on the same playback clock',async()=>{
+ const timeline=await import('../src/finale-state.js');
+ for(const [playback,authored] of [[0,0],[1,2],[3.5,7],[6,12],[9.5,19],[11.5,23],[12.7,30],[14.7,35],[16.9,39],[20,44],[27,52]]){
+  assert.ok(Math.abs((timeline.finaleChoreographyTime?.(playback)??Infinity)-authored)<1e-8);
+  assert.ok(Math.abs((timeline.finalePlaybackTime?.(authored)??Infinity)-playback)<1e-8);
  }
 });

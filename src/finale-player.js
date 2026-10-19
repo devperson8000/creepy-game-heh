@@ -1,5 +1,6 @@
 import * as T from 'three';
 import {createFinaleScene} from './finale-scene.js';
+import {FINALE_DURATION} from './finale-state.js';
 import {createFinaleAudio} from './finale-audio.js';
 import {loadPlayerAvatarAsset} from './player-avatar.js';
 import {gamePreferences,reducedMotion,createRenderQuality} from './preferences.js';
@@ -24,7 +25,7 @@ export function createFinalePlayer({container,renderer:borrowedRenderer,asset,ca
   const replay=node('button','finale-button','Replay'),back=node('button','finale-button','Back to menu');replay.type=back.type='button';replay.addEventListener('click',()=>restart(Number(select.value)));back.addEventListener('click',exit);select.addEventListener('change',()=>restart(Number(select.value)));controls.append(label,replay,sound,back);
  }else controls.append(sound);
  function sample(seconds){
-  if(disposed)return;time=Math.max(0,Math.min(52,seconds));const frame=scene.sample(time);audio.setVolume(gamePreferences().volume);audio.sample(time);fade.style.opacity=String(frame.fade);root.dataset.shot=frame.shot;root.dataset.time=time.toFixed(2);bar.style.transform=`scaleX(${time/52})`;
+  if(disposed)return;time=Math.max(0,Math.min(FINALE_DURATION,seconds));const frame=scene.sample(time);audio.setVolume(gamePreferences().volume);audio.sample(time);fade.style.opacity=String(frame.fade);root.dataset.shot=frame.shot;root.dataset.time=time.toFixed(2);bar.style.transform=`scaleX(${time/FINALE_DURATION})`;
   title.hidden=!frame.title.length;titleSub.hidden=frame.title.length<2;
   if(!document.hidden){renderer.toneMappingExposure=.85*gamePreferences().brightness;renderer.render(scene.scene,scene.camera);}
   if(frame.complete&&!completed){completed=true;onComplete();if(preview)renderer.setAnimationLoop(null);}return frame;

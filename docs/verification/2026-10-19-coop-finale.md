@@ -1,5 +1,7 @@
 # Co-op finale verification
 
+Later changes are recorded in [the faster finale and 3 AM start verification](2026-10-19-faster-finale.md).
+
 The menu/movement polish was pushed to `main` first in `36de932`. The cinematic is implemented in the commits following the approved design and implementation plan. Independent review completed. Its one Important finding, shared mute-state inconsistency, was reproduced in a real two-client browser test and fixed. The full suite and build passed again after that fix.
 
 ## Behavior checked

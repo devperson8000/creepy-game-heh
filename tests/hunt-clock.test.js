@@ -7,7 +7,7 @@ import {createEnemy} from '../src/enemy.js';
 import {worldPoint,pathBetween,gridPoint} from '../src/level.js';
 
 const world={canMove:()=>true,enemyNavigation:{canMove:()=>true,findPath:(_,to)=>[{...to}]},targets:new Map()};
-test('a fresh run starts the hunt clock at midnight',()=>{
+test('a fresh run starts the hunt clock at 3 AM',()=>{
  assert.equal(createRun(42).huntElapsed,0);
 });
 test('opening the boards cannot release or reveal Monochrome before 6:00',()=>{
@@ -19,9 +19,9 @@ test('opening the boards cannot release or reveal Monochrome before 6:00',()=>{
  assert.equal(simulation.enemySnapshot().active,false);
  assert.ok(Math.abs(state.run.huntElapsed-.2)<1e-9);
 });
-test('the host releases the monster exactly at three minutes even with the boards closed',()=>{
+test('the host releases the monster exactly at ninety seconds even with the boards closed',()=>{
  const state=createCoopState(42,['host','guest']),simulation=createCoopSimulation(state,world);
- state.run.huntElapsed=179.9;simulation.advance(.05);
+ state.run.huntElapsed=89.9;simulation.advance(.05);
  assert.equal(simulation.enemySnapshot().active,false);
  const start={...simulation.enemy.position};simulation.advance(.1);
  assert.equal(simulation.enemySnapshot().active,true);
@@ -39,10 +39,10 @@ test('co-op arrival can suspend the clock without suspending the network simulat
 });
 test('co-op snapshots replicate the authoritative hunt clock without a guest timer',()=>{
  const host=createCoopState(42,['host','guest']),guest=createCoopState(42,['host','guest']);
- const simulation=createCoopSimulation(host,world);host.run.huntElapsed=179.9;simulation.advance(.2);
+ const simulation=createCoopSimulation(host,world);host.run.huntElapsed=89.9;simulation.advance(.2);
  applyCoopSnapshot(guest,simulation.snapshot().state);
  assert.equal(guest.run.huntElapsed,host.run.huntElapsed);
- assert.ok(guest.run.huntElapsed>=180);
+ assert.ok(guest.run.huntElapsed>=90);
  const frozen=host.run.huntElapsed;host.run.phase='dead';simulation.advance(.2);
  assert.equal(host.run.huntElapsed,frozen);
 });
@@ -62,12 +62,12 @@ test('Monochrome starts in a reachable room on the opposite side for every basem
 
 test('digital minutes advance every half second and the clock disappears at six',async()=>{
  const clock=await import('../src/hunt-clock.js');
- for(const [seconds,text] of [[0,'12:00'],[.49,'12:00'],[.5,'12:01'],[29.99,'12:59'],[30,'1:00'],[179.5,'5:59']]){
+ for(const [seconds,text] of [[0,'3:00'],[.49,'3:00'],[.5,'3:01'],[29.99,'3:59'],[30,'4:00'],[89.5,'5:59']]){
   assert.deepEqual(clock.huntClockView?.({phase:'playing',huntElapsed:seconds}),{text,visible:true,warning:false});
  }
- assert.deepEqual(clock.huntClockView?.({phase:'playing',huntElapsed:180}),{text:'6:00',visible:false,warning:true});
- assert.deepEqual(clock.huntClockView?.({phase:'playing',huntElapsed:183}),{text:'6:00',visible:false,warning:false});
- assert.equal(clock.huntClockView?.({phase:'finale',huntElapsed:181})?.warning,false);
+ assert.deepEqual(clock.huntClockView?.({phase:'playing',huntElapsed:90}),{text:'6:00',visible:false,warning:true});
+ assert.deepEqual(clock.huntClockView?.({phase:'playing',huntElapsed:93}),{text:'6:00',visible:false,warning:false});
+ assert.equal(clock.huntClockView?.({phase:'finale',huntElapsed:91})?.warning,false);
 });
 test('only active playing time advances the clock',async()=>{
  const clock=await import('../src/hunt-clock.js'),run=createRun(42);
@@ -86,10 +86,10 @@ test('slow rendering cannot slow the clock even though physics steps stay bounde
 
 test('a calibrated guest displays host time rather than a delayed snapshot time',async()=>{
  const clock=await import('../src/hunt-clock.js');
- assert.equal(clock.sampleHuntElapsed?.({phase:'playing',huntElapsed:179},{hostAt:100,hostNow:101,running:true}),180);
+ assert.equal(clock.sampleHuntElapsed?.({phase:'playing',huntElapsed:89},{hostAt:100,hostNow:101,running:true}),90);
  assert.equal(clock.sampleHuntElapsed?.({phase:'playing',huntElapsed:0},{hostAt:100,hostNow:101,running:false}),0);
- assert.equal(clock.sampleHuntElapsed?.({phase:'finale',huntElapsed:179},{hostAt:100,hostNow:105,running:true}),179);
- assert.equal(clock.sampleHuntElapsed?.({phase:'playing',huntElapsed:179},{hostAt:100,hostNow:99,running:true}),179);
+ assert.equal(clock.sampleHuntElapsed?.({phase:'finale',huntElapsed:89},{hostAt:100,hostNow:105,running:true}),89);
+ assert.equal(clock.sampleHuntElapsed?.({phase:'playing',huntElapsed:89},{hostAt:100,hostNow:99,running:true}),89);
 });
 
 test('a slow render cannot move the snapshot clock anchor away from its simulation tick',()=>{
