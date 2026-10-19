@@ -3,12 +3,13 @@ import {createFinaleScene} from './finale-scene.js';
 import {FINALE_DURATION} from './finale-state.js';
 import {createFinaleAudio} from './finale-audio.js';
 import {loadPlayerAvatarAsset} from './player-avatar.js';
+import {JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {gamePreferences,reducedMotion,createRenderQuality} from './preferences.js';
 function node(tag,className,text){const el=document.createElement(tag);el.className=className;if(text)el.textContent=text;return el;}
 export function createFinalePlayer({container,renderer:borrowedRenderer,asset,cast,runnerId,buttonId,preview=false,muted=false,audio:initialAudio,onExit=()=>{},onComplete=()=>{},onMuteChange=()=>{}}){
  const renderer=borrowedRenderer??new T.WebGLRenderer({antialias:true}),owned=!borrowedRenderer;
  if(owned){renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;container.append(renderer.domElement);}
- const quality=owned?createRenderQuality(renderer):null,prefs=gamePreferences();let scene=createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion:reducedMotion(),quality:prefs.quality});
+ const quality=owned?createRenderQuality(renderer):null,prefs=gamePreferences(),mouthTexture=new T.TextureLoader().load(JUMPSCARE_MOUTH_URL);let scene=createFinaleScene({asset,cast,runnerId,buttonId,mouthTexture,reducedMotion:reducedMotion(),quality:prefs.quality});
  let audio=initialAudio??createFinaleAudio({volume:prefs.volume,muted});void audio.resume();
  let disposed=false,completed=false,time=0,origin=performance.now(),previous=origin;
  const root=node('section','finale-ui');root.setAttribute('aria-label',preview?'Finale preview':'Team escape finale');
@@ -36,13 +37,13 @@ export function createFinalePlayer({container,renderer:borrowedRenderer,asset,ca
   const wasMuted=audio.muted;audio.dispose();
   if(count!==cast.length){
    scene.dispose();cast=Array.from({length:count},(_,slot)=>({id:`preview-${slot}`,name:`Survivor ${slot+1}`,slot}));runnerId=cast[0].id;buttonId=cast[1].id;
-   scene=createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion:reducedMotion(),quality:gamePreferences().quality});
+   scene=createFinaleScene({asset,cast,runnerId,buttonId,mouthTexture,reducedMotion:reducedMotion(),quality:gamePreferences().quality});
   }
   audio=createFinaleAudio({volume:gamePreferences().volume,muted:wasMuted});void audio.resume().then(()=>{if(!disposed)soundLabel();});completed=false;time=0;resize();origin=previous=performance.now();renderer.setAnimationLoop(frame);
  }
 
  function key(event){if(preview&&event.code==='Escape'){event.preventDefault();exit();}}
- function dispose(){if(disposed)return;disposed=true;if(owned)renderer.setAnimationLoop(null);audio.dispose();scene.dispose();root.remove();window.removeEventListener('resize',resize);document.removeEventListener('keydown',key);window.removeEventListener('pagehide',dispose);if(owned){renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}document.body.classList.remove('finale-active');}
+ function dispose(){if(disposed)return;disposed=true;if(owned)renderer.setAnimationLoop(null);audio.dispose();scene.dispose();mouthTexture.dispose();root.remove();window.removeEventListener('resize',resize);document.removeEventListener('keydown',key);window.removeEventListener('pagehide',dispose);if(owned){renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}document.body.classList.remove('finale-active');}
  window.addEventListener('resize',resize);document.addEventListener('keydown',key);window.addEventListener('pagehide',dispose,{once:true});try{resize();if(preview){origin=previous=performance.now();renderer.setAnimationLoop(frame);}}catch(error){dispose();throw error;}
  return {sample,resize,dispose,setMuted,get ready(){return !disposed;},get time(){return time;},get audio(){return audio;},get scene(){return scene;},get castCount(){return cast.length;}};
 }

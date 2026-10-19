@@ -15,8 +15,8 @@ test('button press places the real glove on the requested contact point',async()
  a.sample({clip:'Idle',time:0,position:[0,0,0],yaw:Math.PI,action:'press',progress:1,handTarget:target.toArray()});a.root.updateMatrixWorld(true);
  assert.ok(a.root.getObjectByName('handR').getWorldPosition(new T.Vector3()).distanceTo(target)<.025);a.dispose();
 });
-test('trapped creature opens its jaw; severed head falls independently and stops twitching',()=>{
- const a=createFinaleCreature();a.sample({time:26,mode:'trapped',position:[0,0,0],yaw:0,neckPosition:[0,2,0]});assert.ok(a.jaw.rotation.x>.2);
+test('trapped creature opens its mouth; severed head falls independently and stops twitching',()=>{
+ const a=createFinaleCreature({mouthTexture:new T.DataTexture(new Uint8Array([255,0,0,255]),1,1)});a.sample({time:26,mode:'trapped',position:[0,0,0],yaw:0,neckPosition:[0,2,0]});assert.ok(a.mouth.scale.y>1);assert.equal(a.mouth.visible,true);
  a.sample({time:36,mode:'severed',position:[0,0,0],yaw:0,neckPosition:[0,2,0],deathTime:1});const before=a.head.position.clone();assert.notEqual(a.head.parent,a.body.torso);
  a.sample({time:40,mode:'dead',position:[0,0,0],yaw:0,neckPosition:[0,2,0],deathTime:5});const settled=a.head.position.clone(),rotation=a.head.quaternion.clone();assert.ok(settled.y<before.y);
  a.sample({time:43,mode:'dead',position:[0,0,0],yaw:0,neckPosition:[0,2,0],deathTime:8});assert.ok(a.head.position.distanceTo(settled)<1e-8);assert.ok(a.head.quaternion.angleTo(rotation)<1e-6);a.dispose();a.dispose();
@@ -48,4 +48,17 @@ test('the airborne survivor stays in frame throughout the dive on desktop and po
   }
  }
  a.dispose();
+});
+
+test('finale uses the exact jumpscare mouth texture and keeps borrowed texture ownership',async()=>{
+ const {createJumpscare}=await import('../src/jumpscare.js');
+ const texture=new T.DataTexture(new Uint8Array([255,0,0,255]),1,1),scare=createJumpscare({mouthTexture:texture}),a=createFinaleCreature({mouthTexture:texture});
+ a.sample({mode:'trapped',time:26});
+ assert.equal(a.mouth?.material.map,scare.mouth.material.map);
+ assert.equal(a.mouth?.geometry.parameters.width,scare.mouth.geometry.parameters.width);
+ assert.equal(a.mouth?.material.transparent,true);assert.equal(a.mouth?.visible,true);
+ let disposed=0;texture.addEventListener('dispose',()=>disposed++);a.dispose();assert.equal(disposed,0);texture.dispose();
+});
+test('an undecoded finale mouth cannot show a white rectangle',()=>{
+ const a=createFinaleCreature({mouthTexture:new T.Texture()});a.sample({mode:'trapped',time:26});assert.equal(a.mouth?.visible,false);a.dispose();
 });

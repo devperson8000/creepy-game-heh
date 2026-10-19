@@ -1,7 +1,8 @@
-export const FINALE_DURATION=27;
+export const FINALE_DURATION=30;
 // Playback seconds and original choreography seconds. Retiming these beats in
 // one place keeps poses, cameras, audio and authoritative victory in step.
-const SHOTS=[['black',0,1,0,2],['chase',1,6,2,12],['stairs',6,9.5,12,19],['dive',9.5,11.5,19,23],['trapped',11.5,12.7,23,30],['ascent',12.7,14.7,30,35],['sever',14.7,16.9,35,39],['death',16.9,20,39,44],['escape',20,27,44,52]];
+const SHOTS=[['black',0,1,0,2],['chase',1,6,2,12],['stairs',6,9.5,12,19],['dive',9.5,11.5,19,23],['trapped',11.5,12.7,23,30],['ascent',12.7,14.7,30,35],['sever',14.7,16.9,35,39],['death',16.9,20,39,44],['escape',20,27,44,52]]
+ .map(([name,start,end,from,to])=>[name,start*FINALE_DURATION/27,end*FINALE_DURATION/27,from,to]);
 const clamp=value=>Math.max(0,Math.min(FINALE_DURATION,Number.isFinite(value)?value:0));
 export function finaleShot(seconds){const t=clamp(seconds),[name,start,end]=SHOTS.find(([,a,b])=>t>=a&&t<b)??SHOTS.at(-1);return {name,start,end};}
 export function finaleChoreographyTime(seconds){

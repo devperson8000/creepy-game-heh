@@ -9,6 +9,15 @@ export const JUMPSCARE_MOUTH_URL = '/images/jumpscare-mouth.png';
 const clamp01 = value => THREE.MathUtils.clamp(value, 0, 1);
 const ease = (value, start, end) => THREE.MathUtils.smoothstep(value, start, end);
 
+export function createJumpscareMouth(mouthTexture){
+ if(mouthTexture)mouthTexture.colorSpace=THREE.SRGBColorSpace;
+ const mouth=new THREE.Mesh(new THREE.PlaneGeometry(.32,.25),new THREE.MeshBasicMaterial({
+  map:mouthTexture??null,transparent:true,alphaTest:.025,depthWrite:false,side:THREE.DoubleSide,toneMapped:false
+ }));
+ mouth.position.set(0,.235,.218);mouth.renderOrder=2;mouth.userData.jumpscareMouth=true;mouth.visible=false;
+ return mouth;
+}
+
 export function createJumpscare({mouthTexture} = {}) {
  const scene = new THREE.Scene();
  scene.background = new THREE.Color(0x080305);
@@ -60,18 +69,7 @@ export function createJumpscare({mouthTexture} = {}) {
   (isEye ? eyes : darkSurfaces).push(mesh);
  });
 
- if(mouthTexture) mouthTexture.colorSpace = THREE.SRGBColorSpace;
- const mouth = new THREE.Mesh(
-  new THREE.PlaneGeometry(.32, .25),
-  new THREE.MeshBasicMaterial({
-   map: mouthTexture ?? null, transparent: true, alphaTest: .025,
-   depthWrite: false, side: THREE.DoubleSide, toneMapped: false
-  })
- );
- mouth.position.set(0, .235, .218);
- mouth.renderOrder = 2;
- mouth.userData.jumpscareMouth = true;
- mouth.visible = false;
+ const mouth=createJumpscareMouth(mouthTexture);
  face.add(mouth);
 
  // The first frame fits the horns even on portrait screens; the near-instant

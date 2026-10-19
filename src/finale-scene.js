@@ -4,9 +4,9 @@ import {createFinaleSet} from './finale-set.js';
 import {createFinaleSurvivor,createFinaleCreature} from './finale-actors.js';
 const smooth=(a,b,t)=>T.MathUtils.smoothstep(t,a,b),mix=T.MathUtils.lerp;
 const stairHeight=z=>3.6*T.MathUtils.clamp((8-z)/6,0,1);
-export function createFinaleScene({asset,cast,runnerId,buttonId,reducedMotion=false,quality='auto'}){
+export function createFinaleScene({asset,cast,runnerId,buttonId,mouthTexture,reducedMotion=false,quality='auto'}){
  const scene=new T.Scene();scene.name='monochrome-finale';scene.background=new T.Color(0x070c0e);scene.fog=new T.FogExp2(0x101918,.027);
- const camera=new T.PerspectiveCamera(58,1,.045,100),set=createFinaleSet({quality}),creature=createFinaleCreature();scene.add(set.root,creature.root);
+ const camera=new T.PerspectiveCamera(58,1,.045,100),set=createFinaleSet({quality}),creature=createFinaleCreature({mouthTexture});scene.add(set.root,creature.root);
  const actors=new Map(cast.map(member=>[member.id,createFinaleSurvivor(asset,member)]));for(const a of actors.values())scene.add(a.root);
  const ambient=new T.HemisphereLight(0x9bb4b6,0x12150e,.5);scene.add(ambient);
  const key=new T.SpotLight(0xc6d9d0,60,28,.9,.8,1.5);key.position.set(2,3.7,10);key.castShadow=quality!=='low';key.shadow.mapSize.set(512,512);scene.add(key,key.target);
