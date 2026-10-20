@@ -91,7 +91,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,players=
    const monitorDistance=1.35/(2*Math.tan(camera.fov*Math.PI/360)*camera.aspect)*1.08;
    const positions=teaser?new THREE.Vector3(-.65,1.6,-1.94+monitorDistance):elapsed<3?new THREE.Vector3(-2.2,1.75,-.4):new THREE.Vector3(1.85,1.85,-1.4);
    camera.position.copy(positions);camera.lookAt(teaser?new THREE.Vector3(-.65,1.6,-2):new THREE.Vector3(.55,1.65,-3));
-   sub.textContent=teaser?sampleTeaser(elapsed-TEASER_START).subtitle:elapsed<1?'':elapsed<3?'YOU: “Who are you?”':elapsed<6.2?'STRANGER: “Someone who knows what comes next.”':elapsed<TEASER_START?'STRANGER: “Watch carefully. Listen to the voices.”':elapsed<38.4?'STRANGER: “Now you know what to listen for.”':'';
+   sub.textContent=teaser?sampleTeaser(elapsed-TEASER_START).subtitle:elapsed<1?'':elapsed<3?'YOU: “Who are you?”':elapsed<6.2?'STRANGER: “Someone who knows what comes next.”':elapsed<TEASER_START?'STRANGER: “Watch carefully. Don’t look away.”':elapsed<38.4?'STRANGER: “That’s all I could recover. You should go.”':'';
    fade.style.opacity=elapsed>=38.4&&elapsed<39.6?'1':'0';
    for(const [index,at] of [[0,3],[1,6.2],[2,TEASER_END]])if(elapsed>=at&&!audioPlayed.has(index)){audioPlayed.add(index);if(elapsed-at<1&&!document.hidden)void voices[index].play().catch(()=>{});}
    if(teaser)teaserAudio.update(elapsed-TEASER_START,{muted:isMuted(),volume:prefs.volume});else teaserAudio.pause();

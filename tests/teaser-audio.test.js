@@ -10,6 +10,8 @@ test('unlocking a suspended audio context joins the current film instead of repl
   createGain(){return {gain:parameter(),connect(){},disconnect(){}};}
   createBuffer(channels,length,rate){return {duration:length/rate,getChannelData:()=>new Float32Array(length)};}
   decodeAudioData(bytes){return Promise.resolve({duration:bytes.byteLength===1?1.22:bytes.byteLength===2?1.817:120});}
+  createBiquadFilter(){return {frequency:parameter(),Q:parameter(),connect(){},disconnect(){}};}
+  createOscillator(){return {frequency:parameter(),connect(){},disconnect(){},start(){},stop(){}};}
   createBufferSource(){return {connect(){},disconnect(){},start(when=0,offset=0){starts.push({when,offset,duration:this.buffer.duration});},stop(){}};}
   resume(){return this.state==='running'?Promise.resolve():new Promise(resolve=>pending.push(resolve));}
   close(){return Promise.resolve();}
@@ -21,7 +23,6 @@ test('unlocking a suspended audio context joins the current film instead of repl
  for(let i=0;i<=50;i++)audio.update(i/10);
  assert.equal(starts.length,0);
  context.state='running';pending.splice(0).forEach(resolve=>resolve());await flush();
- assert.equal(starts.length,3,'the radio line has already finished and must not start late');
- assert.ok(Math.abs(starts[0].when-1.2)<.05,'first help arrives 1.2 seconds after unlocking at film time5');
- assert.ok(Math.abs(starts[1].when-6.7)<.05);audio.dispose();
+ const voices=starts.filter(s=>s.duration>1);assert.equal(voices.length,1,'the radio line has finished and must not replay late');
+ assert.ok(Math.abs(voices[0].when-15.05)<.05,'the distant Monochrome sound joins the final beat of the film');audio.dispose();
 });
