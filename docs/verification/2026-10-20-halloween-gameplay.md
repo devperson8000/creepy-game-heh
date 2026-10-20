@@ -32,4 +32,8 @@ The current encounter explicitly uses a temporary authored smooth black cloaked 
 - Built production bundle passes both sides of the exact deadline with a mocked authoritative endpoint; production ignores `?halloween=preview` and exposes no test options.
 - Desktop archive, dialogue and teaser framing were visually reviewed; phone earned-footage replay, Escape disposal and return to one menu canvas pass.
 
-Production staging and live endpoint verification are recorded after deployment.
+## Production rollout
+
+Code commit `7bf5f2abe03564dac9b6f48da67a3a38e93af4ce` was pushed to `main` and automatically deployed by the existing Vercel Git integration. Deployment `dpl_9B7fJBWCFmMCitJTZyt51rji1bom` reached READY and received all production aliases, including https://creepy-game-heh.vercel.app.
+
+At 2026-10-20 00:29 UTC, the live production `/api/halloween-release` returned HTTP 200, `version: halloween-2026`, `releaseAt: 1793422800000`, a current server timestamp and `released: false`. Its response uses `Cache-Control: no-store, max-age=0` and `CDN-Cache-Control: no-store`. The production bundle was rechecked after the final build: a future visitor date and preview query cannot activate it; the exact trusted deadline does activate its map and quest. No future build, cron job or manual deployment is required at launch.
