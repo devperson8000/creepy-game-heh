@@ -17,7 +17,7 @@ function storedName() {
 }
 
 /** Owns its connection until a started session is handed to onMultiplayer. */
-export function createLobbyMenu({onReplay=()=>{}, onSingleplayer = () => {}, onMultiplayer = () => {}, createClient, initialPlayerName, onClient} = {}) {
+export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,onReplay=()=>{}, onSingleplayer = () => {}, onMultiplayer = () => {}, createClient, initialPlayerName, onClient} = {}) {
  const root = element('main', 'lobby-menu');
  root.id = 'lobby-menu';
  root.setAttribute('aria-label', 'Monochrome game menu');
@@ -108,6 +108,7 @@ export function createLobbyMenu({onReplay=()=>{}, onSingleplayer = () => {}, onM
   options.append(solo, multiplayer);
   countdown=createHalloweenCountdown();
   content.append(intro, options, countdown.root);
+  if(showHalloweenTest){const tests=button('Test Halloween Gameplay','halloween-test-entry',onHalloweenTest);tests.classList.add('halloween-test-entry');content.append(tests);}
   if(hasRecoveredFootage()){const replay=button('Recovered footage / Tape 02','recovered-footage',()=>{dispose();onReplay();});replay.classList.add('recovered-footage');content.append(replay);}
  }
 

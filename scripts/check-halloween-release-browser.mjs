@@ -15,5 +15,5 @@ try{
   assert.equal(await page.evaluate(()=>!!monochrome.run.halloween),released,'only the trusted server clock may enable a production run');
   assert.equal(await page.evaluate(()=>!!monochrome.world.halloween),released);
  }
- assert.deepEqual(errors,[]);console.log('PASS production bundle: future device clock and preview query cannot unlock Halloween; exact trusted deadline enables its map/quest; no public test options.');
+ assert.deepEqual(errors,[]);console.log('PASS production bundle: future device clock and preview query cannot unlock Halloween; exact trusted deadline enables its map/quest; no unrestricted test options.');
 }finally{await browser.close();}
