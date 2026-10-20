@@ -1,3 +1,4 @@
+import {B2_DURATION} from '../src/halloween-state.js';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']}),page=await browser.newPage({viewport:{width:900,height:650}}),errors=[];
@@ -17,7 +18,7 @@ try{
  const hunt=await page.evaluate(()=>{monochrome.run.halloween.visit.startedAt-=6;return monochrome.run.huntElapsed;});await page.waitForFunction(()=>monochrome.run.halloween.visit?.stage==='archive');
  assert.equal(await page.evaluate(()=>monochrome.run.huntElapsed),hunt);
  await page.evaluate(()=>{monochrome.renderer.domElement.focus();});await page.keyboard.down('KeyW');await page.waitForFunction(()=>monochrome.run.halloween.visit.stage==='conversation',null,{timeout:5000});await page.keyboard.up('KeyW');
- await page.evaluate(()=>monochrome.run.halloween.visit.startedAt-=26);await page.waitForFunction(()=>monochrome.run.halloween.seen);
+ await page.evaluate(duration=>monochrome.run.halloween.visit.startedAt-=duration,B2_DURATION.conversation+1);await page.waitForFunction(()=>monochrome.run.halloween.seen);
  assert.equal(await page.evaluate(()=>localStorage.getItem('monochrome.recovered-footage.2026')),'1');
  await page.evaluate(()=>{Object.assign(monochrome.player,{x:0,z:3.2});monochrome.renderer.domElement.focus();});await page.waitForFunction(()=>!document.querySelector('.b2-return').disabled);await page.click('.b2-return');await page.waitForFunction(()=>monochrome.run.halloween.visit.stage==='return');
  await page.evaluate(()=>monochrome.run.halloween.visit.startedAt-=5);await page.waitForFunction(()=>monochrome.run.phase==='playing');assert.equal(await page.evaluate(()=>monochrome.player.height),3.6);

@@ -26,7 +26,7 @@ const cases=[
  ['quest','Quest items','Jump straight to the invitation, each wax seal or the chest. Hold E to test each interaction.'],
  ['key','Halloween key reveal','Watch the chest open and the key lift out. No items or searching required.'],
  ['b2','B2 encounter','Skip the quest and play the descent, stranger dialogue, monitor teaser and disappearance.'],
- ['teaser','Monochrome II teaser','Watch the recovered monitor footage immediately.'],
+ ['teaser','Monochrome II teaser','Watch the full 25-second voice-mimic reveal and chase.'],
  ['return','Return elevator','Test the return to B1 with the Halloween Key already collected.']
 ];
 export function startHalloweenTestPage({password,onExit}){

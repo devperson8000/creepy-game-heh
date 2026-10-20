@@ -37,8 +37,8 @@ test('B2 requires its key, everyone upstairs and no downed teammates, then resto
  assert.ok(players.every(p=>p.z<4&&p.height===0));
  Object.assign(players[0],{x:0,z:-1.2});advanceHalloween(r,players,17);
  assert.equal(r.halloween.visit.stage,'conversation');
- advanceHalloween(r,players,45);assert.equal(r.halloween.seen,true);assert.equal(r.halloween.visit.stage,'archive');
- assert.equal(interactHalloween(r,'halloween:return',{players,now:46}).ok,true);advanceHalloween(r,players,51);
+ advanceHalloween(r,players,60);assert.equal(r.halloween.seen,true);assert.equal(r.halloween.visit.stage,'archive');
+ assert.equal(interactHalloween(r,'halloween:return',{players,now:61}).ok,true);advanceHalloween(r,players,66);
  assert.equal(r.phase,'playing');assert.equal(r.halloween.visit,null);
  for(let i=0;i<players.length;i++)for(const key of ['x','z','height','yaw','pitch'])assert.equal(players[i][key],poses[i][key]);
 });

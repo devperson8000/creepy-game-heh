@@ -1,3 +1,4 @@
+import {B2_DURATION} from '../src/halloween-state.js';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader','--disable-background-timer-throttling','--disable-renderer-backgrounding','--disable-backgrounding-occluded-windows']});
@@ -36,7 +37,7 @@ try{
  assert.equal(await guest.evaluate(()=>monochrome.state.players.get(monochrome.client.id).height),0);
  await host.evaluate(()=>{const p=monochrome.state.players.get(monochrome.client.id);Object.assign(p,{x:0,z:-.6,height:0});});
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>monochrome.run.halloween.visit.stage==='conversation')));
- await host.evaluate(()=>monochrome.run.halloween.visit.startedAt-=26);
+ await host.evaluate(duration=>monochrome.run.halloween.visit.startedAt-=duration,B2_DURATION.conversation+1);
  await Promise.all([host,guest].map(p=>p.waitForFunction(()=>monochrome.run.halloween.seen&&monochrome.run.halloween.visit.stage==='archive')));
  await host.evaluate(()=>{for(const p of monochrome.state.players.values())Object.assign(p,{x:0,z:3.2,height:0});});
  await guest.waitForFunction(()=>!document.querySelector('.b2-return').disabled);await guest.click('.b2-return');

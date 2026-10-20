@@ -1,4 +1,5 @@
-export const B2_DURATION={descent:5,conversation:25,return:4};
+import {B2_CONVERSATION_DURATION} from './teaser-timeline.js';
+export const B2_DURATION={descent:5,conversation:B2_CONVERSATION_DURATION,return:4};
 export const B2_NPC={x:0,z:-3};
 export const B2_RETURN={x:0,z:3.4,height:0};
 export function createHalloweenQuest(seed,roomCount){
