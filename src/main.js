@@ -32,6 +32,8 @@ function failed(error){
 }
 const testFrame=window.parent!==window&&new URLSearchParams(location.search).get('mode')==='halloween-test-frame';
 let previewAuthorized=false,testClient=null;
+// Preview arrivals leave the pointer free; a deliberate canvas click still locks it.
+function configureTestInput(game){if(testFrame)game.input.capture=()=>{game.renderer.domElement.focus();game.input.clear();};}
 const releaseReady=halloweenRelease.start();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void halloweenRelease.refresh();});
 window.addEventListener('pagehide',()=>halloweenRelease.dispose(),{once:true});
@@ -52,7 +54,7 @@ try {
     createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});if(testFrame)testClient=client;return client;},
     onReplay:()=>startHalloweenReplay(document.querySelector('#scene'),{onExit:()=>makeMenu()}),
     onSingleplayer:async()=>{const ready=preparing();try{await releaseReady;await halloweenRelease.refresh();window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,halloween:previewAuthorized||halloweenEnabled()});}catch(error){failed(error);}finally{ready();}},
-    onMultiplayer:async({client,session})=>{const ready=preparing();try{if(client.id===session.ownerId){await releaseReady;await halloweenRelease.refresh();session={...session,halloween:previewAuthorized||halloweenEnabled()};}else session=await waitForHalloweenSession(client,session);window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}finally{ready();}}
+    onMultiplayer:async({client,session})=>{const ready=preparing();try{if(client.id===session.ownerId){await releaseReady;await halloweenRelease.refresh();session={...session,halloween:previewAuthorized||halloweenEnabled()};}else session=await waitForHalloweenSession(client,session);window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});configureTestInput(window.monochrome);}catch(error){client.close();failed(error);}finally{ready();}}
    });
    return menu;
   }
@@ -74,6 +76,7 @@ try {
      else if(selected==='teaser')replay=startHalloweenReplay(document.querySelector('#scene'),{onExit:()=>post('halloween-test-finished')});
      else{
       window.monochrome=startGame(document.querySelector('#scene'),{halloween:true,autostart:selected==='full'});
+      configureTestInput(window.monochrome);
       scenario=setupHalloweenTest(window.monochrome,selected);timer=setInterval(()=>scenario.tick(),50);
      }
      post('halloween-test-running');

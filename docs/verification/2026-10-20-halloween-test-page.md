@@ -13,7 +13,7 @@ After unlocking, the page offers:
 - Monochrome II teaser: play the recovered footage immediately.
 - Return elevator: begin the real return sequence with the key granted and the B1 pose preserved.
 
-Each scenario supports Replay test and Back to tests. A separate game frame isolates input handlers, rendering, sound and network connections when switching tests. Returning from a co-op test closes the host session. Normal menu entries and the October 31 release gate remain unchanged by testing. The selected Hooded Wanderer source asset remains unavailable, and the page identifies the temporary B2 figure.
+Each scenario supports Replay test and Back to tests. A separate game frame isolates input handlers, rendering, sound and network connections when switching tests. Returning from a co-op test closes the host session. Test arrivals leave the mouse free until the tester clicks the game canvas, so completing the intro cannot unexpectedly capture the test-page navigation. Normal menu entries and the October 31 release gate remain unchanged by testing. The selected Hooded Wanderer source asset remains unavailable, and the page identifies the temporary B2 figure.
 
 Verification:
 
