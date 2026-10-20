@@ -1,3 +1,4 @@
+import {interactHalloween,advanceHalloween} from './halloween-state.js';
 import {drawerOperation} from './drawer-interaction.js';
 import {beginFinale,advanceFinale} from './finale-state.js';
 import {createEnemy,tickEnemy,createAmbush,tickAmbush,SIGHT_RANGE,releaseMonster} from './enemy.js';
@@ -39,7 +40,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
  const navigation=world.enemyNavigation??{};
  function tell(playerId,message){notices.push({id:++noticeId,playerId,message});if(notices.length>24)notices.shift();}
  function setInput(id,input){
-  if(state.run.phase!=='playing'||!state.players.has(id)||!input||!['forward','right','yaw','pitch'].every(k=>Number.isFinite(input[k])))return false;
+  if(!['playing','halloween'].includes(state.run.phase)||!state.players.has(id)||!input||!['forward','right','yaw','pitch'].every(k=>Number.isFinite(input[k])))return false;
   if(Array.isArray(input.commands)){
    if(!remoteMovement.has(id))remoteMovement.set(id,createRemoteMovement(state.players.get(id),world.canMove));
    if(!remoteMovement.get(id).receive(input))return false;
@@ -58,7 +59,15 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
   const player=state.players.get(id);
   if(!player)return {ok:false,reason:'unavailable'};
   const targetId=typeof action?.targetId==='string'?action.targetId:undefined,target=world.targets.get(targetId);
-  const type=targetId==='leave'?'leave':targetId?.startsWith('revive:')?'revive':target?.type;
+  if(target?.type==='halloween'||targetId==='halloween:return'){
+   const at=targetId==='halloween:return'?{x:0,z:3.4,height:0}:target.position;
+   if(player.status!=='alive'||player.hidden||!at||Math.hypot(player.x-at.x,player.z-at.z,player.height-(at.height??0))>3.2||target&&world.canSeeInteraction&&!world.canSeeInteraction(player,target))return {ok:false,reason:'too-far'};
+   const result=interactHalloween(state.run,targetId,{now:now(),players:[...state.players.values()]});
+   if(result.message)tell(id,result.message);
+   if(result.ok&&!result.repeated)emit(player,{x:player.x,z:player.z,height:player.height,radius:2,type:result.reveal?'key':'clue'});
+   return result;
+  }
+  const type=targetId==='leave' ?'leave':targetId?.startsWith('revive:')?'revive':target?.type;
   const drawerRequest=(type==='drawer'||targetId?.startsWith('drawer-'))&&drawerOperation(action?.code);
   let completed;
   if(drawerRequest){
@@ -81,6 +90,21 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
  function advance(delta,{clockRunning=true,clockDelta=Math.min(.2,Math.max(0,delta))}={}){
   beginFinale(state,now());
   if(state.run.phase==='finale'){advanceFinale(state,now());return;}
+  if(state.run.phase==='halloween'){
+   huntClockAt=now();clockIsRunning=false;pendingNoise=[];
+   const visit=state.run.halloween.visit;
+   state.run.elapsed+=Math.min(.2,Math.max(0,delta));
+   for(const player of state.players.values()){
+    const command=inputs.get(player.id),fresh=command&&state.run.elapsed-command.at<.65;
+    if(visit.stage==='archive'){
+     if(remoteMovement.has(player.id))remoteMovement.get(player.id).advance(delta);
+     else if(fresh&&!command.paused){const next=moveInWorld(player,command,command.yaw,Math.min(.2,delta),world.canMove,command.sprint?3.7:2.5);const distance=Math.hypot(next.x-player.x,next.z-player.z);player.moving=distance>.0001;player.speed=distance/Math.max(.001,Math.min(.2,delta));player.sprint=!!command.sprint&&player.moving;Object.assign(player,next,{yaw:command.yaw,pitch:command.pitch});}
+    }else{player.moving=false;player.speed=0;player.sprint=false;}
+    if(visit.stage==='archive'||visit.stage==='conversation')player.height=0;
+   }
+   if(advanceHalloween(state.run,[...state.players.values()],now())){inputs.clear();remoteMovement.clear();remoteAt.clear();}
+   return;
+  }
   if(state.run.phase!=='playing')return;
   huntClockAt=now();clockIsRunning=clockRunning;
   // Time follows the host's real elapsed interval; bounded physics work must

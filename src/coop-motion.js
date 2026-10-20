@@ -11,7 +11,7 @@ function move(player,command,canMove){
    player.x=next.x;player.z=next.z;
   }
  }
- player.height=groundHeight(player);
+ player.height=(canMove.groundHeight??groundHeight)(player);
  const distance=Math.hypot(player.x-before.x,player.z-before.z);
  player.moving=distance>.00001;player.speed=distance/command.duration;player.sprint=!!command.sprint&&player.moving;
  return distance;
@@ -39,7 +39,7 @@ export function createMovementPrediction(player,canMove){
   for(const command of pending)move(player,command,canMove);
   if(!transition){player.yaw=yaw;player.pitch=pitch;}
  }
- return {step,reconcile,packet:input=>({...input,motionId,commands:pending.slice(0,MAX_PENDING)}),get pendingCount(){return pending.length;}};
+ return {reset(){pending=[];sequence=0;motionId=crypto.randomUUID();},step,reconcile,packet:input=>({...input,motionId,commands:pending.slice(0,MAX_PENDING)}),get pendingCount(){return pending.length;}};
 }
 
 export function createRemoteMovement(player,canMove){

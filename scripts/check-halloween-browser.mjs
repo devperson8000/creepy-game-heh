@@ -7,6 +7,8 @@ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[],b
 page.on('pageerror',error=>errors.push(error.message));
 await page.clock.install({time:new Date('2026-10-20T04:00:00Z')});
 await page.clock.pauseAt(new Date('2026-10-20T05:00:00Z'));
+let serverNow=Date.parse('2026-10-20T05:00:00Z');
+await page.route('**/api/halloween-release',route=>route.fulfill({json:{version:'halloween-2026',releaseAt:Date.parse('2026-10-31T05:00:00Z'),serverNow}}));
 try{
  await page.goto(base);await page.locator('.halloween-countdown').waitFor();
  assert.deepEqual(await page.locator('[data-countdown]').allTextContents(),['11','00','00','00']);
@@ -25,11 +27,13 @@ try{
  await page.locator('#lobby-multiplayer').click();await page.locator('#lobby-back').waitFor();
  assert.equal(await page.locator('.halloween-countdown').count(),0);
  await page.locator('#lobby-back').click();assert.equal(await page.locator('.halloween-countdown').count(),1);
- await page.clock.setSystemTime(new Date('2026-10-31T04:59:59Z'));await page.clock.runFor(1000);
+ await page.clock.setSystemTime(new Date('2026-10-31T05:00:00Z'));await page.clock.runFor(1000);
+ assert.equal(await page.locator('.halloween-countdown.is-complete').count(),0,'client wall clock cannot release the update');
+ serverNow=Date.parse('2026-10-31T05:00:00Z');await page.evaluate(async()=>{const {halloweenRelease}=await import('/src/halloween-release.js');await halloweenRelease.refresh();});await page.clock.runFor(1000);
  await page.waitForSelector('.halloween-countdown.is-complete');
- assert.equal(await page.locator('.halloween-clock').isVisible(),false);assert.equal(await page.locator('.halloween-arrived').innerText(),'The wait is over.');
+ assert.equal(await page.locator('.halloween-clock').isVisible(),false);assert.equal(await page.locator('.halloween-arrived').innerText(),'The archive is waiting. Enter a new run.');
  await page.clock.fastForward(60000);assert.equal(await page.locator('.halloween-countdown.is-complete').count(),1);
  await page.locator('#lobby-singleplayer').click();await page.waitForFunction(()=>!!window.monochrome);
- assert.equal(await page.locator('.halloween-countdown').count(),0);
+ assert.equal(await page.locator('.halloween-countdown').count(),0);assert.equal(await page.evaluate(()=>!!monochrome.run.halloween),true);
  assert.deepEqual(errors,[]);console.log('PASS fixed Sydney deadline, live tick, desktop/mobile layouts, reduced motion, multiplayer/back lifecycle, expiry and solo start; no runtime errors');
 }finally{await browser.close();}

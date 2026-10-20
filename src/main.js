@@ -1,3 +1,7 @@
+import './halloween-game.css';
+import {halloweenRelease,halloweenEnabled} from './halloween-release.js';
+import {waitForHalloweenSession} from './halloween-session.js';
+import {startHalloweenReplay} from './halloween-replay.js';
 import './finale.css';
 import {startFinalePreview} from './finale-player.js';
 import {gamePreferences} from './preferences.js';
@@ -23,6 +27,10 @@ function failed(error){
  const message=document.querySelector('#error');message.hidden=false;
  message.textContent='The game could not start. Please reload and check that WebGL is enabled.';
 }
+const releaseReady=halloweenRelease.start();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)void halloweenRelease.refresh();});
+window.addEventListener('pagehide',()=>halloweenRelease.dispose(),{once:true});
+function preparing(){const label=document.createElement('p');label.className='round-loading';label.setAttribute('role','status');label.textContent='Preparing the descent…';document.body.append(label);return()=>label.remove();}
 try {
  document.documentElement.classList.toggle('reduce-motion',gamePreferences().reducedMotion);
  const study=import.meta.env.DEV&&new URLSearchParams(location.search).get('mode')==='study';
@@ -35,8 +43,9 @@ try {
    return createLobbyMenu({
     ...options,
     createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});return client;},
-    onSingleplayer:()=>{try{window.monochrome=startGame(document.querySelector('#scene'),{autostart:true});}catch(error){failed(error);}},
-    onMultiplayer:({client,session})=>{try{window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}}
+    onReplay:()=>startHalloweenReplay(document.querySelector('#scene'),{onExit:()=>makeMenu()}),
+    onSingleplayer:async()=>{const ready=preparing();try{await releaseReady;await halloweenRelease.refresh();window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,halloween:halloweenEnabled()});}catch(error){failed(error);}finally{ready();}},
+    onMultiplayer:async({client,session})=>{const ready=preparing();try{if(client.id===session.ownerId){await releaseReady;await halloweenRelease.refresh();session={...session,halloween:halloweenEnabled()};}else session=await waitForHalloweenSession(client,session);window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}finally{ready();}}
    });
   }
   const testSession=import.meta.env.DEV?readTestSession(location.search):null;

@@ -1,6 +1,8 @@
 // Sydney observes AEDT (UTC+11) on this date. Keep one fixed launch instant
 // regardless of the visitor's timezone, and never roll it into another year.
-export const HALLOWEEN_DEADLINE=Date.parse('2026-10-31T16:00:00+11:00');
+import {HALLOWEEN_DEADLINE} from './halloween-release-time.js';
+import {halloweenRelease} from './halloween-release.js';
+export {HALLOWEEN_DEADLINE};
 export function countdownParts(now=Date.now()){
  const total=Math.max(0,Math.ceil((HALLOWEEN_DEADLINE-now)/1000));
  return {days:Math.floor(total/86400),hours:Math.floor(total/3600)%24,minutes:Math.floor(total/60)%60,seconds:total%60,complete:now>=HALLOWEEN_DEADLINE};
@@ -26,11 +28,11 @@ export function createHalloweenCountdown(){
  const values=[...root.querySelectorAll('[data-countdown]')];let timer=null,disposed=false;
  function update(){
   if(disposed)return;
-  const parts=countdownParts();root.classList.toggle('is-complete',parts.complete);
+  const release=halloweenRelease.sample(),parts=countdownParts(release.serverNow??Date.now());const complete=release.released;root.classList.toggle('is-complete',complete);
   for(const value of values)value.textContent=String(parts[value.dataset.countdown]).padStart(2,'0');
   clock.setAttribute('aria-label',`${parts.days} days, ${parts.hours} hours, ${parts.minutes} minutes, ${parts.seconds} seconds until the Halloween update`);
-  clock.hidden=parts.complete;root.querySelector('.halloween-arrived').hidden=!parts.complete;
-  if(parts.complete){title.textContent='Halloween has arrived.';clearInterval(timer);}
+  clock.hidden=complete;root.querySelector('.halloween-arrived').hidden=!complete;
+  if(complete){title.textContent='Halloween is live.';root.querySelector('.halloween-arrived').textContent='The archive is waiting. Enter a new run.';clearInterval(timer);}
  }
  timer=setInterval(update,1000);update();
  document.addEventListener('visibilitychange',update);

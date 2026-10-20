@@ -1,3 +1,5 @@
+import {halloweenTargetInfo,canMoveB2} from './halloween-state.js';
+import {createHalloweenExperience,createHalloweenQuestUI} from './halloween-experience.js';
 import {createDrawerRequests,drawerTargetFromHit,retainDrawerTarget} from './drawer-interaction.js';
 import {createRevivePrompts} from './revive-prompts.js';
 import {huntActive,sampleHuntElapsed} from './hunt-clock.js';
@@ -25,7 +27,7 @@ import {createArrival} from './arrival.js';
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience();
  const arrival=createArrival();
- const state=createCoopState(session.seed,session.players),run=state.run;
+ const state=createCoopState(session.seed,session.players,{halloween:session.halloween===true}),run=state.run;
  state.ownerId=session.ownerId;
  const localId=client.id,isHost=localId===session.ownerId;
  if(!state.players.has(localId))throw new Error('You are not a member of this round.');
@@ -54,6 +56,7 @@ export function startCoopGame(container,{client,session}){
   const first=raycaster.intersectObjects(solids(),false)[0];
   return !first||first.object.userData.interactId===target.id||first.distance>length-.08;
  };
+ const b1CanMove=world.canMove;world.canMove=(x,z)=>run.phase==='halloween'?canMoveB2(x,z):b1CanMove(x,z);world.canMove.groundHeight=p=>run.phase==='halloween'?0:groundHeight(p);
  const simulation=isHost?createCoopSimulation(state,world):null;
  const drawerRequests=createDrawerRequests({send:action=>client.send('action',{action})});
  let enemyView={position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
@@ -103,6 +106,10 @@ export function startCoopGame(container,{client,session}){
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(disconnected||run.phase!=='playing')return;if(ui.overlay==='pause')resume();else if(!ui.overlay)screen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void audio.resume();void ambience.resume();});
  input.setView(local().yaw);
+ const questUI=createHalloweenQuestUI(ui.root,run);
+ const experience=createHalloweenExperience({renderer,camera,run,input,ui,players:()=>[...state.players.values()],localId,onReturn:()=>sendAction('halloween:return'),onMute:()=>toggleSound(),isMuted:()=>audio.muted,poseFor:p=>poseBuffers.get(p.id)?.sample(performance.now()/1000)??p});
+ let inB2=false;
+
  function cycleSpectator(){const available=[...state.players.values()].filter(p=>p.id!==localId&&p.status==='alive');if(!available.length){spectateId=null;return;}const at=available.findIndex(p=>p.id===spectateId);spectateId=available[(at+1)%available.length].id;}
  nextButton.addEventListener('click',cycleSpectator);team.querySelector('#coop-leave').addEventListener('click',leave);
  function toggleTorch(){if(ui.overlay||local()?.status!=='alive')return;torch.toggle();audio.playNoise('torch');ui.el('torch-toggle').textContent=torch.on?'Torch on':'Torch off';ui.el('torch-toggle').setAttribute('aria-pressed',String(torch.on));ui.el('torch-toggle').setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
@@ -127,7 +134,7 @@ export function startCoopGame(container,{client,session}){
  function openKeypad(){buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.feedback('','');ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
  ui.root.querySelectorAll('[data-digit]').forEach(button=>button.addEventListener('click',()=>digit(button.dataset.digit)));ui.el('close-keypad').addEventListener('click',closeKeypad);
  function targetInfo(target){
-  if(!target)return null;const labels={boards:['Pry away the boards',1.8],closet:['Hide in closet',.25],clue:['Read the four-digit clue',.2],locks:[`Bank your keys · ${run.banked.size} / 4 filled`,.6],keypad:[run.codeAccepted?'Keypad · code accepted':'Enter elevator code',.15],elevator:[run.exitOpen?'Step into the elevator':'Open elevator · four keys + code',.6]};
+  if(!target)return null;if(target.type==='halloween')return halloweenTargetInfo(run,target);const labels={boards:['Pry away the boards',1.8],closet:['Hide in closet',.25],clue:['Read the four-digit clue',.2],locks:[`Bank your keys · ${run.banked.size} / 4 filled`,.6],keypad:[run.codeAccepted?'Keypad · code accepted':'Enter elevator code',.15],elevator:[run.exitOpen?'Step into the elevator':'Open elevator · four keys + code',.6]};
   if(target.type==='drawer'){const drawer=run.drawers[target.drawerId];return {...target,label:drawer.opened?(drawer.key&&!drawer.taken?'Take the key':'Close searched drawer'):'Search drawer',duration:drawer.opened?.15:.3};}
   if(target.type==='boards'&&run.boardsOpen)return null;
   if(!labels[target.type])return null;return {...target,label:labels[target.type][0],duration:labels[target.type][1]};
@@ -154,14 +161,17 @@ export function startCoopGame(container,{client,session}){
   }
   if(isHost||!snapshot||!Number.isFinite(snapshot.sequence)||snapshot.sequence<=latestSequence||snapshot.state?.seed!==state.seed)return;
   hostClock.accept(snapshot.clockSync?.echoes?.[localId]);
+  const beforePhase=run.phase,beforeVisit=run.halloween?.visit?.stage;
   const before=local()?{...local()}:null;latestSequence=snapshot.sequence;lastSnapshotAt=performance.now();
   applyCoopSnapshot(state,snapshot.state);
   drawerRequests.reconcile(run,local()?.drawerActionCode);
   huntClockStamp=snapshot.huntClock;
   const after=local();
   if(!after){disconnected=true;screen('lost');return;}
-  const transition=before?.status!==after?.status||before?.hidden!==after?.hidden||before?.closetId!==after?.closetId;
-  if(run.phase==='playing')prediction.reconcile({...after},before);
+  const phaseTransition=beforePhase!==run.phase||beforeVisit!==run.halloween?.visit?.stage;
+  const transition=phaseTransition||before?.status!==after?.status||before?.hidden!==after?.hidden||before?.closetId!==after?.closetId;
+  if(phaseTransition){prediction.reset();input.clear();input.setView(after.yaw??0,after.pitch??0);}
+  else if(run.phase==='playing'||run.phase==='halloween')prediction.reconcile({...after},before);
   if(run.phase==='playing'&&before&&!transition){correction.x+=before.x-after.x;correction.z+=before.z-after.z;}
   else{correction.x=0;correction.z=0;}
   enemyView=snapshot.enemy??enemyView;recordPoses();
@@ -208,7 +218,7 @@ export function startCoopGame(container,{client,session}){
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);finale?.resize();}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ window.addEventListener('pagehide',()=>{experience.dispose();questUI.dispose();drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
  screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
  function broadcast(wallDelta){
   if(isHost&&!disconnected){
@@ -248,7 +258,7 @@ export function startCoopGame(container,{client,session}){
   const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),wallDelta=Math.min(1,clockDelta),delta=Math.min(.2,wallDelta);previous=now;time+=delta;
   avatarResume=wasHidden&&!document.hidden;wasHidden=document.hidden;
   let own=local();if(!own)return;
-  const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||run.phase!=='playing'||own.status!=='alive'};
+  const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||!(run.phase==='playing'||run.phase==='halloween'&&run.halloween.visit.stage==='archive')||own.status!=='alive'};
   if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:10000)){disconnected=true;screen('lost');}
   if(isHost){
    simulation.setInput(localId,command);
@@ -264,15 +274,20 @@ export function startCoopGame(container,{client,session}){
    const fingerprint=client.voice?.localFingerprint?.(session.ownerId);
    const direct=peerReady(session.ownerId);
    if(!direct&&fingerprint&&client.voice?.gameConnected(session.ownerId)&&now-peerProofAt>2000){if(client.send('action',{action:{targetId:'peer-channel',code:fingerprint}}))peerProofAt=now;}
-   if(run.phase==='playing')prediction.step(command,delta);
+   if(run.phase==='playing'||run.phase==='halloween')prediction.step(command,delta);
    inputClock+=wallDelta;
-   if(inputClock>=.05&&run.phase==='playing'){inputClock%=.05;
+   if(inputClock>=.05&&(run.phase==='playing'||run.phase==='halloween')){inputClock%=.05;
     const packet=prediction.packet(command);
     if(!direct||!client.voice.sendGameplay(session.ownerId,'input',{input:packet}))client.send('input',{input:packet});
    }
   }
   if(!isHost&&!disconnected&&needsHostClockSync(hostClock.ready,run.phase)&&!input.interact&&ui.overlay!=='keypad'&&now>=nextClockPing&&now-peerProofAt>200){client.send('action',{action:{targetId:'finale-clock',code:hostClock.ping()}});nextClockPing=now+5000;}
-  own=local();
+  own=local();questUI.update();
+  if(!disconnected&&run.phase==='halloween'){
+   inB2=true;audio.pause();ambience.pause();revivePrompts.update({active:false,players:[],own,camera});
+   if(experience.render(delta)){broadcast(wallDelta);return;}
+  }
+  if(inB2){inB2=false;experience.finish();void audio.resume();void ambience.resume();input.setView(own.yaw??Math.PI,own.pitch??0);hold=0;holdId=null;latched=false;correction.x=0;correction.z=0;}
   if(!disconnected&&run.finale&&!finaleFinished){playFinale(now);broadcast(wallDelta);return;}
   if(own.status!==lastStatus){
    if(lastStatus==='alive'&&(own.status==='downed'||own.status==='dead'))startScare();
@@ -338,5 +353,5 @@ export function startCoopGame(container,{client,session}){
  const backgroundTimer=setInterval(()=>{if(document.hidden)frame();},100);
  window.addEventListener('pagehide',()=>clearInterval(backgroundTimer),{once:true});
  function scaredOrWatching(){return scareStatus||ui.overlay==='pause'||local()?.status==='alive';}
- return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival,get finale(){return finale;}};
+ return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival,experience,get finale(){return finale;}};
 }

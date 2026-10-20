@@ -1,3 +1,4 @@
+import {createHalloweenWorld} from './halloween-world.js';
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {CELL,SIZE,worldPoint,gridPoint,walkable,groundHeight} from './level.js';
@@ -108,7 +109,7 @@ export function createWorld(run){
  }
  run.layout.rooms.forEach((room,index)=>{
   const p=worldPoint(room);cabinet(p.x-1.65,p.z-1.25,index*2);cabinet(p.x+1.65,p.z-1.25,index*2+1);
-  sign(`STORAGE ${String(index+1).padStart(2,'0')}`,1.25,.28,p.x,2.8,p.z-3.72);
+  sign(run.halloween?.rooms[0]===index?'STORAGE / ERASED':`STORAGE ${String(index+1).padStart(2,'0')}`,1.25,.28,p.x,2.8,p.z-3.72);
   fixture(p.x,4.15,p.z,26);
   const x=p.x+2.35,z=p.z+1.4,closet=new THREE.Group();closet.position.set(x,0,z);scene.add(closet);
   box(1.3,2.85,.12,0,1.425,-.45,wood,closet);box(.1,2.85,1,-.65,1.425,0,wood,closet);box(.1,2.85,1,.65,1.425,0,wood,closet);box(1.4,.1,1,0,2.85,0,wood,closet);
@@ -128,6 +129,7 @@ export function createWorld(run){
   fixture(p.x,4.15,p.z,18);
  }
  const wallNotes=createWallNotes(run.layout);scene.add(...wallNotes);
+ const halloween=createHalloweenWorld(scene,run,targets,rayMeshes);
  const clueRoom=worldPoint(run.layout.rooms[run.clueRoom]);
  box(1.6,.08,.72,clueRoom.x,.9,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x-.65,.45,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x+.65,.45,clueRoom.z+2.3,wood);collider(clueRoom.x,clueRoom.z+2.3,1.6,.72);
  box(.84,.37,.04,clueRoom.x,1.25,clueRoom.z+2.42,wood);box(.045,.35,.045,clueRoom.x,1.08,clueRoom.z+2.4,wood);
@@ -172,6 +174,7 @@ export function createWorld(run){
  const enemyCanMove=(x,z)=>canMove(x,z,.6,1.1);
  const navigator=createNavigator(enemyCanMove,{minX:firstCell.x-CELL/2,maxX:lastCell.x+CELL/2,minZ:firstCell.z-CELL/2,maxZ:lastCell.z+CELL/2});
  function update(delta,time,player,threat,hold=0,monster){
+  halloween?.update(time);
   for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,1-Math.exp(-Math.max(0,delta)*18));view.key.visible=d.key&&!d.taken&&d.opened;if(view.key.visible){view.key.rotation.y=Math.sin(time*.7+view.id)*.08;}}
   boardHitbox.visible=!run.boardsOpen;
   boards.forEach((b,i)=>{b.visible=!run.boardsOpen;b.position.z=-25-(hold>0?.1*Math.sin(hold*20+i):0);});
@@ -199,5 +202,5 @@ export function createWorld(run){
    if(source)light.position.copy(source.position);
   });
  }
- return {scene,targets,rayMeshes,wallNotes,canMove,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:clueRoom.x,z:clueRoom.z+2.45},get doorProgress(){return doorProgress;}};
+ return {scene,targets,rayMeshes,wallNotes,halloween,canMove,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:clueRoom.x,z:clueRoom.z+2.45},get doorProgress(){return doorProgress;}};
 }
