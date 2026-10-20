@@ -1,5 +1,16 @@
 [
   {
+    "file": "hooded-wanderer.jpg",
+    "title": "The Hooded Wanderer",
+    "author": "Ikk1",
+    "source": "https://sketchfab.com/3d-models/the-hooded-wanderer-e6bb88b557fd4efca786068af6960230",
+    "license": "CC Attribution",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "preview_source": "https://media.sketchfab.com/models/e6bb88b557fd4efca786068af6960230/thumbnails/ab251548a44245868a578df6c28b96cb/ef23c2dc3a4e4e588cb83570ccc533ad.jpeg",
+    "sha256": "1566eb5cb7a51ef9e6f272b3220975d7126855dd148d74bbf58e7d6bf6282487",
+    "selected_for_b2": true
+  },
+  {
     "file": "black-hooded-figure.jpg",
     "title": "Hooded Figure 3d Model Free",
     "author": "iRahulRajput",
@@ -7,7 +18,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/e69ebfea7478492e8c80db2c3c8895a8/thumbnails/d303de305f784ca9bb015fc1a23492a9/e1d912987d6b49e6a5c0290d6cca510a.jpeg",
-    "sha256": "b7271cec62a3a4624b0c1929bcdda93b7823dc1993082804afe0e33766d23338"
+    "sha256": "b7271cec62a3a4624b0c1929bcdda93b7823dc1993082804afe0e33766d23338",
+    "selected_for_b2": false
   },
   {
     "file": "dark-hooded-rogue.jpg",
@@ -17,7 +29,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/7dfc2cee5b334ad082e03dcff0209f53/thumbnails/4cdb611820a948b19af383b964a6865d/5dbec52dece849349e45688599914f3c.jpeg",
-    "sha256": "609395fd582f27baad01721b0e82dd0c63e23d2f0afca1fa5cf5d87f6d18351a"
+    "sha256": "609395fd582f27baad01721b0e82dd0c63e23d2f0afca1fa5cf5d87f6d18351a",
+    "selected_for_b2": false
   },
   {
     "file": "shadow-monk-assassin.jpg",
@@ -27,7 +40,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/317f8ab8cf7041c1abb070d603c041ab/thumbnails/c0529269d0754417b813e3c00318bdd4/7f7e5734cd0e4fdf82a2c973b0c561d9.jpeg",
-    "sha256": "8335841ebfbe232bf14fb2b2e28e811bc86b255bb218a7a70a5191a6925b3def"
+    "sha256": "8335841ebfbe232bf14fb2b2e28e811bc86b255bb218a7a70a5191a6925b3def",
+    "selected_for_b2": false
   },
   {
     "file": "hooded-horror-woman.jpg",
@@ -37,7 +51,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/f59d17be392f4494a5b85d927df48ffd/thumbnails/d6a591fa98854bb6833860b67ca2acbd/d0cafea367354226bb240da4b6b20fb8.jpeg",
-    "sha256": "f0167e9854eb4b67e8ae87f25892dc66d88970bcc8710641a8e136af8a6e6d15"
+    "sha256": "f0167e9854eb4b67e8ae87f25892dc66d88970bcc8710641a8e136af8a6e6d15",
+    "selected_for_b2": false
   },
   {
     "file": "cultist-armed.jpg",
@@ -47,7 +62,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/63af0c04ad5d4d6180c15dd0c09d6a3a/thumbnails/bb1d9d70b8a044aa95b6ee8ddb482daf/4cc54dc97ee84ae4a64698895cf1b923.jpeg",
-    "sha256": "0297904767338ad4b8a8fd45cf5914a27a040c0ce235a3a26af82e8d8c8917aa"
+    "sha256": "0297904767338ad4b8a8fd45cf5914a27a040c0ce235a3a26af82e8d8c8917aa",
+    "selected_for_b2": false
   },
   {
     "file": "grim-reaper-norberto.jpg",
@@ -57,7 +73,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/304c48ee2bab4aabb61a99630d2008bb/thumbnails/81f0ebe2ed2b4298be4930f24e1d4657/918e9310ceac45bd881da237bd769092.jpeg",
-    "sha256": "0ae6be0da2262a4a94198bc57446bc30d4ccf573217e88763cb1fb64f529157f"
+    "sha256": "0ae6be0da2262a4a94198bc57446bc30d4ccf573217e88763cb1fb64f529157f",
+    "selected_for_b2": false
   },
   {
     "file": "grim-reaper-vasian.jpg",
@@ -67,7 +84,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/8767c43f4fc6444aa3d1ced5ff33d047/thumbnails/1eaaf4f4b3d149b7a90c6c9b0c5763a1/216625a4df7240ee832f8b8d4b4cf05d.jpeg",
-    "sha256": "42815ee368cfd77cbc6ff8479bdb3844c1e2cf3dd125bcc953772c5e4d5efca5"
+    "sha256": "42815ee368cfd77cbc6ff8479bdb3844c1e2cf3dd125bcc953772c5e4d5efca5",
+    "selected_for_b2": false
   },
   {
     "file": "cloaked-reaper.jpg",
@@ -77,17 +95,8 @@
     "license": "CC Attribution",
     "license_url": "https://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/83489603d36d40388d667c1125c26872/thumbnails/71d92d04d513429e84e60f8e1104eb0e/f450c32467da4c389819227e93182e29.jpeg",
-    "sha256": "9122b4972eae8340bf977de00944af44dac8e13871df0e4725d4ffb815627605"
-  },
-  {
-    "file": "hooded-wanderer.jpg",
-    "title": "The Hooded Wanderer",
-    "author": "Ikk1",
-    "source": "https://sketchfab.com/3d-models/none-e6bb88b557fd4efca786068af6960230",
-    "license": "CC Attribution",
-    "license_url": "https://creativecommons.org/licenses/by/4.0/",
-    "preview_source": "https://media.sketchfab.com/models/e6bb88b557fd4efca786068af6960230/thumbnails/ab251548a44245868a578df6c28b96cb/ef23c2dc3a4e4e588cb83570ccc533ad.jpeg",
-    "sha256": "1566eb5cb7a51ef9e6f272b3220975d7126855dd148d74bbf58e7d6bf6282487"
+    "sha256": "9122b4972eae8340bf977de00944af44dac8e13871df0e4725d4ffb815627605",
+    "selected_for_b2": false
   },
   {
     "file": "enigmatic-cloaked-wanderer.jpg",
@@ -97,7 +106,8 @@
     "license": "CC Attribution",
     "license_url": "http://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/dc0b172da7e74350a48fe637f9233af4/thumbnails/ba2db98ee9734f17a0baac2e10b28ce4/70f91e3342cd403bb1efa61f52b196e7.jpeg",
-    "sha256": "00336b364738ce52a33644002e94815a524ae9a907a89bd8102ec63dc2e7ac4a"
+    "sha256": "00336b364738ce52a33644002e94815a524ae9a907a89bd8102ec63dc2e7ac4a",
+    "selected_for_b2": false
   },
   {
     "file": "hooded-figure-with-scythe.jpg",
@@ -107,7 +117,8 @@
     "license": "CC Attribution",
     "license_url": "http://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/e713317859574b3583202eff64fa4ac4/thumbnails/e10e804fbfb44290b61d4537143ce022/d6fbccba6c1740858f2458d00a03ac50.jpeg",
-    "sha256": "97ad226d05a8d5a7de27a717b52d24c4b7915789f9737176bcbd570827282190"
+    "sha256": "97ad226d05a8d5a7de27a717b52d24c4b7915789f9737176bcbd570827282190",
+    "selected_for_b2": false
   },
   {
     "file": "maniacs-cloak-high-poly.jpg",
@@ -117,7 +128,8 @@
     "license": "CC Attribution",
     "license_url": "http://creativecommons.org/licenses/by/4.0/",
     "preview_source": "https://media.sketchfab.com/models/880bea7e2614458194e72acebe23f652/thumbnails/95150c28023448a08bd7411e658d357b/f837d4fd909d47ee8f38400c743ef145.jpeg",
-    "sha256": "046a860b17c27bbf5c7ae423eab168a781be66aaca6289d1cb93edb1bc45c91f"
+    "sha256": "046a860b17c27bbf5c7ae423eab168a781be66aaca6289d1cb93edb1bc45c91f",
+    "selected_for_b2": false
   },
   {
     "file": "hooded-stranger.webp",
@@ -127,7 +139,8 @@
     "license": "CC BY 3.0",
     "license_url": "https://creativecommons.org/licenses/by/3.0/",
     "preview_source": "https://static.poly.pizza/ade5984f-8471-4561-8469-b7e96523a2f3.webp",
-    "sha256": "ead78667b59c8303f2c91a05134d41e60816c9476234baf85a9a40e2a3c62740"
+    "sha256": "ead78667b59c8303f2c91a05134d41e60816c9476234baf85a9a40e2a3c62740",
+    "selected_for_b2": false
   },
   {
     "file": "hooded-adventurer.webp",
@@ -137,6 +150,7 @@
     "license": "CC0 1.0",
     "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
     "preview_source": "https://static.poly.pizza/3186b8e9-afd5-4d48-846c-b2b530cd23e2.webp",
-    "sha256": "7c1df1baf8797555ea6f33001efe2fec30b72ff0868e8612364b690d19598f8a"
+    "sha256": "7c1df1baf8797555ea6f33001efe2fec30b72ff0868e8612364b690d19598f8a",
+    "selected_for_b2": false
   }
 ]
