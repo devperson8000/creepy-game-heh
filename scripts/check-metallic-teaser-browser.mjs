@@ -29,21 +29,23 @@ try{
   let binary='';const array=new Uint8Array(bytes);for(let i=0;i<array.length;i+=8192)binary+=String.fromCharCode(...array.subarray(i,i+8192));
   return {...stats,peak,rmsRatio:Math.sqrt(energy/originalEnergy),differenceRatio:Math.sqrt(difference/originalEnergy),wav:btoa(binary)};
  });
- assert.ok(result.finite);assert.ok(result.sourceUnchanged);assert.ok(Math.abs(result.attack-.43)<.01,'direct sound keeps the original attack');assert.ok(result.tail>1e-5,'short ringing reflections add metallic resonance');assert.ok(result.late<1e-8,'the metal resonance decays rather than feeding back indefinitely');
- assert.ok(result.peak<.95,'the actual recording retains headroom');assert.ok(result.rmsRatio>.55&&result.rmsRatio<1.3,'effect preserves useful loudness');assert.ok(result.differenceRatio>.08,'the real recording is audibly processed');
+ console.log(JSON.stringify({...result,wav:undefined}));
+ assert.ok(result.finite);assert.ok(result.sourceUnchanged);assert.ok(Math.abs(result.attack-.43)<.01,'direct sound keeps the original attack');assert.ok(result.tail>.10,'steel resonance is substantially stronger than the first mix');assert.ok(result.late<1e-8,'the metal resonance decays rather than feeding back indefinitely');
+ assert.ok(result.peak<.95,'the actual recording retains headroom');assert.ok(result.rmsRatio>.55&&result.rmsRatio<1.3,'effect preserves useful loudness');assert.ok(result.differenceRatio>.40,'the stronger metal layer is prominent around the recognizable original cry');
  await mkdir('work/metallic-teaser',{recursive:true});await writeFile('work/metallic-teaser/monster-metallic-preview.wav',Buffer.from(result.wav,'base64'));delete result.wav;
  await page.evaluate(async()=>{
-  const C=window.AudioContext,convolver=C.prototype.createConvolver,buffer=C.prototype.createBufferSource;window.metalConvolvers=[];window.voiceSources=[];
+  const C=window.AudioContext,convolver=C.prototype.createConvolver,buffer=C.prototype.createBufferSource,oscillator=C.prototype.createOscillator;window.metalConvolvers=[];window.voiceSources=[];window.metalCarriers=[];
   C.prototype.createConvolver=function(){const node=convolver.call(this);metalConvolvers.push(node);return node;};
   C.prototype.createBufferSource=function(){const node=buffer.call(this);voiceSources.push(node);return node;};
+  C.prototype.createOscillator=function(){const node=oscillator.call(this),stop=node.stop.bind(node);node.stop=(...args)=>{node.wasStopped=true;return stop(...args);};metalCarriers.push(node);return node;};
   const {createTeaserAudio}=await import('/src/teaser-audio.js');
   window.teaserAudio=createTeaserAudio({voices:[{at:0,end:1.1,file:'radio-out'}],soundCues:[],monsterCue:{at:1.5,end:3,file:'monster'}});teaserAudio.update(0);
  });
  await page.waitForFunction(()=>metalConvolvers.length===1&&voiceSources.filter(s=>s.buffer).length===2);
  assert.equal(await page.evaluate(()=>metalConvolvers.length),1,'only the monster receives the effect, not dialogue');
  assert.ok(await page.evaluate(()=>voiceSources.every(s=>s.playbackRate.value===1)),'no voice is pitch-shifted or time-stretched');
- await page.evaluate(()=>teaserAudio.pause());assert.ok(await page.evaluate(()=>metalConvolvers.every(n=>n.buffer===null)),'pause releases the ringing network immediately');
+ await page.evaluate(()=>teaserAudio.pause());assert.ok(await page.evaluate(()=>metalConvolvers.every(n=>n.buffer===null)&&metalCarriers.every(n=>n.wasStopped)),'pause releases ringing networks and stops modulation carriers immediately');
  await page.evaluate(()=>teaserAudio.update(0,{muted:true}));await page.waitForFunction(()=>metalConvolvers.length===2);
- await page.evaluate(()=>{teaserAudio.dispose();teaserAudio.dispose();});assert.ok(await page.evaluate(()=>metalConvolvers.every(n=>n.buffer===null)));
+ await page.evaluate(()=>{teaserAudio.dispose();teaserAudio.dispose();});assert.ok(await page.evaluate(()=>metalConvolvers.every(n=>n.buffer===null)&&metalCarriers.every(n=>n.wasStopped)));
  assert.deepEqual(errors,[]);console.log('PASS actual Web Audio metallic resonance, preserved source/attack, finite output, decaying tail, recording headroom and double disposal.');console.log(JSON.stringify(result));
 }finally{await browser.close();}
