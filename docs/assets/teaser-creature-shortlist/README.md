@@ -1,5 +1,7 @@
 # Monochrome II — choose one creature
 
+**New direction:** [Darker Backrooms-style creature shortlist](../backrooms-creature-shortlist/README.md).
+
 Six dark creature options for **one** subtle introduction in the B2 monitor teaser. No selection has been made. This gallery does not change the current teaser or gameplay.
 
 **My recommendation: 1 — Creeping Shadow.** Its narrow face and long fingers would read clearly in a short doorway reveal. Choose a number after comparing the original previews below.
