@@ -23,8 +23,8 @@ try{
   const {createTeaserAudio}=await import('/src/teaser-audio.js'),t=await import('/src/needlelimbs-timeline.js');
   window.audio=createTeaserAudio({voices:t.NEEDLELIMBS_VOICES,soundCues:t.NEEDLELIMBS_SOUND_CUES,monsterCue:t.NEEDLELIMBS_MONSTER_CUE});audio.update(4.6);
  });
- await page.waitForFunction(()=>plays.some(s=>s.duration>4.9&&s.duration<5.1));
- const reply=await page.evaluate(()=>plays.find(s=>s.duration>4.9&&s.duration<5.1));assert.ok(reply.offset>=.49&&reply.offset<2);
+ await page.waitForFunction(()=>plays.some(s=>s.duration>3.1&&s.duration<3.5));
+ const reply=await page.evaluate(()=>plays.find(s=>s.duration>3.1&&s.duration<3.5));assert.ok(reply.offset>=.49&&reply.offset<2);
  const stopped=await page.evaluate(()=>{const before=stops;audio.pause();return stops-before;});assert.ok(stopped>=2,'pause cancels dialogue and future monster audio');
  await page.evaluate(()=>audio.update(8.2,{muted:true}));await page.waitForFunction(()=>gains.some(g=>g.lastTarget===0));await page.evaluate(()=>{audio.dispose();audio.dispose();});
  await page.addInitScript(()=>localStorage.setItem('monochrome.recovered-footage.2026','1'));

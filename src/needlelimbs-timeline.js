@@ -1,8 +1,8 @@
 /** The new edit is staged until the selected, animated Needlelimbs source arrives. */
 export const NEEDLELIMBS_DURATION=25;
 export const NEEDLELIMBS_VOICES=[
- {at:1.1,end:3.8,file:'radio-out',subtitle:'RADIO: “You made it out?”'},
- {at:4.1,end:9.6,file:'survivor-reply',subtitle:'SURVIVOR: “Yes, but I don’t think it was just Monochrome…”'}
+ {at:1.1,end:2.4,file:'radio-out-v2',subtitle:'RADIO: “You made it out?”'},
+ {at:4.1,end:7.8,file:'survivor-reply-v2',subtitle:'SURVIVOR: “Yes, but I don’t think it was just Monochrome…”'}
 ];
 export const NEEDLELIMBS_MONSTER_CUE={at:12.5,end:20.65,file:'monster'};
 export const NEEDLELIMBS_SOUND_CUES=[{at:7.7,kind:'scrape'},{at:12.1,kind:'metal'},{at:16.6,kind:'metal'},{at:18.9,kind:'breath'}];
@@ -11,7 +11,7 @@ const smooth=(a,b,t)=>{const p=clamp((t-a)/(b-a));return p*p*(3-2*p);};
 // Integral of the smooth stop: pose phase follows actual distance, not wall time.
 function approach(t){const p=clamp((t-4)/3.2);return p<.75?p/.875:(.75+(p-.75)-(p-.75)**2/.5)/.875;}
 export function sampleNeedlelimbsTeaser(value){
- const time=Math.max(0,Math.min(25,Number.isFinite(value)?value:0)),step=approach(time),peek=smooth(7,8.9,time)*(1-smooth(18.5,20,time));
+ const time=Math.max(0,Math.min(25,Number.isFinite(value)?value:0)),step=approach(time),peek=smooth(6.4,7.8,time)*(1-smooth(18.5,20,time));
  const pursuit=smooth(12,17,time),distance=pursuit*3.1;
  return {time,shot:time<4?'arrival':time<12?'corner':time<21?'rebuilt':'title',subtitle:NEEDLELIMBS_VOICES.find(v=>time>=v.at&&time<v.end)?.subtitle??'',blackout:time>=20.65&&time<21,
   needle:{visible:time>=4&&time<20.65,position:[6.15-step*3.5,0,-6.05],yaw:-Math.PI/2,travel:step*3.5,walk:time<4?0:1-smooth(6.4,7.2,time),peek},

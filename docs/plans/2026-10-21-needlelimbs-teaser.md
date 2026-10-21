@@ -14,7 +14,7 @@ User direction: choose Loco's Needlelimbs; replace the three-monster edit with o
 Duration remains 25 seconds, preserving the shared host clock and the existing 43-second B2 conversation.
 
 - 0–4: hazmat survivor exits the elevator; radio asks the question.
-- 4–9.6: survivor reply. Needlelimbs follows its actual skeletal walking clip along a continuous path toward the right-hand corridor corner; it slows into the peek, turns its head and neck, and keeps the rest of its body behind actual walls.
+- 4–7.8: survivor reply (updated neural voices and quicker delivery). Needlelimbs follows its actual skeletal walking clip along a continuous path toward the right-hand corridor corner; it slows into the peek, turns its head and neck, and keeps the rest of its body behind actual walls.
 - 12–17: cut into the branch; Monochrome walks up behind Needlelimbs. Original monster recording starts at 12.5 seconds.
 - 16.5–20.65: closer camera angle makes the replacement steel head, segmented horns, bolts, jaw hinges and repaired neck readable.
 - 20.65–21: black cut.

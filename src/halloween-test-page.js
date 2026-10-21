@@ -31,19 +31,36 @@ const cases=[
 ];
 export function startHalloweenTestPage({password,onExit}){
  let accessPassword=password,frame=null,current=null,disposed=false,starting=false;
- const root=document.createElement('main');root.id='halloween-test-hub';root.innerHTML='<header><div><small>HALLOWEEN / PRIVATE TEST AREA</small><h1>Test the dark.</h1></div><button class="test-exit">Return to main menu</button></header><section class="halloween-test-picker"><p>Every shortcut uses the actual game animations. Nothing needs to be found first.</p><div class="halloween-test-cards"></div><p class="test-asset-note">The B2 stranger currently uses a temporary black hooded figure while the selected model file is unavailable.</p></section><section class="halloween-test-player" hidden><nav><button class="test-back">Back to tests</button><strong></strong><button class="test-replay">Replay test</button></nav><div class="halloween-test-commands"></div><p class="halloween-test-status" role="status"></p><div class="halloween-test-viewport"></div></section>';
+ const root=document.createElement('main');root.id='halloween-test-hub';root.innerHTML='<header><div><small>HALLOWEEN / PRIVATE TEST AREA</small><h1>Test the dark.</h1></div><button class="test-exit">Return to main menu</button></header><section class="halloween-test-picker"><p>Every shortcut uses the actual game animations. Nothing needs to be found first.</p><div class="halloween-test-cards"></div><p class="test-asset-note">The B2 stranger currently uses a temporary black hooded figure while the selected model file is unavailable.</p></section><section class="halloween-test-player" hidden><nav><button class="test-back">Back to tests</button><strong></strong><button type="button" class="test-fullscreen" aria-pressed="false">Fullscreen</button><button class="test-replay">Replay test</button></nav><div class="halloween-test-commands"></div><p class="halloween-test-status" role="status"></p><div class="halloween-test-viewport"></div></section>';
  document.body.append(root);document.body.classList.add('halloween-testing');
  const picker=root.querySelector('.halloween-test-picker'),player=root.querySelector('.halloween-test-player'),viewport=root.querySelector('.halloween-test-viewport'),status=root.querySelector('.halloween-test-status'),commands=root.querySelector('.halloween-test-commands');
+ const fullscreen=root.querySelector('.test-fullscreen');let fullscreenPending=false;
+ function syncFullscreen(){const active=document.fullscreenElement===player||player.classList.contains('is-expanded');fullscreen.textContent=active?'Exit fullscreen':'Fullscreen';fullscreen.setAttribute('aria-pressed',String(active));}
+ async function leaveFullscreen(){player.classList.remove('is-expanded');if(document.fullscreenElement===player)await document.exitFullscreen().catch(()=>{});syncFullscreen();}
+ function fullscreenKey(event){if(event.code==='Escape'&&(document.fullscreenElement===player||player.classList.contains('is-expanded'))){event.preventDefault();event.stopImmediatePropagation();void leaveFullscreen();}}
+ fullscreen.onclick=async()=>{
+  if(fullscreenPending||disposed||player.hidden)return;fullscreenPending=true;
+  try{
+   if(document.fullscreenElement===player||player.classList.contains('is-expanded'))await leaveFullscreen();
+   else{
+    try{if(!player.requestFullscreen)throw new Error('Native fullscreen unavailable');await player.requestFullscreen();if(disposed||player.hidden)await leaveFullscreen();}
+    catch{if(!disposed&&!player.hidden)player.classList.add('is-expanded');}
+    syncFullscreen();
+   }
+  }finally{fullscreenPending=false;}
+ };
+ document.addEventListener('fullscreenchange',syncFullscreen);
+ document.addEventListener('keydown',fullscreenKey,true);
  function send(command){frame?.contentWindow?.postMessage({type:'halloween-test-command',command},location.origin);}
  function commandButton(label,command){const b=document.createElement('button');b.textContent=label;b.onclick=()=>send(command);commands.append(b);}
- async function stopFrame(){const previous=frame;frame=null;if(previous){try{await previous.contentWindow.disposeHalloweenTest?.();}catch{}previous.remove();}}
+ async function stopFrame(){const previous=frame;frame=null;if(previous){try{previous.contentDocument?.removeEventListener('keydown',fullscreenKey,true);await previous.contentWindow.disposeHalloweenTest?.();}catch{}previous.remove();}}
  async function start(id){
   if(starting||disposed)return;starting=true;await stopFrame();if(disposed){starting=false;return;}current=id;picker.hidden=true;player.hidden=false;commands.replaceChildren();
   player.querySelector('nav strong').textContent=cases.find(c=>c[0]===id)[1];status.textContent='Preparing test…';
   if(id==='map')commandButton('Next decorated room','room-next');
   if(id==='quest')for(const [label,item] of [['Invitation','invitation'],['Seal 1','seal-0'],['Seal 2','seal-1'],['Seal 3','seal-2'],['Key chest','chest']])commandButton(label,'quest:'+item);
   if(id==='b2')commandButton('Return to B1','return');
-  frame=document.createElement('iframe');frame.id='halloween-test-frame';frame.title=cases.find(c=>c[0]===id)[1];frame.allow='autoplay; fullscreen';frame.src=location.pathname+'?mode=halloween-test-frame';viewport.append(frame);starting=false;
+  frame=document.createElement('iframe');frame.id='halloween-test-frame';frame.title=cases.find(c=>c[0]===id)[1];frame.allow='autoplay; fullscreen';frame.src=location.pathname+'?mode=halloween-test-frame';const created=frame;created.addEventListener('load',()=>{if(!disposed&&frame===created)created.contentDocument?.addEventListener('keydown',fullscreenKey,true);});viewport.append(frame);starting=false;
  }
  function receive(event){
   if(disposed||event.origin!==location.origin||event.source!==frame?.contentWindow)return;
@@ -54,8 +71,8 @@ export function startHalloweenTestPage({password,onExit}){
  }
  window.addEventListener('message',receive);
  for(const [id,label,description] of cases){const b=document.createElement('button');b.type='button';b.setAttribute('aria-label',label);const title=document.createElement('strong'),detail=document.createElement('span');title.textContent=label;detail.textContent=description;b.append(title,detail);b.onclick=()=>{void start(id);};root.querySelector('.halloween-test-cards').append(b);}
- root.querySelector('.test-back').onclick=async()=>{if(starting)return;starting=true;await stopFrame();starting=false;if(disposed)return;player.hidden=true;picker.hidden=false;root.querySelector('.halloween-test-cards button').focus();};
+ root.querySelector('.test-back').onclick=async()=>{if(starting)return;starting=true;await leaveFullscreen();await stopFrame();starting=false;if(disposed)return;player.hidden=true;picker.hidden=false;root.querySelector('.halloween-test-cards button').focus();};
  root.querySelector('.test-replay').onclick=()=>{void start(current);};
- async function dispose(){if(disposed)return;disposed=true;accessPassword='';window.removeEventListener('message',receive);await stopFrame();root.remove();document.body.classList.remove('halloween-testing');onExit();}
+ async function dispose(){if(disposed)return;disposed=true;accessPassword='';window.removeEventListener('message',receive);document.removeEventListener('fullscreenchange',syncFullscreen);document.removeEventListener('keydown',fullscreenKey,true);await leaveFullscreen();await stopFrame();root.remove();document.body.classList.remove('halloween-testing');onExit();}
  root.querySelector('.test-exit').onclick=()=>{void dispose();};return {dispose};
 }

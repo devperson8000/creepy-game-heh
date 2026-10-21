@@ -11,7 +11,7 @@ try{
  await frame().locator('.replay-preview-note').waitFor({timeout:30000});assert.match(await frame().locator('.replay-preview-note').textContent(),/Needlelimbs.*missing/i);
  await frame().locator('.b2-subtitle').filter({hasText:'You made it out?'}).waitFor({timeout:10000});
  const started=Date.now();await frame().locator('.b2-subtitle').filter({hasText:'I don’t think it was just Monochrome'}).waitFor({timeout:10000});
- const requests=await frame().evaluate(()=>teaserRequests);assert.ok(requests.some(url=>url.includes('survivor-reply.mp3')));assert.equal(requests.some(url=>/models\/teaser\/(sonask|crawler|maw|needlelimbs)\.glb/.test(url)),false,'missing selected model is explicit; no substitute or missing-file request');
+ const requests=await frame().evaluate(()=>teaserRequests);assert.ok(requests.some(url=>url.includes('survivor-reply-v2.mp3')));assert.ok(requests.some(url=>url.includes('radio-out-v2.mp3')));assert.equal(requests.some(url=>/models\/teaser\/(sonask|crawler|maw|needlelimbs)\.glb/.test(url)),false,'missing selected model is explicit; no substitute or missing-file request');
  const remaining=Math.max(0,9500-(Date.now()-started));await page.waitForTimeout(remaining);await mkdir('work/updated-teaser',{recursive:true});
  console.log('Before reveal capture',Date.now()-started,await frame().locator('.replay-preview-note').isVisible());
  const bounds=await page.locator('#halloween-test-frame').boundingBox();await page.screenshot({clip:bounds,path:'work/updated-teaser/mechanical-reveal.png',animations:'disabled',timeout:5000});
