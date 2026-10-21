@@ -5,7 +5,7 @@ import {createRebuiltMonochrome} from './mechanical-head.js';
 import {sampleNeedlelimbsTeaser} from './needlelimbs-timeline.js';
 
 /** Authored replacement edit. Activates only after the selected source is imported and reviewed. */
-export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset}={}){
+export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset,allowMissingNeedlelimbs=false}={}){
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x060809);scene.fog=new THREE.Fog(0x080b0c,13,30);
  const camera=new THREE.PerspectiveCamera(49,16/9,.05,45);scene.add(camera);
  const target=new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});target.texture.colorSpace=THREE.SRGBColorSpace;
@@ -36,9 +36,9 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset}={}
  const titleMaterial=new THREE.MeshBasicMaterial({map:titleTexture,depthTest:false,depthWrite:false,toneMapped:false});materials.add(titleMaterial);
  const title=new THREE.Mesh(overlayGeometry,titleMaterial);title.position.z=-1;title.renderOrder=100;camera.add(title);
  const blackMaterial=new THREE.MeshBasicMaterial({color:0,depthTest:false,depthWrite:false});materials.add(blackMaterial);const blackout=new THREE.Mesh(overlayGeometry,blackMaterial);blackout.position.z=-1;blackout.renderOrder=99;camera.add(blackout);
- const ready=Promise.all([survivorAsset??loadPlayerAvatarAsset(),needlelimbsAsset??loadNeedlelimbsAsset()]).then(([player,asset])=>{
+ const ready=Promise.all([survivorAsset??loadPlayerAvatarAsset(),needlelimbsAsset??(allowMissingNeedlelimbs?Promise.resolve(null):loadNeedlelimbsAsset())]).then(([player,asset])=>{
   if(disposed)return;
-  needle=createNeedlelimbsActor(asset);scene.add(needle.root);monsters.set('needlelimbs',needle);
+  if(asset){needle=createNeedlelimbsActor(asset);scene.add(needle.root);monsters.set('needlelimbs',needle);}
   survivor=createPlayerAvatar(player,{id:'teaser-survivor',slot:0,name:''});scene.add(survivor.root);
  }).catch(error=>{loadError=error;});
  const look=new THREE.Vector3();
@@ -46,7 +46,7 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset}={}
   state=sampleNeedlelimbsTeaser(t);const s=state,u=s.time;
   title.visible=s.shot==='title';blackout.visible=s.blackout;
   for(let i=0;i<2;i++)doors[i].position.x=(i?1:-1)*(.58+Math.min(1,u/1.25));
-  survivor?.sampleCinematic({clip:u<3.8?'Walk':'Idle',time:Math.min(u,3.8),position:[-.45,0,5.5-Math.min(u,3.8)*.62],yaw:Math.PI});
+  survivor?.sampleCinematic({clip:u<3.8?'Walk':'Idle',time:Math.min(u,3.8),position:[-.45,0,5.5-Math.min(u,3.8)*.62],yaw:0});
   if(survivor)survivor.root.visible=u<4;
   if(needle){needle.root.visible=s.needle.visible;needle.sample(s.needle);}
   rebuilt.root.visible=s.monochrome.visible;rebuilt.sample({time:u,...s.monochrome});
@@ -56,7 +56,7 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset}={}
   else if(u<12){camera.position.set(-1.2,1.65,-1.85);look.set(2.55,2.25,-6.05);if(!reducedMotion)camera.position.z-=(u-4)*.015;}
   else {
    const c=s.monochrome.closeup;
-   camera.position.set(2.0+c*1.45,2.45+c*.35,-4.5-c*.48);look.set(5.35-c*.95,2.5+c*.83,-6.2);
+   camera.position.set(.6+c*2,2.3+c*.7,-5.95+c*.3);look.set(5.35-c*.95,2.5+c*.83,-6.2);
   }
   camera.lookAt(look);scene.updateMatrixWorld(true);return state;
  }
@@ -67,5 +67,5 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset}={}
   finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.toneMappingExposure=exposure;renderer.autoClear=auto;}
  }
  function dispose(){if(disposed)return;disposed=true;survivor?.dispose();needle?.dispose();rebuilt.dispose();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());target.dispose();}
- return {scene,camera,target,ready,sample,render,dispose,monsters,creature:rebuilt,get survivor(){return survivor;},get error(){return loadError;},get state(){return state;}};
+ return {scene,camera,target,ready,sample,render,dispose,monsters,creature:rebuilt,get needlelimbsPending(){return allowMissingNeedlelimbs&&!needle;},get survivor(){return survivor;},get error(){return loadError;},get state(){return state;}};
 }

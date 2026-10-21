@@ -75,7 +75,7 @@ try {
      if(!await authorizeHalloweenTest(event.data.password,AbortSignal.timeout(8000))){post('halloween-test-error');return;}
      if(stopped)return;previewAuthorized=true;started=true;const selected=event.data.scenario;
      if(selected==='coop'){testMenu=makeMenu();void testMenu.openMultiplayer();}
-     else if(selected==='teaser')replay=startHalloweenReplay(document.querySelector('#scene'),{onExit:()=>post('halloween-test-finished')});
+     else if(selected==='teaser')replay=startHalloweenReplay(document.querySelector('#scene'),{updatedTeaser:true,onExit:()=>post('halloween-test-finished')});
      else{
       window.monochrome=startGame(document.querySelector('#scene'),{halloween:true,autostart:selected==='full'});
       configureTestInput(window.monochrome);

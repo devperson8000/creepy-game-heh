@@ -1,6 +1,5 @@
-import {createTeaserScene} from './teaser-scene.js';
-import {createTeaserAudio} from './teaser-audio.js';
-import {TEASER_START,TEASER_END,sampleTeaser} from './teaser-timeline.js';
+import {createTeaserPlayback} from './teaser-playback.js';
+import {TEASER_START,TEASER_END} from './teaser-timeline.js';
 import {createHalloweenAudio} from './halloween-audio.js';
 import * as THREE from 'three';
 import {gamePreferences,reducedMotion} from './preferences.js';
@@ -22,7 +21,7 @@ function hoodedStranger(){
  for(const side of [-1,1]){const arm=part(new THREE.CapsuleGeometry(.105,.53,8,20),cloth,side*.36,1.03,.23);arm.rotation.x=-.65;arm.rotation.z=side*.15;if(side===-1)root.userData.leftArm=arm;const hand=part(new THREE.SphereGeometry(.105,20,16),cloth,side*.34,.79,.44);hand.scale.set(.85,.7,1.3);if(side===-1)root.userData.leftHand=hand;}
  root.position.set(.55,.06,-3);return root;
 }
-export function createHalloweenExperience({renderer,camera,run,input,ui,players=()=>[],localId='solo',onReturn=()=>{},onMute=()=>{},isMuted=()=>false,poseFor=p=>p,replay=false}){
+export function createHalloweenExperience({renderer,camera,run,input,ui,players=()=>[],localId='solo',onReturn=()=>{},onMute=()=>{},isMuted=()=>false,poseFor=p=>p,replay=false,teaserPreview=false}){
  if(!run.halloween)return {render:()=>false,finish(){},dispose(){}};
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x030405);scene.fog=new THREE.FogExp2(0x050607,.065);
  const resources=new Set(),root=new THREE.Group();scene.add(root);
@@ -43,7 +42,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,players=
  const doorLeft=box(1.15,2.8,.12,-.58,1.4,4.25),doorRight=box(1.15,2.8,.12,.58,1.4,4.25);
  const overlay=document.createElement('section');overlay.className='b2-overlay';overlay.hidden=true;overlay.innerHTML='<div class="b2-top"><div><small>RESTRICTED SERVICE ACCESS</small><strong>B2 / THE ARCHIVE</strong></div><button class="b2-mute">Sound on · M</button></div><div class="b2-letterbox"></div><p class="b2-subtitle" aria-live="polite"></p><div class="b2-fade"></div><div class="b2-bottom"><p class="b2-hint"></p><button class="b2-return" hidden>Return to B1</button></div>';
  document.body.append(overlay);const el=s=>overlay.querySelector(s),sub=el('.b2-subtitle'),fade=el('.b2-fade'),hint=el('.b2-hint'),returnButton=el('.b2-return');returnButton.onclick=()=>{renderer.domElement.focus();onReturn();};el('.b2-mute').onclick=()=>{onMute();score.resume();renderer.domElement.focus();};
- const score=createHalloweenAudio(),teaserScene=createTeaserScene(),teaserAudio=createTeaserAudio();
+ const score=createHalloweenAudio(),{scene:teaserScene,audio:teaserAudio,sample:sampleFilm}=createTeaserPlayback({preview:replay&&teaserPreview});
  const resumeScore=()=>{score.resume();teaserAudio.resume();};renderer.domElement.addEventListener('pointerdown',resumeScore);
  const voices=['knows','watch','leave'].map(name=>new Audio(`/audio/halloween/stranger-${name}.mp3`));voices.forEach(a=>{a.preload='auto';});
  const visibility=()=>{if(document.hidden){voices.forEach(a=>a.pause());score.pause();teaserAudio.pause();}};document.addEventListener('visibilitychange',visibility);
@@ -91,7 +90,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,players=
    const monitorDistance=1.35/(2*Math.tan(camera.fov*Math.PI/360)*camera.aspect)*1.08;
    const positions=teaser?new THREE.Vector3(-.65,1.6,-1.94+monitorDistance):elapsed<3?new THREE.Vector3(-2.2,1.75,-.4):new THREE.Vector3(1.85,1.85,-1.4);
    camera.position.copy(positions);camera.lookAt(teaser?new THREE.Vector3(-.65,1.6,-2):new THREE.Vector3(.55,1.65,-3));
-   sub.textContent=teaser?sampleTeaser(elapsed-TEASER_START).subtitle:elapsed<1?'':elapsed<3?'YOU: “Who are you?”':elapsed<6.2?'STRANGER: “Someone who knows what comes next.”':elapsed<TEASER_START?'STRANGER: “Watch carefully. Don’t look away.”':elapsed<38.4?'STRANGER: “That’s all I could recover. You should go.”':'';
+   sub.textContent=teaser?sampleFilm(elapsed-TEASER_START).subtitle:elapsed<1?'':elapsed<3?'YOU: “Who are you?”':elapsed<6.2?'STRANGER: “Someone who knows what comes next.”':elapsed<TEASER_START?'STRANGER: “Watch carefully. Don’t look away.”':elapsed<38.4?'STRANGER: “That’s all I could recover. You should go.”':'';
    fade.style.opacity=elapsed>=38.4&&elapsed<39.6?'1':'0';
    for(const [index,at] of [[0,3],[1,6.2],[2,TEASER_END]])if(elapsed>=at&&!audioPlayed.has(index)){audioPlayed.add(index);if(elapsed-at<1&&!document.hidden)void voices[index].play().catch(()=>{});}
    if(teaser)teaserAudio.update(elapsed-TEASER_START,{muted:isMuted(),volume:prefs.volume});else teaserAudio.pause();

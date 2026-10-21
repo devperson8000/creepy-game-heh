@@ -4,6 +4,8 @@ User direction: choose Loco's Needlelimbs; replace the three-monster edit with o
 
 ## What is active
 
+- The password-protected **Monochrome II teaser** case now plays the revised cutscene and audio. This work-in-progress preview explicitly omits the unavailable Needlelimbs model and displays a notice. Normal gameplay still uses the earlier complete film.
+
 - The unlocked “Recovered footage / Tape 02” menu button has been removed, including for returning players with the old localStorage flag. The password-protected Halloween test hub is preserved.
 - Normal startup passes through a prepared intro slot. No unwritten film delays the mode menu. Test frames, direct multiplayer testing and the existing in-game B1 arrival are preserved.
 
@@ -20,7 +22,7 @@ Duration remains 25 seconds, preserving the shared host clock and the existing 4
 
 New modules: `needlelimbs-timeline.js`, `needlelimbs-actor.js`, `needlelimbs-scene.js`, `mechanical-head.js`. Audio scheduling accepts the edition's voice and sound cue lists and loads the recorded survivor reply. It retains mute, visibility, audio-unlock and disposal behavior.
 
-`teaser-edition.js` keeps `NEEDLELIMBS_READY=false`. Both picture and sound switch together when the reviewed source is ready. The old public edit remains working while the selected file is missing. No other model is presented as Needlelimbs.
+`teaser-edition.js` keeps `NEEDLELIMBS_READY=false`. Both picture and sound switch together when the reviewed source is ready. The old public edit remains working while the selected file is missing. The private tester explicitly chooses the new picture, sound and subtitle timeline together through `teaser-playback.js`. Its preview-only missing-model option still loads the real hazmat character, shows the mechanical Monochrome reveal and never substitutes another creature. No other model is presented as Needlelimbs.
 
 ## Exact source dependency
 

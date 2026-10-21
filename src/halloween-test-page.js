@@ -26,7 +26,7 @@ const cases=[
  ['quest','Quest items','Jump straight to the invitation, each wax seal or the chest. Hold E to test each interaction.'],
  ['key','Halloween key reveal','Watch the chest open and the key lift out. No items or searching required.'],
  ['b2','B2 encounter','Skip the quest and play the descent, stranger dialogue, monitor teaser and disappearance.'],
- ['teaser','Monochrome II teaser','Watch the 25-second teaser with three brief creature reveals.'],
+ ['teaser','Monochrome II teaser','Watch the updated dialogue and mechanical-head reveal. Needlelimbs is missing until its selected model file is supplied.'],
  ['return','Return elevator','Test the return to B1 with the Halloween Key already collected.']
 ];
 export function startHalloweenTestPage({password,onExit}){

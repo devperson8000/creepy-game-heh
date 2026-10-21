@@ -1,5 +1,7 @@
 # Needlelimbs teaser preparation — verification
 
+Update: [the revised cutscene is now playable in the private Halloween tester](2026-10-21-updated-halloween-teaser-test.md), with the missing Needlelimbs model explicitly disclosed. The preparation checks below predate that tester connection.
+
 ## Scope and activation
 
 The replay button is removed from the mode menu. The Monochrome I pre-menu intro slot is wired but has no authored film yet, so the mode menu opens immediately. The replacement Monochrome II film, dialogue and mechanical Monochrome design are staged behind `NEEDLELIMBS_READY=false`.
