@@ -1,0 +1,50 @@
+MONOCHROME II CREATURE REFERENCE SHORTLIST
+Checked: 2026-10-21
+
+Official Sketchfab listing thumbnails, saved for model selection. No source mesh files are included.
+Listing license for all six models: Creative Commons Attribution 4.0 International.
+License: https://creativecommons.org/licenses/by/4.0/
+Images retain their source appearance. comparison.jpg arranges resized previews with number labels and credits.
+See references.json for original thumbnail URLs, source records and SHA-256 checksums.
+
+1. Creeping Shadow Creature – Free Horror 3D Model
+Creator: Purple.Point
+https://sketchfab.com/Purple.Point
+Model: https://sketchfab.com/3d-models/creeping-shadow-creature-free-horror-3d-model-53e77576ca0b4c5988ba2991a4bff075
+Original preview: https://media.sketchfab.com/models/53e77576ca0b4c5988ba2991a4bff075/thumbnails/29708e9a5c9a446592f04f782cb37055/3618ccde0ade44e3b2c39b081109e59a.jpeg
+Local preview: 01-creeping-shadow.jpg
+
+2. Void Demon Stalker Creature
+Creator: Pigcraft
+https://sketchfab.com/s8819296
+Model: https://sketchfab.com/3d-models/void-demon-stalker-creature-8576d7a73d8d462fbe5d765afe6d8136
+Original preview: https://media.sketchfab.com/models/8576d7a73d8d462fbe5d765afe6d8136/thumbnails/cad8a351d05441d39610ac7f72be4be4/7a7dcd6b38bc415881f5b98fae914776.jpeg
+Local preview: 02-void-demon.jpg
+
+3. Tall Fast Horror Monster with Long Claws
+Creator: Pigcraft
+https://sketchfab.com/s8819296
+Model: https://sketchfab.com/3d-models/tall-fast-horror-monster-with-long-claws-74a81838ee6045a9b4df581b90bd68bb
+Original preview: https://media.sketchfab.com/models/74a81838ee6045a9b4df581b90bd68bb/thumbnails/f569e45eeb6f4f5ab036de3a5794a9d2/777f648798b145bca4c49381967cae8d.jpeg
+Local preview: 03-tall-fast-horror.jpg
+
+4. Nightmarish Shadow Horror
+Creator: Pigcraft
+https://sketchfab.com/s8819296
+Model: https://sketchfab.com/3d-models/nightmarish-shadow-horror-03439fb6d19f4472aecfa1b4f72c4936
+Original preview: https://media.sketchfab.com/models/03439fb6d19f4472aecfa1b4f72c4936/thumbnails/3c3e4e10458443c095b273c14bd9a762/fab1c1ccb586474fb2a0e69e9bfa8f94.jpeg
+Local preview: 04-nightmarish-shadow.jpg
+
+5. Shadow Stalker – Horror Creature 3D Model
+Creator: DevPoly3D
+https://sketchfab.com/DevPoly3D
+Model: https://sketchfab.com/3d-models/shadow-stalker-horror-creature-3d-model-298b244a438949f99a6869961186bf99
+Original preview: https://media.sketchfab.com/models/298b244a438949f99a6869961186bf99/thumbnails/40a8e57f28574414b605c95881430f4a/16d57076fee647fcbbbf3a719e4cfb22.jpeg
+Local preview: 05-shadow-stalker.jpg
+
+6. Faceless Boney Horror Demon
+Creator: Pigcraft
+https://sketchfab.com/s8819296
+Model: https://sketchfab.com/3d-models/faceless-boney-horror-demon-8d896c8d527f463985115d526c23c039
+Original preview: https://media.sketchfab.com/models/8d896c8d527f463985115d526c23c039/thumbnails/3ab107381ab540f99244576681e28faa/4dccacdff6d94c7fbee560c9a84ded83.jpeg
+Local preview: 06-faceless-boney-demon.jpg
