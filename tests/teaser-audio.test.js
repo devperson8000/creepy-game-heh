@@ -10,7 +10,8 @@ test('unlocking a suspended audio context joins the current film instead of repl
   createGain(){return {gain:parameter(),connect(){},disconnect(){}};}
   createBuffer(channels,length,rate){return {duration:length/rate,getChannelData:()=>new Float32Array(length)};}
   decodeAudioData(bytes){return Promise.resolve({duration:bytes.byteLength===1?1.22:bytes.byteLength===2?1.817:120});}
-  createBiquadFilter(){return {frequency:parameter(),Q:parameter(),connect(){},disconnect(){}};}
+  createBiquadFilter(){return {frequency:parameter(),Q:parameter(),gain:parameter(),connect(){},disconnect(){}};}
+  createConvolver(){return {connect(){},disconnect(){}};}
   createOscillator(){return {frequency:parameter(),connect(){},disconnect(){},start(){},stop(){}};}
   createBufferSource(){return {connect(){},disconnect(){},start(when=0,offset=0){starts.push({when,offset,duration:this.buffer.duration});},stop(){}};}
   resume(){return this.state==='running'?Promise.resolve():new Promise(resolve=>pending.push(resolve));}

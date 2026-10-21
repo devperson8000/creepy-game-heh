@@ -1,10 +1,14 @@
 import {TEASER_VOICES,TEASER_SOUND_CUES,TEASER_MONSTER_CUE} from './teaser-timeline.js';
 import {MONSTER_SOUND_URL} from './monster-audio.js';
+import {createMetallicTeaserVoice} from './teaser-metallic-voice.js';
 /** Schedule dialogue on the audio clock, so a slow rendered frame cannot miss a line. */
 export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_CUES,monsterCue=TEASER_MONSTER_CUE}={}){
  let context,master,noise,anchor=null,last=-1,lastAt=0,disposed=false,active=false;
- const buffers=new Map(),scheduled=new Set(),nodes=new Set(),abort=new AbortController();
- function track(source,gain,filter){nodes.add(source);source.onended=()=>{nodes.delete(source);source.disconnect();gain?.disconnect();filter?.disconnect();};return source;}
+ const buffers=new Map(),scheduled=new Set(),nodes=new Set(),cleanups=new Map(),abort=new AbortController();
+ function track(source,gain,filter,extraCleanup){
+  nodes.add(source);const release=()=>{if(!nodes.delete(source))return;cleanups.delete(source);source.disconnect();gain?.disconnect();filter?.disconnect();extraCleanup?.();};
+  cleanups.set(source,release);source.onended=release;return source;
+ }
  function schedule(){
   if(disposed||!active||context?.state!=='running'||anchor===null||document.hidden)return;
   const time=context.currentTime-anchor;
@@ -12,7 +16,10 @@ export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_C
    const buffer=buffers.get(cue.file);if(!buffer||scheduled.has(i))continue;
    const offset=Math.max(0,time-cue.at);if(time>=cue.end||offset>=buffer.duration){scheduled.add(i);continue;}
    const source=context.createBufferSource(),gain=context.createGain();source.buffer=buffer;source.loop=cue.file==='monster';gain.gain.value=cue.file==='monster'?.34:.86;
-   source.connect(gain);gain.connect(master);track(source,gain);const when=Math.max(context.currentTime,anchor+cue.at);source.start(when,offset);source.stop(Math.min(when+buffer.duration-offset,anchor+cue.end));scheduled.add(i);
+   source.connect(gain);
+   const metal=cue.file==='monster'?createMetallicTeaserVoice(context,master):null;
+   gain.connect(metal?.input??master);track(source,gain,null,()=>metal?.dispose());
+   const when=Math.max(context.currentTime,anchor+cue.at);source.start(when,offset);source.stop(Math.min(when+buffer.duration-offset,anchor+cue.end));scheduled.add(i);
   }
   for(const [i,cue] of soundCues.entries()){const key=`fx:${i}`;if(scheduled.has(key))continue;scheduled.add(key);if(time<cue.at+.2)sound(cue.kind,Math.max(context.currentTime,anchor+cue.at));}
  }
@@ -33,7 +40,7 @@ export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_C
   g.gain.setValueAtTime(.001,at);g.gain.linearRampToValueAtTime(level,at+.018);g.gain.exponentialRampToValueAtTime(.001,at+duration);source.connect(f);f.connect(g);g.connect(master);track(source,g,f);source.start(at);source.stop(at+duration+.02);
  }
  function pause(){
-  active=false;anchor=null;scheduled.clear();for(const source of nodes){try{source.stop();}catch{}}nodes.clear();if(master)master.gain.setTargetAtTime(0,context.currentTime,.025);
+  active=false;anchor=null;scheduled.clear();for(const source of [...nodes]){try{source.stop();}catch{}cleanups.get(source)?.();}if(master)master.gain.setTargetAtTime(0,context.currentTime,.025);
  }
  function update(time,{muted=false,volume=.8}={}){
   if(disposed)return;resume();
