@@ -1,8 +1,10 @@
 # Monochrome II — darker Backrooms-style options
 
-A new shortlist focused on black silhouettes, strange proportions and barely visible faces. These are **four choices for one creature**, with original model previews. No model has been selected or imported, and the current teaser is unchanged.
+**Selected: 1 — Needlelimbs by Loco.** Source download is pending; the replacement teaser is staged. [Mechanical Monochrome design and status](../mechanical-monochrome/README.md).
 
-**My pick: 1 — Needlelimbs.** Its twisted silhouette is the most unsettling fit for a brief corner reveal. Choose whichever number you prefer.
+A new shortlist focused on black silhouettes, strange proportions and barely visible faces. These are **four choices for one creature**, with original model previews. Needlelimbs has been selected but not imported; the current public teaser is unchanged.
+
+The chosen Needlelimbs silhouette will be used for the brief corner reveal once the actual source rig has been inspected.
 
 ![Four numbered Backrooms creature previews](comparison.jpg)
 

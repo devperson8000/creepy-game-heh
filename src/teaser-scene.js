@@ -3,9 +3,12 @@ import {createCreature,applyIdle} from './creature.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {loadTeaserMonsters,createTeaserMonster} from './teaser-monsters.js';
 import {sampleTeaser} from './teaser-timeline.js';
+import {NEEDLELIMBS_READY} from './teaser-edition.js';
+import {createNeedlelimbsTeaserScene} from './needlelimbs-scene.js';
 
 /** A restrained in-engine teaser: the geometry hides most of every new creature. */
 export function createTeaserScene(){
+ if(NEEDLELIMBS_READY)return createNeedlelimbsTeaserScene();
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x030708);scene.fog=new THREE.Fog(0x060c0d,8,25);
  const camera=new THREE.PerspectiveCamera(54,16/9,.05,45);scene.add(camera);
  const target=new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});target.texture.colorSpace=THREE.SRGBColorSpace;

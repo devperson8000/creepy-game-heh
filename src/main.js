@@ -18,6 +18,9 @@ import './two-tab-test.css';
 import './polish.css';
 import './hunt-clock.css';
 import './halloween-countdown.css';
+import './opening-sequence.css';
+import {playOpeningBeforeMenu} from './opening-sequence.js';
+import {createOpeningFilm} from './opening-film.js';
 import {createTwoTabTest,readTestSession} from './two-tab-test.js';
 import {createVoiceChat} from './voice-chat.js';
 import {startScene} from './scene.js';
@@ -52,7 +55,6 @@ try {
     showHalloweenTest:!testFrame,
     onHalloweenTest:()=>requestHalloweenTestAccess({onAuthorized:password=>{menu.dispose();startHalloweenTestPage({password,onExit:()=>makeMenu()});}}),
     createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});if(testFrame)testClient=client;return client;},
-    onReplay:()=>startHalloweenReplay(document.querySelector('#scene'),{onExit:()=>makeMenu()}),
     onSingleplayer:async()=>{const ready=preparing();try{await releaseReady;await halloweenRelease.refresh();window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,halloween:previewAuthorized||halloweenEnabled()});}catch(error){failed(error);}finally{ready();}},
     onMultiplayer:async({client,session})=>{const ready=preparing();try{if(client.id===session.ownerId){await releaseReady;await halloweenRelease.refresh();session={...session,halloween:previewAuthorized||halloweenEnabled()};}else session=await waitForHalloweenSession(client,session);window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});configureTestInput(window.monochrome);}catch(error){client.close();failed(error);}finally{ready();}}
    });
@@ -87,7 +89,7 @@ try {
   }
   else if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
   else if(import.meta.env.DEV&&new URLSearchParams(location.search).get('mode')==='finale'){void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{history.replaceState({},'',location.pathname);makeMenu();}}).then(value=>{window.monochromeFinale=value;});}
-  else makeMenu();
+  else playOpeningBeforeMenu({container:document.querySelector('#scene'),onComplete:()=>makeMenu(),createFilm:createOpeningFilm,reducedMotion:gamePreferences().reducedMotion});
  }
 }
 catch(error) {

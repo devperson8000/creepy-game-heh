@@ -22,3 +22,13 @@ These are alternate downloadable models selected for short, partial trailer glim
 - Modifications: removed separate scenery/debris; merged coincident vertices; embedded/resized textures; scaled for a brief doorway glimpse.
 
 Only the files used by the teaser are shipped. Original downloads and rejected candidates remain outside the published game.
+
+## Staged replacement: Needlelimbs
+
+The user selected **Backrooms Entity 38 Needlelimbs** by **Loco** on 21 October 2026.
+
+Source: https://sketchfab.com/3d-models/backrooms-entity-38-needlelimbs-6e8ad10cbcbb49bda63a1b21a660533d
+
+Listing license: https://creativecommons.org/licenses/by/4.0/
+
+**No Needlelimbs mesh is included yet.** The official model download requires sign-in. `src/needlelimbs-actor.js` prepares an importer for the real animated asset; the replacement edit remains disabled until that source is obtained, credited and visually verified. The mechanical Monochrome head is original game geometry authored in `src/mechanical-head.js`.

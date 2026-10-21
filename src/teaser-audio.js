@@ -1,27 +1,27 @@
-import {TEASER_VOICES,TEASER_SOUND_CUES} from './teaser-timeline.js';
+import {TEASER_VOICES,TEASER_SOUND_CUES,TEASER_MONSTER_CUE} from './teaser-timeline.js';
 import {MONSTER_SOUND_URL} from './monster-audio.js';
 /** Schedule dialogue on the audio clock, so a slow rendered frame cannot miss a line. */
-export function createTeaserAudio(){
+export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_CUES,monsterCue=TEASER_MONSTER_CUE}={}){
  let context,master,noise,anchor=null,last=-1,lastAt=0,disposed=false,active=false;
  const buffers=new Map(),scheduled=new Set(),nodes=new Set(),abort=new AbortController();
  function track(source,gain,filter){nodes.add(source);source.onended=()=>{nodes.delete(source);source.disconnect();gain?.disconnect();filter?.disconnect();};return source;}
  function schedule(){
   if(disposed||!active||context?.state!=='running'||anchor===null||document.hidden)return;
   const time=context.currentTime-anchor;
-  for(const [i,cue] of [...TEASER_VOICES,{at:20.05,end:20.65,file:'monster'}].entries()){
+  for(const [i,cue] of [...voices,monsterCue].entries()){
    const buffer=buffers.get(cue.file);if(!buffer||scheduled.has(i))continue;
    const offset=Math.max(0,time-cue.at);if(time>=cue.end||offset>=buffer.duration){scheduled.add(i);continue;}
    const source=context.createBufferSource(),gain=context.createGain();source.buffer=buffer;source.loop=cue.file==='monster';gain.gain.value=cue.file==='monster'?.34:.86;
    source.connect(gain);gain.connect(master);track(source,gain);const when=Math.max(context.currentTime,anchor+cue.at);source.start(when,offset);source.stop(Math.min(when+buffer.duration-offset,anchor+cue.end));scheduled.add(i);
   }
-  for(const [i,cue] of TEASER_SOUND_CUES.entries()){const key=`fx:${i}`;if(scheduled.has(key))continue;scheduled.add(key);if(time<cue.at+.2)sound(cue.kind,Math.max(context.currentTime,anchor+cue.at));}
+  for(const [i,cue] of soundCues.entries()){const key=`fx:${i}`;if(scheduled.has(key))continue;scheduled.add(key);if(time<cue.at+.2)sound(cue.kind,Math.max(context.currentTime,anchor+cue.at));}
  }
  function resume(){
   if(disposed)return;try{
    if(!context){
     const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return;context=new C();master=context.createGain();master.gain.value=0;master.connect(context.destination);
     noise=context.createBuffer(1,context.sampleRate,context.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
-    for(const file of ['radio-out','monster'])void fetch(file==='monster'?MONSTER_SOUND_URL:`/audio/halloween/${file}.mp3`,{signal:abort.signal}).then(r=>{if(!r.ok)throw new Error('Tape audio unavailable');return r.arrayBuffer();}).then(bytes=>context.decodeAudioData(bytes)).then(buffer=>{if(!disposed){buffers.set(file,buffer);schedule();}}).catch(()=>{});
+    for(const file of new Set([...voices.map(v=>v.file),'monster']))void fetch(file==='monster'?MONSTER_SOUND_URL:`/audio/halloween/${file}.mp3`,{signal:abort.signal}).then(r=>{if(!r.ok)throw new Error('Tape audio unavailable');return r.arrayBuffer();}).then(bytes=>context.decodeAudioData(bytes)).then(buffer=>{if(!disposed){buffers.set(file,buffer);schedule();}}).catch(()=>{});
    }
    void context.resume().then(()=>{if(!disposed&&active&&anchor===null){anchor=context.currentTime-(last+Math.max(0,(performance.now()-lastAt)/1000));}schedule();}).catch(()=>{});
   }catch{}
