@@ -7,7 +7,7 @@ import {waitForHalloweenSession} from './halloween-session.js';
 import {startHalloweenReplay} from './halloween-replay.js';
 import './finale.css';
 import {startFinalePreview} from './finale-player.js';
-import {gamePreferences} from './preferences.js';
+import {gamePreferences,reducedMotion} from './preferences.js';
 import './style.css';
 import './lobby-menu.css';
 import './coop-game.css';
@@ -89,7 +89,7 @@ try {
   }
   else if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
   else if(import.meta.env.DEV&&new URLSearchParams(location.search).get('mode')==='finale'){void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{history.replaceState({},'',location.pathname);makeMenu();}}).then(value=>{window.monochromeFinale=value;});}
-  else playOpeningBeforeMenu({container:document.querySelector('#scene'),onComplete:()=>makeMenu(),createFilm:createOpeningFilm,reducedMotion:gamePreferences().reducedMotion});
+  else playOpeningBeforeMenu({container:document.querySelector('#scene'),onComplete:()=>makeMenu(),createFilm:createOpeningFilm,reducedMotion:reducedMotion()});
  }
 }
 catch(error) {

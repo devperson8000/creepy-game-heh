@@ -1,0 +1,6 @@
+<!doctype html><html><body><button id="sound">Enable sound</button><script type="module">
+import {createOpeningAudio} from '/src/opening-audio.js';import {openingFrame} from '/src/opening-sequence.js';
+window.openingAudio=createOpeningAudio();await openingAudio.ready;
+window.updateOpeningAudio=time=>openingAudio.update(openingFrame(time));
+document.querySelector('#sound').onclick=()=>openingAudio.resume();window.openingAudioReady=true;
+</script></body></html>

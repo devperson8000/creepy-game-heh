@@ -1,0 +1,10 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/src/opening-sequence.css"></head><body style="background:black"><div id="scene"></div><script type="module">
+import {playOpeningBeforeMenu} from '/src/opening-sequence.js';
+window.startOpeningCase=({loading=false,fail=false,reducedMotion=false}={})=>{
+ const stats={created:0,disposed:0,completed:0,renders:0};let resolve,reject;
+ const ready=new Promise((yes,no)=>{resolve=yes;reject=no;});if(!loading&&!fail)resolve();
+ const controller=playOpeningBeforeMenu({container:document.querySelector('#scene'),reducedMotion,onComplete(){stats.completed++;},createFilm(){stats.created++;return {ready,render(){stats.renders++;},dispose(){stats.disposed++;}};}});
+ if(fail)reject(new Error('Deliberately unavailable WebGL film'));
+ window.openingCase={stats,resolve,dispose:()=>controller.dispose()};return stats;
+};
+</script></body></html>
