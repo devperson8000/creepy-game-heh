@@ -18,7 +18,7 @@ import {groundHeight as legacyGroundHeight} from './level.js';
 import {createGameUI} from './game-ui.js';
 import {gameInput} from './game-input.js';
 import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
-import {createTorch} from './torch.js';
+import {createTorch,sampleTorchSurface} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createMovementPrediction,createPoseBuffer} from './coop-motion.js';
@@ -61,7 +61,7 @@ export function startCoopGame(container,{client,session}){
  const drawerRequests=createDrawerRequests({send:action=>client.send('action',{action})});
  let enemyView={position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
  let latestSequence=-1,lastNotice=0,scareStatus=null,lastStatus='alive',outcome=null,spectateId=null,lastSnapshotAt=performance.now(),leaving=false;
- let hold=0,holdId=null,latched=false,buffer='',inputClock=0,snapshotClock=0,disconnected=false,surfaceDistance=Infinity;
+ let hold=0,holdId=null,latched=false,buffer='',inputClock=0,snapshotClock=0,disconnected=false,surfaceDistance=Infinity,surfaceHit=null;
  let huntClockStamp=null;
  const avatars=new Map(),noiseSequences=new Map(),poseBuffers=new Map(),enemyBuffer=createPoseBuffer({adaptive:true});let avatarAsset;
  const prediction=createMovementPrediction(state.players.get(localId),world.canMove);
@@ -141,7 +141,7 @@ export function startCoopGame(container,{client,session}){
  }
  function currentTarget(){
   const own=local();if(own?.status!=='alive')return null;
-  if(own.hidden){surfaceDistance=.55;return{id:'leave',type:'leave',label:'Leave the closet',duration:.2};}
+  if(own.hidden){return{id:'leave',type:'leave',label:'Leave the closet',duration:.2};}
   camera.updateMatrixWorld();camera.getWorldDirection(direction);
   for(const player of state.players.values())if(player.status==='downed'&&Math.hypot(player.x-own.x,player.z-own.z,player.height-own.height)<2){
    point.set(player.x-own.x,0,player.z-own.z).normalize();
@@ -149,8 +149,7 @@ export function startCoopGame(container,{client,session}){
    const target={id:`revive:${player.id}`,type:'revive',position:player};
    if(point.dot(looking)>.65&&world.canSeeInteraction(own,target))return {...target,label:`Revive ${player.name}`,duration:2.5};
   }
-  raycaster.setFromCamera(new THREE.Vector2(),camera);raycaster.far=2.5;const hit=raycaster.intersectObjects(world.rayMeshes.filter(mesh=>{if(mesh.userData.actor||mesh.userData.drawerPart)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;}),false)[0];
-  surfaceDistance=hit?.distance??Infinity;return targetInfo(drawerTargetFromHit(world.targets,hit));
+  return targetInfo(drawerTargetFromHit(world.targets,surfaceHit));
  }
  function startScare(){
   if(jumpscare.active)return;ui.overlay='jumpscare';ui.el('game-screen').hidden=true;ui.el('keypad-dialog').hidden=true;ui.el('jumpscare-border').hidden=false;document.body.classList.add('jumpscare-active');input.clear();document.exitPointerLock?.();jumpscare.start();audio.playJumpscare();scareStatus=true;
@@ -315,6 +314,7 @@ export function startCoopGame(container,{client,session}){
   }
   if(watched.hidden&&watched.closetId){world.targets.get(watched.closetId).mesh.visible=!!world.targets.get(watched.closetId).physicalGrille;}
   for(const closet of world.closets)if(!(watched.hidden&&watched.closetId===closet.id))closet.mesh.visible=true;
+  ({distance:surfaceDistance,hit:surfaceHit}=sampleTorchSurface({camera,raycaster,meshes:world.rayMeshes,hidden:watched.hidden}));
   let target=!ui.overlay&&!document.hidden?currentTarget():null;
   const held=retainDrawerTarget(target,holdId,world.targets,input.interact);if(held!==target)target=targetInfo(held);
   if(!input.interact){hold=0;holdId=null;latched=false;}

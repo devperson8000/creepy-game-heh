@@ -1,6 +1,18 @@
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 
+// Read the rendered camera, even when interaction is disabled (reviving or spectating).
+export function sampleTorchSurface({camera,raycaster,meshes,hidden=false}){
+ if(hidden)return {distance:.55,hit:null};
+ camera.updateMatrixWorld();raycaster.setFromCamera(new THREE.Vector2(),camera);raycaster.far=2.5;
+ const hit=raycaster.intersectObjects(meshes.filter(mesh=>{
+  if(mesh.userData.actor||mesh.userData.drawerPart)return false;
+  for(let parent=mesh;parent;parent=parent.parent)if(!parent.visible)return false;
+  return true;
+ }),false)[0];
+ return {distance:hit?.distance??Infinity,hit};
+}
+
 export function createTorch(scene,camera,{halloween=false}={}){
  scene.add(camera);
  const reactive=new Map();

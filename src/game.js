@@ -162,8 +162,8 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(arrival?.active){
    torch.model.position.y-=.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
-   torch.beam.intensity=arrival.elapsed>6.7&&torch.on?140:0;
-   if(arrival.update(frameDelta,camera,{...player,yaw:input.yaw})){resume();torch.beam.intensity=torch.on?140:0;}
+   torch.beam.intensity=arrival.elapsed>6.7&&torch.on?torch.power:0;
+   if(arrival.update(frameDelta,camera,{...player,yaw:input.yaw})){resume();torch.beam.intensity=torch.on?torch.power:0;}
    renderDirty=true;
   }
   if(jumpscare.active){

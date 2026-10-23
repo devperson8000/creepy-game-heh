@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {createTorch} from '../src/torch.js';
+import {createTorch,sampleTorchSurface} from '../src/torch.js';
 import {createHalloweenProps} from '../src/halloween-props.js';
 
 test('the torch beam follows camera position and aim',()=>{
@@ -54,4 +54,17 @@ test('Halloween torch softens at close surfaces and restores reach smoothly; leg
 test('decorative flames keep their self-lit material and small props avoid blanket shadow casting',()=>{
  const scene=new THREE.Scene(),props=createHalloweenProps(),candles=props.candleCluster(),pumpkin=props.pumpkin();scene.add(candles,pumpkin);let flame,body;candles.traverse(m=>{if(m.userData.flame&&!m.material.transparent)flame=m;else if(m.isMesh&&!m.userData.flame)body=m;});const original=flame.material;
  createTorch(scene,new THREE.PerspectiveCamera(),{halloween:true});assert.equal(flame.material.uuid,original.uuid);assert.equal(body.castShadow,false);assert.equal(pumpkin.body.castShadow,true);props.dispose();
+});
+
+test('surface sampling follows the current view independently of interaction eligibility',()=>{
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(),raycaster=new THREE.Raycaster();
+ const wall=new THREE.Mesh(new THREE.PlaneGeometry(10,10),new THREE.MeshBasicMaterial());wall.position.z=-.55;scene.add(wall);scene.updateMatrixWorld(true);
+ const sample=hidden=>sampleTorchSurface({camera,raycaster,meshes:[wall],hidden});
+ assert.ok(Math.abs(sample(false).distance-.55)<.001);
+ // A spectator or a survivor targeting a revive still samples the camera's new pose.
+ camera.position.x=20;assert.equal(sample(false).distance,Infinity);
+ assert.equal(sample(true).distance,.55);
+ camera.position.x=0;assert.ok(sample(false).hit);
+ wall.visible=false;assert.equal(sample(false).distance,Infinity);
+ wall.visible=true;wall.userData.actor=true;assert.equal(sample(false).distance,Infinity);
 });
