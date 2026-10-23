@@ -20,7 +20,7 @@ export function createOpeningFilm(container){
  function resize(){if(disposed)return;const w=container.clientWidth||innerWidth,h=container.clientHeight||innerHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();}
  const observer=new ResizeObserver(resize);observer.observe(container);resize();quality.update(0,gamePreferences().quality);
  function render(frame,{reducedMotion=false}={}){if(disposed)return;const {time}=frame,delta=Math.max(0,time-last);quality.update(delta,gamePreferences().quality);last=time;
-  set.update(time);camera.position.fromArray(frame.camera);look.fromArray(frame.look);
+  set.update(time,{reducedMotion});camera.position.fromArray(frame.camera);look.fromArray(frame.look);
   const walking=(time<20||(time>28.8&&time<38))&&!reducedMotion;
   if(walking)camera.position.y+=Math.sin(time*9.4)*.012;
   camera.lookAt(look);const falling=ease(38,41,time);if(!reducedMotion)camera.rotateZ(Math.sin(falling*3.5)*.16);

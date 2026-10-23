@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {createHalloweenProps} from './halloween-props.js';
 
 /** Original, locally authored street/house/passage: no remote assets during startup. */
 export function createOpeningSet(scene){
  const street=new THREE.Group(),house=new THREE.Group(),passage=new THREE.Group();scene.add(street,house,passage);
+ const decorations=createHalloweenProps();
  const textures=[],materials=[],geometries=[];
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.85,...extra});materials.push(m);return m;};
  function texture(draw,w=512,h=512){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;draw(canvas.getContext('2d'),w,h);const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;textures.push(map);return map;}
@@ -26,9 +28,9 @@ export function createOpeningSet(scene){
  function rod(group,a,b,r,m=metal){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),mesh=new THREE.Mesh(cube,m);mesh.position.copy(A).add(B).multiplyScalar(.5);mesh.scale.set(r,A.distanceTo(B),r);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),B.sub(A).normalize());group.add(mesh);return mesh;}
  function sign(group,text,w,h,x,y,z,{background='#292b23',color='#d4c6a2',size=38}={}){const map=texture((c,W,H)=>{c.fillStyle=background;c.fillRect(0,0,W,H);c.fillStyle=color;c.textAlign='center';c.textBaseline='middle';c.font=`${size}px Georgia`;text.split('\n').forEach((line,i,lines)=>c.fillText(line,W/2,H/2+(i-(lines.length-1)/2)*size*1.2));},512,256);return box(group,w,h,.025,x,y,z,material(0xffffff,{map}));}
  function window(group,x,y,z,w=1.7,h=1.9){box(group,w+.18,h+.18,.16,x,y,z,trim);box(group,w,h,.18,x,y,z+.02,windowGlow);box(group,.055,h,.21,x,y,z+.04,wood);box(group,w,.055,.21,x,y,z+.04,wood);for(const side of [-1,1])box(group,.24,h,.23,x+side*(w/2-.12),y,z+.04,cloth);box(group,w+.25,.07,.32,x,y-h/2,z+.05,trim);}
- function pumpkin(group,x,y,z,s=1){const p=new THREE.Group();p.position.set(x,y,z);p.scale.setScalar(s);group.add(p);ball(p,0,.24,0,.28,.26,.26,orange);for(let i=0;i<8;i++){const a=i*Math.PI/4;ball(p,Math.sin(a)*.07,.24,Math.cos(a)*.07,.215,.25,.2,orange);}rod(p,[0,.45,0],[.035,.58,-.02],.055,skinny);
-  for(const side of [-1,1]){const shape=new THREE.Shape();shape.moveTo(0,0);shape.lineTo(.075,0);shape.lineTo(.04,.08);shape.closePath();const g=new THREE.ShapeGeometry(shape);geometries.push(g);const eye=new THREE.Mesh(g,glow);eye.position.set(side*.105-.04,.29,.255);p.add(eye);}box(p,.19,.045,.015,0,.18,.262,glow);box(p,.035,.04,.018,-.05,.2,.272,orange);return p;}
- function web(group,x,y,z,s=1){const points=[];for(let i=0;i<7;i++){const a=i/6*Math.PI/2;points.push(new THREE.Vector3(x,y,z),new THREE.Vector3(x+Math.cos(a)*s,y-Math.sin(a)*s,z));}for(let j=1;j<=4;j++)for(let i=0;i<6;i++){const a=i/6*Math.PI/2,b=(i+1)/6*Math.PI/2;points.push(new THREE.Vector3(x+Math.cos(a)*s*j/4,y-Math.sin(a)*s*j/4,z),new THREE.Vector3(x+Math.cos(b)*s*j/4,y-Math.sin(b)*s*j/4,z));}const g=new THREE.BufferGeometry().setFromPoints(points),m=new THREE.LineBasicMaterial({color:0xb5b4a0,transparent:true,opacity:.28});geometries.push(g);materials.push(m);group.add(new THREE.LineSegments(g,m));}
+ function decorate(parent,model,x,y,z){model.position.set(x,y,z);parent.add(model);return model;}
+ function pumpkin(parent,x,y,z,s=1){return decorate(parent,decorations.pumpkin({scale:s}),x,y,z);}
+ function web(parent,x,y,z,s=1){return decorate(parent,decorations.web({size:s}),x,y,z);}
  // A recognizable residential street, with neighboring homes and bare garden trees.
  box(street,80,.15,19,0,-.21,25,material(0x272b2e));box(street,80,.12,2.4,0,-.09,14.3,material(0x7c7e76));box(street,30,.1,16,0,-.13,5.4,material(0x26362a));box(street,2.6,.11,14,0,-.02,7,material(0x6d7067));
  for(const x of [-17,17]){box(street,9,4.4,8,x,2,-1,siding);box(street,10,.3,9,x,4.4,-1,roof);window(street,x-2,2.1,3.1);window(street,x+2,2.1,3.1);}
@@ -43,11 +45,12 @@ export function createOpeningSet(scene){
  for(const x of [-1.6,1.6]){box(street,.12,3.25,.12,x,1.6,.75,trim);box(street,.4,.42,.3,x,2.65,.75,dark);ball(street,x,2.66,.93,.11,.16,.04,glow);}
  box(street,3.5,.16,2.2,0,3.3,.7,roof);
  const doorPivot=new THREE.Group();doorPivot.position.set(-.82,0,0);street.add(doorPivot);box(doorPivot,1.62,2.8,.12,.81,1.4,0,material(0x283a32));for(const y of [.63,1.7])box(doorPivot,1.28,.85,.025,.81,y,.08,material(0x32483b));ball(doorPivot,1.43,1.2,.13,.045,.045,.045,material(0xb69c58,{metalness:.7}));
- const wreathGeo=new THREE.TorusGeometry(.24,.055,6,24);geometries.push(wreathGeo);const wreath=new THREE.Mesh(wreathGeo,orange);wreath.position.set(.81,2.05,.12);doorPivot.add(wreath);sign(doorPivot,'WELCOME',.44,.17,.81,2.02,.19,{background:'#271d13',color:'#d7b27a',size:54});
+ decorate(doorPivot,decorations.wreath(),.81,2.05,.12);sign(doorPivot,'WELCOME',.44,.17,.81,2.02,.19,{background:'#271d13',color:'#d7b27a',size:54});
  for(const x of [-.95,.95])box(street,.13,2.95,.24,x,1.47,0,trim);box(street,2,.13,.24,0,2.95,0,trim);
  sign(street,'HALLOWEEN\nPARTY',1.35,.7,2.1,1.18,.25,{background:'#b27d39',color:'#251b16',size:48});
  for(const [x,z,s] of [[-1.1,1.5,1.1],[1.35,1.4,.8],[-1.45,3.9,.7],[1.6,5.6,.8],[-1.7,8.5,.85]])pumpkin(street,x,0,z,s);
- for(let i=0;i<23;i++){const x=-5.7+i*.52;ball(street,x,3.22-Math.sin(i/22*Math.PI)*.27,.27,.045,.055,.045,i%2?glow:orange);if(i<22)rod(street,[x,3.22-Math.sin(i/22*Math.PI)*.27,.27],[x+.52,3.22-Math.sin((i+1)/22*Math.PI)*.27,.27],.012,dark);}
+ decorate(street,decorations.stringLights({width:11.44,count:23,sag:.27}),.02,3.22,.27);
+ decorate(street,decorations.lantern({scale:.85}),-1.3,.02,.4);
  web(street,-1.48,3.16,.88,.8);
  // Empty party: tableware, abandoned chair, bunting, couch, rug, framed pictures.
  box(house,12,.14,9,0,-.08,-4.5,floor);box(house,12,.12,9,0,3.4,-4.5,material(0x898773));
@@ -62,7 +65,9 @@ export function createOpeningSet(scene){
  const chair=new THREE.Group();chair.position.set(2.95,.08,-4);chair.rotation.z=.3;chair.rotation.y=-.45;house.add(chair);box(chair,.65,.08,.65,0,.48,0,wood);box(chair,.65,.65,.07,0,.83,.29,wood);for(const x of [-.26,.26])for(const z of [-.26,.26])box(chair,.05,.5,.05,x,.21,z,wood);
  for(const x of [-3.4,3.4]){box(house,1.15,1.6,.1,x,2,-8.82,wood);box(house,.99,1.42,.11,x,2,-8.75,material(0x242b24));sign(house,x<0?'HOME\nSWEET HOME':'OCTOBER\n31',.76,.8,x,2,-8.67,{background:'#242b24',color:'#9c987b',size:42});}
  sign(house,'HAPPY HALLOWEEN',3.5,.48,1.8,2.8,-8.7,{background:'#342921',color:'#ce9246',size:42});
- for(let i=0;i<12;i++){const x=-5.5+i;rod(house,[x,2.92,-2],[x+1,2.92,-2],.012,dark);const shape=new THREE.Shape();shape.moveTo(-.22,0);shape.lineTo(.22,0);shape.lineTo(0,-.43);shape.closePath();const g=new THREE.ShapeGeometry(shape);geometries.push(g);const flag=new THREE.Mesh(g,i%2?orange:black);flag.material.side=THREE.DoubleSide;flag.position.set(x,2.91,-2);house.add(flag);}
+ decorate(house,decorations.bunting({width:11.7,count:24}),0,2.92,-2);
+ decorate(house,decorations.candleCluster({scale:.85}),-2.4,.65,-4.6);pumpkin(house,-3.05,.65,-4.6,.8);
+ decorate(house,decorations.bats(),-5.86,2.58,-5.4).rotation.y=Math.PI/2;decorate(house,decorations.bats(),5.86,2.58,-6).rotation.y=-Math.PI/2;
  web(house,-5.88,3.25,-8.72,1.3);web(house,3.1,3.25,-8.72,.8);
  for(let i=0;i<32;i++){const scrap=box(house,.035,.004,.08,-1+random()*6,.025,-1-random()*6,i%2?orange:trim);scrap.rotation.y=random()*6.2;}
  // One lonely ceiling pendant. Its warm spill dies before the wall is crossed.
@@ -78,5 +83,5 @@ export function createOpeningSet(scene){
  box(passage,3.8,.15,.16,0,-.02,-17.64,metal);for(const x of [-1.78,1.78])box(passage,.1,.1,7.1,x,-.02,-21.2,metal);
  sign(passage,'SERVICE ACCESS\nKEEP CLEAR',.65,.35,1.8,1.5,-15.8,{background:'#343c32',color:'#c4c3a0',size:38}).rotation.y=-Math.PI/2;
  for(let i=0;i<15;i++){const scrap=box(passage,.05,.02,.3,(random()-.5)*3.1,-.02,-10-random()*7,wood);scrap.rotation.y=random()*6;}
- return {street,house,passage,wall,update(time){street.visible=time<13.5;house.visible=time<31.6;passage.visible=time>28;doorPivot.rotation.y=1.48*(Math.max(0,Math.min(1,(time-7.6)/3.3))**2*(3-2*Math.max(0,Math.min(1,(time-7.6)/3.3))));houseLights.visible=time<30.2;pendant.intensity=55*(1-.75*Math.max(0,Math.min(1,(time-17)/10)));},dispose(){textures.forEach(t=>t.dispose());materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());}};
+ return {street,house,passage,wall,update(time,{reducedMotion=false}={}){decorations.update(time,{reducedMotion});street.visible=time<13.5;house.visible=time<31.6;passage.visible=time>28;doorPivot.rotation.y=1.48*(Math.max(0,Math.min(1,(time-7.6)/3.3))**2*(3-2*Math.max(0,Math.min(1,(time-7.6)/3.3))));houseLights.visible=time<30.2;pendant.intensity=55*(1-.75*Math.max(0,Math.min(1,(time-17)/10)));},dispose(){decorations.dispose();textures.forEach(t=>t.dispose());materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());}};
 }
