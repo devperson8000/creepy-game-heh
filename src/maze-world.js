@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {buildMazeWallSurfaces,mazeWallHalf} from './maze-wall-surfaces.js';
 import {CELL,worldPoint,gridPoint,walkable,groundHeight as sampleGround,randomSource} from './level.js';
 import {createMazeNavigator} from './maze-navigation.js';
 import {createHalloweenWorld} from './halloween-world.js';
@@ -20,15 +21,8 @@ export function createMazeWorld(run){
  function target(id,type,mesh,data={}){const t={id,type,mesh,...data};mesh.userData.interactId=id;targets.set(id,t);return t;}
  function sign(text,w,h,x,y,z,{rotation=0,background='#171e17',color='#aaa993',size=58}={}){const c=document.createElement('canvas');c.width=768;c.height=256;const ctx=c.getContext('2d');ctx.fillStyle=background;ctx.fillRect(0,0,768,256);ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`${size}px monospace`;ctx.fillText(text,384,128,720);const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map,side:THREE.DoubleSide,roughness:1}));mesh.position.set(x,y,z);mesh.rotation.y=rotation;scene.add(mesh);rayMeshes.push(mesh);return mesh;}
  function fixture(x,y,z,strength=8){box(.72,.07,.2,x,y+.04,z,dark);const tube=box(.6,.025,.12,x,y,z,white.clone());tube.userData.ceilingLight=true;const light=new THREE.PointLight(0xd7d9be,strength,7,1.7);light.position.set(x,y-.08,z);lamps.push({light,tube,base:strength,position:{x,z,height:groundHeight({x,z})}});}
- const roomCells=new Set(layout.rooms.map(p=>`${p.x},${p.z}`)),closetCells=new Set(layout.closets.map(p=>`${p.x},${p.z}`));
- function halfWall(x,z){return CELL/2+([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>roomCells.has(`${x+dx},${z+dz}`))?.1:.4);}
- // Small instance chunks give raycasting and frustum culling useful bounds.
- const chunks=new Map();
- for(let z=layout.mazeStart;z<size;z++)for(let x=0;x<size;x++)if(!layout.grid[z][x]&&!closetCells.has(`${x},${z}`)){
-  const key=`${x>>3},${z>>3}`;if(!chunks.has(key))chunks.set(key,[]);chunks.get(key).push({x,z});
- }
- const matrix=new THREE.Matrix4(),q=new THREE.Quaternion();
- for(const cells of chunks.values()){const mesh=new THREE.InstancedMesh(boxGeometry,concrete,cells.length);cells.forEach((c,i)=>{const p=worldPoint(c),w=halfWall(c.x,c.z)*2;matrix.compose(new THREE.Vector3(p.x,floor+height/2,p.z),q,new THREE.Vector3(w,height,w));mesh.setMatrixAt(i,matrix);});mesh.computeBoundingSphere();mesh.receiveShadow=true;scene.add(mesh);rayMeshes.push(mesh);}
+ const halfWall=(x,z)=>mazeWallHalf(layout,x,z),wallSurfaces=buildMazeWallSurfaces(layout);
+ for(const geometry of wallSurfaces.geometries){const mesh=new THREE.Mesh(geometry,concrete);mesh.name='joined-maze-wall';mesh.userData.mazeWall=true;mesh.receiveShadow=true;scene.add(mesh);rayMeshes.push(mesh);}
  const first=worldPoint({x:0,z:layout.mazeStart}),last=worldPoint({x:size-1,z:size-1}),center={x:(first.x+last.x)/2,z:(first.z+last.z)/2};
  box(size*CELL,.12,(size-layout.mazeStart)*CELL,center.x,floor-.06,center.z,floorMat);
  const roofStart=worldPoint({x:0,z:7}).z-CELL/2,roofEnd=last.z+CELL/2;box(size*CELL,.12,roofEnd-roofStart,center.x,floor+height+.06,(roofStart+roofEnd)/2);
@@ -95,8 +89,7 @@ export function createMazeWorld(run){
  });
  layout.closets.forEach((cell,index)=>{
   const p=worldPoint(cell),n=cell.normal,w=halfWall(cell.x,cell.z)*2,g=new THREE.Group();g.position.set(p.x,floor,p.z);g.rotation.y=Math.atan2(n.x,n.z);scene.add(g);
-  const side=(w-1.12)/2;for(const x of [-1,1])box(side,height,w,x*(.56+side/2),height/2,0,concrete,g);
-  box(1.12,height,w-1.05,0,height/2,-.525,concrete,g);box(1.12,height-2.25,1.05,0,(height+2.25)/2,w/2-.525,concrete,g);
+  // Concrete casing is part of the joined wall union; only its inset door is separate.
   const door=new THREE.Group();door.position.set(0,0,w/2+.008);g.add(door);
   // Actual open grille: upper/lower panels surround separate world-space slats.
   box(1.08,.9,.06,0,.45,0,wood,door);box(1.08,.24,.06,0,2.13,0,wood,door);
@@ -144,5 +137,5 @@ export function createMazeWorld(run){
   if(Math.hypot(player.x-lastX,player.z-lastZ)>.7){selection=[...lamps].sort((a,b)=>Math.hypot(a.position.x-player.x,a.position.z-player.z,a.position.height-groundHeight(player))-Math.hypot(b.position.x-player.x,b.position.z-player.z,b.position.height-groundHeight(player)));lastX=player.x;lastZ=player.z;}
   ceilingLights.forEach((light,i)=>{const source=selection[i]?.light;light.intensity=source?.intensity??0;if(source)light.position.copy(source.position);});
  }
- return {scene,targets,rayMeshes,wallNotes,halloween,canMove,groundHeight,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:cp.x-cn.x*.65,z:cp.z-cn.z*.65},get doorProgress(){return doorProgress;}};
+ return {scene,targets,rayMeshes,wallSurfaces,wallNotes,halloween,canMove,groundHeight,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:cp.x-cn.x*.65,z:cp.z-cn.z*.65},get doorProgress(){return doorProgress;}};
 }
