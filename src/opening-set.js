@@ -53,7 +53,7 @@ export function createOpeningSet(scene){
  decorate(street,decorations.lantern({scale:.85}),-1.3,.02,.4);
  web(street,-1.48,3.16,.88,.8);
  // Empty party: tableware, abandoned chair, bunting, couch, rug, framed pictures.
- box(house,12,.14,9,0,-.08,-4.5,floor);box(house,12,.12,9,0,3.4,-4.5,material(0x898773));
+ const houseFloor=box(house,12,.14,9,0,-.08,-4.5,floor);box(house,12,.12,9,0,3.4,-4.5,material(0x898773));
  for(const x of [-6,6]){box(house,.18,3.4,9,x,1.65,-4.5,paper);box(house,.22,.16,9,x, .08,-4.5,trim);}
  const wall=box(house,12,3.4,.18,0,1.65,-9,paper);wall.name='the-wall';box(house,12,.17,.22,0,.08,-8.88,trim);box(house,12,.1,.22,0,3.25,-8.88,trim);
  box(house,2.4,.02,3.3,.3,.02,-3.4,material(0x4d342b));
@@ -83,5 +83,5 @@ export function createOpeningSet(scene){
  box(passage,3.8,.15,.16,0,-.02,-17.64,metal);for(const x of [-1.78,1.78])box(passage,.1,.1,7.1,x,-.02,-21.2,metal);
  sign(passage,'SERVICE ACCESS\nKEEP CLEAR',.65,.35,1.8,1.5,-15.8,{background:'#343c32',color:'#c4c3a0',size:38}).rotation.y=-Math.PI/2;
  for(let i=0;i<15;i++){const scrap=box(passage,.05,.02,.3,(random()-.5)*3.1,-.02,-10-random()*7,wood);scrap.rotation.y=random()*6;}
- return {street,house,passage,wall,update(time,{reducedMotion=false}={}){decorations.update(time,{reducedMotion});street.visible=time<13.5;house.visible=time<31.6;passage.visible=time>28;doorPivot.rotation.y=1.48*(Math.max(0,Math.min(1,(time-7.6)/3.3))**2*(3-2*Math.max(0,Math.min(1,(time-7.6)/3.3))));houseLights.visible=time<30.2;pendant.intensity=55*(1-.75*Math.max(0,Math.min(1,(time-17)/10)));},dispose(){decorations.dispose();textures.forEach(t=>t.dispose());materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());}};
+ return {street,house,passage,wall,houseFloor,doorPivot,chair,pendant,houseLights,streetLights,update(time,{reducedMotion=false}={}){decorations.update(time,{reducedMotion});street.visible=time<13.5;house.visible=time<31.6;passage.visible=time>28;doorPivot.rotation.y=1.48*(Math.max(0,Math.min(1,(time-7.6)/3.3))**2*(3-2*Math.max(0,Math.min(1,(time-7.6)/3.3))));houseLights.visible=time<30.2;pendant.intensity=55*(1-.75*Math.max(0,Math.min(1,(time-17)/10)));},dispose(){decorations.dispose();textures.forEach(t=>t.dispose());materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());}};
 }

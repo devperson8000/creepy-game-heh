@@ -73,7 +73,8 @@ export function coopInteract(state,playerId,action,{targets=new Map(),canSee,now
    const count=player.carried.size;for(const id of player.carried)run.banked.add(id);player.carried.clear();return {ok:true,type:'locks',count};
   }
   case 'keypad':return enterCode(run,action.code)?{ok:true,type:'keypad'}:fail('wrong-code');
-  case 'elevator':return openExit(run)?{ok:true,type:'elevator'}:fail('locked');
+  case 'escape':return run.halloween&&run.banked.size===4&&run.codeAccepted?{ok:true,type:'escape'}:fail('locked');
+  case 'elevator':return !run.halloween&&openExit(run)?{ok:true,type:'elevator'}:fail('locked');
   case 'closet':{
    if(state.closets.has(target.id))return fail('occupied');
    if(!target.hide||!target.exit||distance({...target.hide,height:at.height??0},at)>2.6||distance({...target.exit,height:at.height??0},at)>2.6)return fail('invalid-closet');
@@ -103,7 +104,7 @@ export function expireDowned(state,now=state.run.elapsed){
 }
 export function markEscaped(state,playerId){
  const player=state.players.get(playerId);
- if(!playing(state,player)||!state.run.exitOpen||player.z>=-33.6)return false;
+ if(state.run.halloween||!playing(state,player)||!state.run.exitOpen||player.z>=-33.6)return false;
  releaseCloset(state,player);player.status='escaped';updateOutcome(state);return true;
 }
 export function removeCoopPlayer(state,playerId){

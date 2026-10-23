@@ -1,3 +1,6 @@
+import {createHalloweenEndingPlayer} from './halloween-ending-player.js';
+import {beginFinale,advanceFinale} from './finale-state.js';
+import {loadPlayerAvatarAsset} from './player-avatar.js';
 import {attachMechanicalHead} from './mechanical-head.js';
 import {movePlayer} from './player-movement.js';
 import {halloweenTargetInfo,interactHalloween,advanceHalloween,canMoveB2} from './halloween-state.js';
@@ -37,8 +40,15 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
  const jumpscare=createJumpscare({mouthTexture,metallic:!!run.halloween});
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);let surfaceDistance=Infinity;
- let enemy=createEnemy(run.layout),player={x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
+ let enemy=createEnemy(run.layout),player={id:'solo',name:'You',slot:0,status:'alive',x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
+ const soloState={seed,run,players:new Map([['solo',player]]),closets:new Map()};let ending=null,endingAsset=null,endingFailed=false,endingFinished=false;
+ function beginHouseEscape(){
+  if(!beginFinale(soloState,Date.now()/1000,{requested:true}))return false;
+  ui.hideScreen();ui.overlay='finale';input.clear();document.exitPointerLock?.();monsterAudio.pause();ambience.pause();
+  void loadPlayerAvatarAsset().then(asset=>{endingAsset=asset;}).catch(()=>{endingFailed=true;});return true;
+ }
+
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void monsterAudio.resume();void ambience.resume();});
  const questUI=createHalloweenQuestUI(ui.root,run);
@@ -64,10 +74,10 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  torchButton.addEventListener('click',toggleTorch);
  document.addEventListener('keydown',event=>{if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}});
  document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'||ui.overlay==='halloween'))toggleSound();});
- window.addEventListener('pagehide',()=>{experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
+ window.addEventListener('pagehide',()=>{ending?.dispose();experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
  function closeKeypad(){void monsterAudio.resume();void ambience.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
- function submitCode(){if(enterCode(run,buffer)){ui.feedback('Code accepted. Complete the four key locks to open the elevator.','success');monsterAudio.playNoise('keypad');ui.toast('Code accepted.');closeKeypad();}else{ui.feedback('Access denied. Read the four digits from this run.');buffer='';ui.el('code-display').textContent='— — — —';}}
+ function submitCode(){if(enterCode(run,buffer)){ui.feedback(run.halloween?'Code accepted. Complete the four key locks to unlock the house service exit.':'Code accepted. Complete the four key locks to open the elevator.','success');monsterAudio.playNoise('keypad');ui.toast('Code accepted.');closeKeypad();}else{ui.feedback('Access denied. Read the four digits from this run.');buffer='';ui.el('code-display').textContent='— — — —';}}
  function digit(value){if(value==='✓'){submitCode();return;}if(value==='←')buffer=buffer.slice(0,-1);else if(buffer.length<4)buffer+=value;ui.el('code-display').textContent=buffer.padEnd(4,'—').split('').join(' ');}
  ui.root.querySelectorAll('[data-digit]').forEach(b=>b.addEventListener('click',()=>digit(b.dataset.digit)));
  ui.el('close-keypad').addEventListener('click',closeKeypad);
@@ -81,6 +91,8 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   if(t.type==='clue'){label='Read the four-digit clue';duration=.2;}
   if(t.type==='locks'){label=run.carried.size?`Insert ${run.carried.size} ${run.carried.size===1?'key':'keys'}`:`Key panel · ${run.banked.size} / 4 filled`;duration=.6;}
   if(t.type==='keypad'){label=run.codeAccepted?'Keypad · code accepted':'Enter elevator code';duration=.15;}
+  if(t.type==='escape'){label=run.banked.size===4&&run.codeAccepted?'Open house service exit':'House exit locked · four keys + code';duration=.6;}
+  if(t.type==='elevator'&&run.halloween)return {...t,label:'B2 service lift · use the pumpkin panel',duration:.4};
   if(t.type==='elevator'){label=run.exitOpen?'Step inside the elevator':run.banked.size===4&&run.codeAccepted?'Open elevator':'Elevator locked · four keys + code';duration=.6;}
   return {...t,label,duration};
  }
@@ -99,6 +111,8 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   if(t.type==='clue'){readClue(run);ui.toast(`Four-digit clue recorded: ${run.code}`);}
   if(t.type==='locks'){const count=bankKeys(run);ui.toast(count?`${count} ${count===1?'key':'keys'} banked. ${run.banked.size} / 4 locks complete.`:'No unbanked keys. Search the basement drawers.');}
   if(t.type==='keypad'){if(!run.codeAccepted)openKeypad();else ui.toast('The number lock is already complete.');}
+  if(t.type==='escape'){if(!beginHouseEscape())ui.toast('The house exit needs all four keys and the correct code.');}
+  if(t.type==='elevator'&&run.halloween){ui.toast('Use the pumpkin-marked wall panel to reach B2.');return;}
   if(t.type==='elevator'){if(openExit(run))ui.toast('Both locks released. Step inside.');else ui.toast('The elevator needs all four keys and the correct code.');}
   if(t.type==='closet'){
    run.hidden=true;hiddenCloset=t;hideWitnessed=lastResult.visible&&lastResult.distance<7;player.x=t.hide.x;player.z=t.hide.z;t.mesh.visible=!!t.physicalGrille;input.setView(t.hideYaw??Math.PI);if(hideWitnessed)ui.toast('It saw you enter.');else ui.toast('Stay quiet. E to leave when it passes.');
@@ -111,6 +125,11 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),frameDelta=Math.min(clockDelta,.2);previous=now;
   questUI.update();
+  if(run.finale?.variant==='house'&&!endingFinished){
+   advanceFinale(soloState,Date.now()/1000);
+   try{if(!ending&&!endingFailed&&endingAsset)ending=createHalloweenEndingPlayer({container,renderer,asset:endingAsset,...run.finale,muted:monsterAudio.muted,onMuteChange:value=>monsterAudio.setMuted(value)});ending?.sample(run.finale.elapsed);}catch(error){console.warn('House ending presentation unavailable',error);ending?.dispose();ending=null;endingFailed=true;}
+   if(run.phase==='won'){ending?.dispose();ending=null;endingFinished=true;showScreen('won');}return;
+  }
   if(run.phase==='halloween'){
    inB2=true;run.elapsed+=frameDelta;monsterAudio.pause();ambience.pause();
    const v=run.halloween.visit;
@@ -146,7 +165,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
    else if(!target){hold=0;holdId=null;}
    if(performance.now()>noiseUntil)player.noise='Quiet';
    ui.update(run,player,target,hold);
-   if(run.phase==='playing'&&run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
+   if(!run.halloween&&run.phase==='playing'&&run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
   }else{camera.position.set(player.x,player.height+1.65,player.z);input.updateView();ui.update(run,player,null,0);}
   creature.root.visible=huntActive(run);creature.mechanical?.sample(time,{jaw:enemy.mode==='chase'?.35+.15*Math.sin(time*4):.05});
   applyIdle(creature,idlePose(time));const gait=creatureMotion.update(enemy.position,enemy.mode,ui.overlay?0:frameDelta,huntActive(run));if(gait.weight>.001)applyRunning(creature,gait.time,gait.weight*(enemy.mode==='chase'?1:.6));
@@ -178,5 +197,5 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   else if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);if(!arrival?.active||arrival.elapsed>9.5)torch.render(renderer);renderDirty=false;}
   lastOverlay=ui.overlay;
  });
- return {run,world,enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch,jumpscare,arrival,experience};
+ return {run,world,get ending(){return ending;},enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch,jumpscare,arrival,experience};
 }

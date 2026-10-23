@@ -85,7 +85,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
    if(type==='closet')player.hideWitnessed=witnessed;
    emit(player,interactionNoise(type,player,{takingKey:result.type==='key'}));
    tell(id,instructions[result.type]??'Done.');
-   beginFinale(state,now());
+   beginFinale(state,now(),{requested:type==='escape'});
   }else if(type!=='drawer'&&!targetId?.startsWith('drawer-'))tell(id,reasons[result.reason]??'You cannot do that right now.');
   return result;
  }

@@ -20,6 +20,7 @@ export function requestHalloweenTestAccess({onAuthorized,onCancel=()=>{}}){
  dialog.showModal();field.focus();return {dispose:()=>dialog.close()};
 }
 const cases=[
+ ['ending','Halloween house ending','Preview the connected service passage, wall crossing, house escape and final reveal. Test solo and team rescue.'],
  ['opening','Opening house introduction','Watch the Halloween house, impossible wall and descent. Uses your motion settings; hold Skip for two seconds.'],
  ['new-gameplay','Test new gameplay','Explore the deep narrow maze, three-drawer cabinets and recessed closets. Test stamina and switch on the hunt.'],
  ['full','Full Halloween gameplay','Play the complete B1 quest from the beginning.'],
@@ -59,6 +60,8 @@ export function startHalloweenTestPage({password,onExit}){
  async function start(id){
   if(starting||disposed)return;starting=true;await stopFrame();if(disposed){starting=false;return;}current=id;picker.hidden=true;player.hidden=false;commands.replaceChildren();
   player.querySelector('nav strong').textContent=cases.find(c=>c[0]===id)[1];status.textContent='Preparing test…';
+  if(id==='ending'){for(const [label,time]of [['Service passage',4],['Wall crossing',13],['House panic',23],['Floor rescue',31],['Escape outside',37],['Final reveal',47]])commandButton(label,'ending:'+time);for(const count of [1,2,4])commandButton(count===1?'Solo rescue':count+' survivors','ending:cast:'+count);}
+  if(id==='new-gameplay')commandButton('Unlock house exit','new:exit');
   if(id==='new-gameplay')for(const [label,action]of [['Next drawer room','drawer'],['Corridor closet','closet'],['Return to stairs','stairs'],['Start hunting','hunt'],['Refill stamina','stamina']])commandButton(label,'new:'+action);
   if(id==='map')commandButton('Next decorated room','room-next');
   if(id==='quest')for(const [label,item] of [['Invitation','invitation'],['Seal 1','seal-0'],['Seal 2','seal-1'],['Seal 3','seal-2'],['Key chest','chest']])commandButton(label,'quest:'+item);

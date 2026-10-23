@@ -241,7 +241,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
    // getting up, without looping through its upright first frame.
    const end=Math.max(0,duration-.001);
    // Bring the forward extension early enough to read as a dive in midair.
-   const sampleTime=action==='prone'?end:action==='get-up'?(1-p)*end:action==='dive'&&clip.toLowerCase()==='death'?Math.pow(p,.4)*end:Math.max(0,finite(time))%duration;
+   const sampleTime=action==='snared'?end*.28:action==='free-leg'?end*.28*(1-p):action==='prone'?end:action==='get-up'?(1-p)*end:action==='dive'&&clip.toLowerCase()==='death'?Math.pow(p,.4)*end:Math.max(0,finite(time))%duration;
    mixer.setTime(sampleTime);
   }
   root.visible=true;root.position.fromArray(position);root.rotation.set(0,yaw+Math.PI,0);model.rotation.set(0,0,0);

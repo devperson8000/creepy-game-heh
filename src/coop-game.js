@@ -1,3 +1,4 @@
+import {createHalloweenEndingPlayer} from './halloween-ending-player.js';
 import {attachMechanicalHead} from './mechanical-head.js';
 import {halloweenTargetInfo,canMoveB2} from './halloween-state.js';
 import {createHalloweenExperience,createHalloweenQuestUI} from './halloween-experience.js';
@@ -138,6 +139,8 @@ export function startCoopGame(container,{client,session}){
   if(!target)return null;if(target.type==='halloween')return halloweenTargetInfo(run,target);const labels={boards:['Pry away the boards',1.8],closet:['Hide in closet',.25],clue:['Read the four-digit clue',.2],locks:[`Bank your keys · ${run.banked.size} / 4 filled`,.6],keypad:[run.codeAccepted?'Keypad · code accepted':'Enter elevator code',.15],elevator:[run.exitOpen?'Step into the elevator':'Open elevator · four keys + code',.6]};
   if(target.type==='drawer'){const drawer=run.drawers[target.drawerId];return {...target,label:drawer.opened?(drawer.key&&!drawer.taken?'Take the key':'Close searched drawer'):'Search drawer',duration:drawer.opened?.15:.3};}
   if(target.type==='boards'&&run.boardsOpen)return null;
+  if(target.type==='escape')return {...target,label:run.banked.size===4&&run.codeAccepted?'Open house service exit':'House exit locked · four keys + code',duration:.6};
+  if(target.type==='elevator'&&run.halloween)return {...target,label:'B2 service lift · use the pumpkin panel',duration:.4};
   if(!labels[target.type])return null;return {...target,label:labels[target.type][0],duration:labels[target.type][1]};
  }
  function currentTarget(){
@@ -246,10 +249,10 @@ export function startCoopGame(container,{client,session}){
   const record=!isHost&&hostClock.ready?{...run.finale,elapsed:Math.max(run.finale.elapsed,hostClock.sample()-run.finale.startedAt)}:run.finale;
   finaleClock.sync(record);const elapsed=finaleClock.sample();
   try{
-   if(!finale&&!finaleFailed&&avatarAsset)finale=createFinalePlayer({container,renderer,asset:avatarAsset,...run.finale,muted:audio.muted,onMuteChange:setSoundMuted});
+   if(!finale&&!finaleFailed&&avatarAsset)finale=(run.finale.variant==='house'?createHalloweenEndingPlayer:createFinalePlayer)({container,renderer,asset:avatarAsset,...run.finale,muted:audio.muted,onMuteChange:setSoundMuted});
    finale?.sample(finaleClock.sample());
   }catch(error){console.warn('Finale presentation unavailable',error);finale?.dispose();finale=null;finaleFailed=true;document.body.classList.remove('finale-active');}
-  if(run.phase==='won'&&elapsed>=FINALE_DURATION){
+  if(run.phase==='won'&&elapsed>=(run.finale.duration??FINALE_DURATION)){
    finaleCompleteAt??=now;
    if(finaleFailed||now-finaleCompleteAt>=1500){finale?.dispose();finale=null;finaleFinished=true;outcome='won';lastStatus=local()?.status;screen('won');}
   }

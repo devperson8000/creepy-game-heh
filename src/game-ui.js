@@ -3,7 +3,7 @@ import {huntClockView,CLOCK_START_HOUR,HUNT_START_SECONDS,HUNT_WARNING_SECONDS} 
 export function objectiveFor(run){
  if(!run.boardsOpen)return 'Open the boarded doorway';
  if(run.exitOpen)return 'Step into the open elevator';
- if(run.banked.size===4&&run.codeAccepted)return 'Open the elevator and step inside';
+ if(run.banked.size===4&&run.codeAccepted)return run.halloween?'House service exit unlocked · return upstairs':'Open the elevator and step inside';
  if(run.banked.size===4)return run.clueRead?'Enter the recorded code at the elevator':'Find the four-digit clue downstairs';
  if((run.teamKeyCount??run.carried.size+run.banked.size)>=4)return 'Return to the elevator · bank all four keys';
  return run.layout?.halloweenMaze?'Search the small rooms · four keys + one number':'Search furniture · four keys + one number';
@@ -33,7 +33,7 @@ export function createGameUI(){
   overlay=kind;el('game-screen').hidden=false;
   const heading=kind==='menu'?'MONOCHROME':kind==='pause'?'STAY QUIET':kind==='dead'?'IT FOUND YOU':'YOU GOT OUT';
   const sub=kind==='menu'?'Four keys. One number. It sees you. It hears you.':kind==='pause'?'The room can wait.':kind==='dead'?'Your banked keys are safe. Unbanked keys are back where you found them.':`Escaped in ${Math.floor(run.elapsed/60)}:${String(Math.floor(run.elapsed%60)).padStart(2,'0')} · ${run.deaths} ${run.deaths===1?'retry':'retries'}`;
-  el('screen-content').innerHTML=`<small>${kind==='menu'?'AN ESCAPE THROUGH THE BASEMENT':kind==='won'?'THE ELEVATOR IS YOUR WAY OUT':'MONOCHROME'}</small><h1 id="screen-title">${heading}</h1><p>${sub}</p>${kind==='menu'?'<div class="intro-route"><span>Search drawers</span><b>·</b><span>Hide in closets</span><b>·</b><span>Return to the elevator</span></div>':''}<button id="screen-primary" class="primary-button">${kind==='menu'?'Enter the lobby':kind==='pause'?'Continue':kind==='dead'?'Try again':'Another run'}<span class="button-arrow" aria-hidden="true"></span></button>${kind==='menu'?'':'<button id="new-run" class="text-button">Return to main menu</button>'}<div class="menu-controls">WASD + mouse · Hold E to interact · Shift to run · F torch</div>`;
+  el('screen-content').innerHTML=`<small>${kind==='menu'?'AN ESCAPE THROUGH THE BASEMENT':kind==='won'?(run.halloween?'YOU ESCAPED THE HOUSE':'THE ELEVATOR IS YOUR WAY OUT'):'MONOCHROME'}</small><h1 id="screen-title">${heading}</h1><p>${sub}</p>${kind==='menu'?'<div class="intro-route"><span>Search drawers</span><b>·</b><span>Hide in closets</span><b>·</b><span>Return to the elevator</span></div>':''}<button id="screen-primary" class="primary-button">${kind==='menu'?'Enter the lobby':kind==='pause'?'Continue':kind==='dead'?'Try again':'Another run'}<span class="button-arrow" aria-hidden="true"></span></button>${kind==='menu'?'':'<button id="new-run" class="text-button">Return to main menu</button>'}<div class="menu-controls">WASD + mouse · Hold E to interact · Shift to run · F torch</div>`;
   if(kind==='pause'){
    const prefs=gamePreferences(),settings=document.createElement('fieldset');settings.className='game-settings';
    settings.innerHTML=`<legend>Make the dark your own</legend>
@@ -69,6 +69,7 @@ export function createGameUI(){
   }
   el('floor-name').textContent=run.layout?.halloweenMaze?(run.hidden?'INSIDE A CLOSET':player.z<=-25?'ELEVATOR LOBBY':player.z<run.layout.stairs.bottomZ?'RETURN STAIRS':'BASEMENT B1'):run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
   const objective=objectiveFor(run);if(objective!==lastObjective){text('current-objective',objective);if(lastObjective&&!overlay)highlight(el('current-objective'));lastObjective=objective;}
+  el('keypad-title').previousElementSibling.textContent=run.halloween?'HOUSE SERVICE / SECURITY':'ELEVATOR / SECURITY';
   const keys=run.banked.size+run.carried.size;if(keys>previousKeys&&!overlay)highlight(el('key-lights'));previousKeys=keys;
   [...el('key-lights').children].forEach((e,i)=>e.classList.toggle('filled',i<run.banked.size));el('key-lights').setAttribute('aria-label',`${run.banked.size} of 4 keys banked`);
   el('carried-keys').textContent=run.carried.size?`Carrying ${run.carried.size} ${run.carried.size===1?'key':'keys'} · return to the lobby`:`${run.banked.size} / 4 keys banked`;

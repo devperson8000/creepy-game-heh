@@ -36,7 +36,7 @@ Interface: pure recapFrame(time) selects historical finale time or teaser-relati
 ### Task 3: House escape and authoritative gameplay integration
 Files: new src/halloween-ending-{timeline,scene,audio,player}.js; extend opening-set, finale-state, game/coop integration, maze-world, game UI, test hub/scenarios; tests/halloween-ending.test.js and browser script.
 Interface: HALLOWEEN_ENDING_DURATION; halloweenEndingFrame(time,{count}) pure poses/camera; createHalloweenEndingScene({asset,cast,...}) sample/resize/dispose; createHalloweenEndingPlayer matches finale player; finale records variant:'house' and duration.
-- [ ] Failing state/timeline/geometry tests for solo/2–4, host completion, continuous wall crossing, distinct solo/team rescue and title; implement physical B1 service exit and sampled shared-house cinematic.
+- [x] Failing state/timeline/geometry tests for solo/2–4, host completion, continuous wall crossing, distinct solo/team rescue and title; implement physical B1 service exit and sampled shared-house cinematic.
 - [ ] Add password-only ending tester with scrub beats/casts and real solo/co-op completion checks; verify original finale remains; commit.
 
 ### Task 4: Mounted key panel, B2 direction and neural dialogue

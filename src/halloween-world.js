@@ -1,3 +1,4 @@
+import {createHouseServiceExit,HOUSE_EXIT_POSITION} from './house-service-exit.js';
 import * as THREE from 'three';
 import {worldPoint,groundHeight,randomSource} from './level.js';
 import {createHalloweenProps} from './halloween-props.js';
@@ -33,6 +34,7 @@ export function createHalloweenWorld(scene,run,targets,rayMeshes){
  const map=own(new THREE.CanvasTexture(canvas));map.colorSpace=THREE.SRGBColorSpace;const sheet=box(note,.32,.2,.009,0,0,0,material(0xffffff,{map}));sheet.rotation.z=.07;ball(note,.09,-.06,.009,.022,.022,.007,wax);tag('halloween:invitation',note,sheet);
  place(props.pumpkin({scale:.62}),{kind:'pumpkin',surface:'landing',x:maze?entry.x-.75:-3.35,y:0,z:maze?entry.z+3.2:-17.9,yaw:maze?Math.PI/2:0});
  const lantern=place(props.lantern({scale:.8}),{kind:'lantern',surface:'landing',x:maze?entry.x-.83:-3.4,y:maze?.62:.2,z:maze?entry.z+5.1:-18.4,yaw:maze?Math.PI/2:0});lantern.seal.material=wax;tag('halloween:seal-2',lantern,lantern.seal);
+ const exit=createHouseServiceExit();exit.root.position.set(HOUSE_EXIT_POSITION.x,HOUSE_EXIT_POSITION.y,HOUSE_EXIT_POSITION.z);root.add(exit.root);exit.root.traverse(m=>{if(m.isMesh)rayMeshes.push(m);});targets.set('house-exit',{id:'house-exit',type:'escape',mesh:exit.leaf,position:{x:HOUSE_EXIT_POSITION.x,z:HOUSE_EXIT_POSITION.z,height:HOUSE_EXIT_POSITION.y}});
  // A matching black pumpkin chest has a real hinge, falling chains and a lifted key.
  const chest=place(props.pumpkin({scale:2.1,black:true,carved:false,openable:true}),{kind:'chest',surface:'lobby',x:1.75,y:3.57-floor,z:-28.4,yaw:0});tag('halloween:chest',chest,chest.body);
  const key=new THREE.Group();key.name='Halloween key';key.position.set(0,.36,.05);chest.add(key);
@@ -55,7 +57,7 @@ export function createHalloweenWorld(scene,run,targets,rayMeshes){
  let revealAge=10,lastTime=null,wasKey=q.key,disposed=false;
  const ease=x=>{const t=THREE.MathUtils.clamp(x,0,1);return t*t*(3-2*t);};
  function update(time,{player,visibility=1,reducedMotion=false}={}){
-  if(disposed)return;const dt=Math.max(0,Math.min(.2,lastTime===null?1/60:time-lastTime));lastTime=time;props.update(time,{reducedMotion});const progress=run.halloween;
+  if(disposed)return;exit.update(run);const dt=Math.max(0,Math.min(.2,lastTime===null?1/60:time-lastTime));lastTime=time;props.update(time,{reducedMotion});const progress=run.halloween;
   if(progress.key&&!wasKey)revealAge=0;wasKey=progress.key;revealAge+=dt;
   const opening=progress.key?ease((revealAge-.12)/.85):0;chest.lid.rotation.x=-1.16*opening;
   for(const chain of chains){chain.root.rotation.z=chain.side*opening*1.3;chain.root.rotation.x=opening*1.25;chain.root.position.y=.425-opening*.33;}
@@ -64,5 +66,5 @@ export function createHalloweenWorld(scene,run,targets,rayMeshes){
   const eye=player?new THREE.Vector3(player.x,(player.height??groundHeight(player,run.layout))+1.4,player.z):null,near=eye?markers.map(m=>({...m,d:m.at.distanceTo(eye)})).filter(m=>m.d<7).sort((a,b)=>a.d-b.d).slice(0,3):[];
   lights.forEach((light,i)=>{const m=near[i],target=m?m.strength*(1-ease((m.d-3.8)/3.2))*Math.max(.05,visibility):0;light.intensity+=(target-light.intensity)*(1-Math.exp(-dt*10));if(m)light.position.copy(m.at);});
  }
- return {root,placements,update,dispose(){if(disposed)return;disposed=true;props.dispose();owned.forEach(o=>o.dispose());root.removeFromParent();}};
+ return {root,placements,update,dispose(){if(disposed)return;disposed=true;exit.dispose();props.dispose();owned.forEach(o=>o.dispose());root.removeFromParent();}};
 }

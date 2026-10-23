@@ -3,11 +3,11 @@ import {openingEase as ease} from './opening-sequence.js';
 
 /** View-relative hands remain in the world depth buffer: the wallpaper really
  * occludes the fingers as they pass through, rather than drawing over the wall. */
-export function createOpeningHands(camera){
+export function createOpeningHands(camera,{hazmat=false}={}){
  const root=new THREE.Group(),left=new THREE.Group(),right=new THREE.Group();camera.add(root);root.add(left,right);
  const materials=[],geometries=[];
  const mat=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.82,...extra});materials.push(m);return m;};
- const skin=mat(0x9e7155),nails=mat(0xb28b74),sleeve=mat(0x263132),cuff=mat(0x192122),metal=mat(0x434b4b,{metalness:.8,roughness:.35}),rubber=mat(0x101615),lens=mat(0xd8e6d5,{emissive:0xb5cdb9,emissiveIntensity:.5});
+ const skin=mat(hazmat?0x242b29:0x9e7155),nails=mat(hazmat?0x242b29:0xb28b74),sleeve=mat(hazmat?0xc3a52b:0x263132),cuff=mat(0x192122),metal=mat(0x434b4b,{metalness:.8,roughness:.35}),rubber=mat(0x101615),lens=mat(0xd8e6d5,{emissive:0xb5cdb9,emissiveIntensity:.5});
  const sphere=new THREE.SphereGeometry(1,16,12);geometries.push(sphere);
  function ellipsoid(group,m,x,y,z,sx,sy,sz){const mesh=new THREE.Mesh(sphere,m);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;}
  function segment(group,a,b,r,m){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),g=new THREE.CapsuleGeometry(r,A.distanceTo(B),4,10);geometries.push(g);const mesh=new THREE.Mesh(g,m);mesh.position.copy(A).add(B).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),B.sub(A).normalize());group.add(mesh);return mesh;}

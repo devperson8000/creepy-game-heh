@@ -1,7 +1,7 @@
 import {HUNT_START_SECONDS} from './hunt-clock.js';
 import {interactHalloween,advanceHalloween} from './halloween-state.js';
 import {worldPoint} from './level.js';
-export const HALLOWEEN_TESTS=new Set(['opening','new-gameplay','full','coop','map','quest','key','b2','teaser','return']);
+export const HALLOWEEN_TESTS=new Set(['ending','opening','new-gameplay','full','coop','map','quest','key','b2','teaser','return']);
 /** Shortcuts live only in the password-authorized test frame; normal runs never call this. */
 export function setupHalloweenTest(game,scenario){
  if(!HALLOWEEN_TESTS.has(scenario)||!game.run.halloween)throw new Error('Unknown Halloween test');
@@ -16,6 +16,7 @@ export function setupHalloweenTest(game,scenario){
  function command(value){
   if(scenario==='new-gameplay'&&value.startsWith('new:')){
    const action=value.slice(4);
+   if(action==='exit'){run.banked=new Set(run.drawers.filter(d=>d.key).map(d=>d.id));run.codeAccepted=true;Object.assign(player,{x:1.4,z:-31.5,height:3.6});input.clear();input.setView(0,0);ui.hideScreen();return true;}
    if(action==='hunt'){newHunt=true;run.huntElapsed=HUNT_START_SECONDS;ui.hideScreen();input.clear();ui.toast('6:00 · Monochrome is hunting.');return true;}
    if(action==='stamina'){player.stamina=1;player.exhausted=false;player.staminaRest=0;return true;}
    if(action==='closet'){const t=world.closets[closetIndex++%world.closets.length];if(!t)return false;Object.assign(player,t.exit);input.clear();input.setView(t.hideYaw+Math.PI,0);ui.hideScreen();return true;}

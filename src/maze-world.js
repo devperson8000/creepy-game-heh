@@ -36,7 +36,7 @@ export function createMazeWorld(run){
  box(12,.15,8,-2.6,3.525,-29,floorMat);box(12,.15,8,-2.6,7.85,-29);
  box(.2,4.4,8,-8.6,5.8,-29);box(.2,4.4,8,3.4,5.8,-29);
  box(4.9,4.4,.2,-6.05,5.8,-25);box(4.9,4.4,.2,.85,5.8,-25);
- box(4.85,4.4,.2,-6.075,5.8,-33);box(4.85,4.4,.2,.875,5.8,-33);box(2.2,1.1,.2,-2.6,7.3,-33);
+ box(4.85,4.4,.2,-6.075,5.8,-33);box(2.2,4.4,.2,-.45,5.8,-33);box(1.15,4.4,.2,2.725,5.8,-33);box(1.5,1.4,.2,1.4,7.1,-33);box(2.2,1.1,.2,-2.6,7.3,-33);
  box(2,.15,2.5,-2.6,3.525,-34.1,metal);box(2,4.4,.12,-2.6,5.8,-35.35,dark);box(.12,4.4,2.5,-3.65,5.8,-34.1,dark);box(.12,4.4,2.5,-1.55,5.8,-34.1,dark);
  for(const [x,z,w,d] of [[-8.6,-29,.2,8],[3.4,-29,.2,8],[-6.05,-25,4.9,.2],[.85,-25,4.9,.2],[-6.075,-33,4.85,.2],[.875,-33,4.85,.2],[-2.6,-35.35,2,.12],[-3.65,-34.1,.12,2.5],[-1.55,-34.1,.12,2.5]])collider(x,z,w,d,()=>true,true);
  const stair=layout.stairs,length=stair.bottomZ-stair.topZ,drop=stair.topHeight-stair.bottomHeight;
@@ -60,7 +60,7 @@ export function createMazeWorld(run){
  for(const z of [-31.5,-29,-26.5])box(11.6,.006,.01,-2.6,3.605,z,dark);
  for(let i=0;i<9;i++){const stripe=box(.15,.008,.44,-3.45+i*.22,3.61,-26,paint);stripe.rotation.y=-.45;}
  sign('B1 / RETURN POINT',1.7,.32,-6.4,5.75,-32.84,{size:54});
- sign('KEEP THE EXIT CLEAR',1.8,.28,1.4,5.7,-32.84,{size:45});
+ sign('HOUSE SERVICE',1.65,.22,1.4,6.75,-32.84,{size:48});
 
  const panel=box(.68,1.2,.14,-4.1,5,-32.79,dark);target('locks','locks',panel);
  const indicators=[];
