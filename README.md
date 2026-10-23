@@ -2,6 +2,14 @@
 
 A first-person monochrome horror escape game built with Three.js and Vite. Uses the creature developed in this repository and the documented escape loop from [monochromegame.wiki](https://monochromegame.wiki/walkthrough/).
 
+## Upcoming Halloween story (31 October 2026, 4 PM Sydney)
+
+The scheduled Halloween variant uses the larger narrow maze, stamina and repaired metal Monochrome. Four normal keys plus the code unlock a separate **HOUSE SERVICE EXIT** in B1. It leads through a rising pipe passage and the original wallpaper wall into the intro house, followed by a solo/team floorboard rescue and an abandoned-house escape. The B2 service lift remains separate from winning. The original game and its elevator finale stay available before the scheduled release.
+
+The optional scavenger hunt awards the Halloween Key. Insert it into the wall-mounted B1 panel to reach B2, approach the hooded keeper and watch the original elevator incident under **PREVIOUSLY**, followed by the current sequel teaser. The recap excludes the survivor walkout. B2 uses local neural speech, subtitles and physical switch/key gestures. The selected Needlelimbs and Hooded Wanderer source assets remain outstanding; see the [gap audit](docs/verification/2026-10-23-halloween-story-gaps.md).
+
+Private previews are at password-protected `/testhalloween`, with house-ending solo/team and scene controls, B2/teaser, intro and full gameplay tests. They are absent from the public menu. The trusted release endpoint controls the scheduled activation; changing the device clock or adding a preview query does not enable it.
+
 ## Modes and co-op
 
 The opening screen offers **Singleplayer** and **Multiplayer**. Multiplayer uses Supabase anonymous authentication, owner-approved named lobbies and a maximum of four players. The host starts once two to four members are ready. The selected player model is the **curved yellow hazmat survivor**, with numbered patches, teammate names and a visible handheld torch. First-person hands wear matching black gloves and a yellow sleeve. The angular model remains a preview option only.

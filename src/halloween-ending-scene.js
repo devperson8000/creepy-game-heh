@@ -72,7 +72,7 @@ export function createHalloweenEndingScene({asset,cast=[{id:'solo',slot:0}],runn
    actor.sample({clip,time:t,position,yaw,action:struggling?'brace':'none',progress:reach,handTarget:contact});actor.root.visible=t<43;
   }
   camera.position.fromArray(f.camera);target.fromArray(f.look);
-  if(aspect<.8&&t>=27&&t<35)camera.position.add(new THREE.Vector3(.6,.2,1));
+  if(aspect<.8)camera.position.addScaledVector(new THREE.Vector3(.6,.2,1),ease(26,28,t)*(1-ease(34,36,t)));
   if(!reducedMotion&&(t<10.5||t>=20&&t<27)){camera.position.y+=Math.sin(t*10)*.012;}
   camera.lookAt(target);camera.updateMatrixWorld(true);
   hands.update({time:t<10.5?15:26,reach:f.reach,torch:t<39?1:0,light:1});hands.left.visible=t>=10.5&&t<17;hands.root.visible=t<18.5;

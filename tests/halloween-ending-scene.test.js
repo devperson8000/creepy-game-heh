@@ -7,3 +7,7 @@ test('ending reuses the exact house wall, has a genuine uphill route, and sample
  a.sample(14);const p=a.camera.position.clone();a.sample(50);a.sample(14);assert.ok(p.distanceTo(a.camera.position)<1e-8);
  a.sample(32);assert.ok(a.floorHinge.rotation.x>.7);assert.equal(a.actors.size,2);a.resize(390/844);assert.ok(a.camera.fov>=75);a.sample(48);assert.ok(a.pumpkinLight.intensity>0);a.dispose();a.dispose();
 });
+
+test('portrait rescue camera stays continuous at fall and escape boundaries',()=>{
+ const a=make();a.resize(390/844);for(const boundary of [27,35]){a.sample(boundary-1e-5);const before=a.camera.position.clone();a.sample(boundary+1e-5);assert.ok(before.distanceTo(a.camera.position)<.001,`camera jump at ${boundary}`);}a.dispose();
+});

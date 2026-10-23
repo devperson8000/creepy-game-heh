@@ -24,4 +24,4 @@ try{
  await Promise.all([frame,guest].map(p=>p.waitForFunction(()=>monochrome.run.phase==='won',null,{timeout:20000})));
  const survivors=await guest.evaluate(()=>[...monochrome.state.players.values()].map(p=>p.status));assert.deepEqual(survivors,['escaped','escaped']);assert.ok(await guest.evaluate(()=>monochrome.run.finale.elapsed>=56));
  await host.getByRole('button',{name:'Back to tests',exact:true}).click();await host.locator('iframe').waitFor({state:'detached'});assert.equal(await host.locator('iframe').count(),0);assert.deepEqual(errors,[]);console.log('PASS real E-triggered host/guest house escape, shared cast and clock, hidden-host authoritative victory and session teardown.');
-}catch(e){console.error(e);throw e;}finally{await guest.evaluate(()=>window.monochrome?.client.close()).catch(()=>{});await browser.close();}
+}catch(e){console.error(e);throw e;}finally{await Promise.race([guest.evaluate(()=>window.monochrome?.client.close()).catch(()=>{}),new Promise(resolve=>setTimeout(resolve,1500))]);await browser.close();}

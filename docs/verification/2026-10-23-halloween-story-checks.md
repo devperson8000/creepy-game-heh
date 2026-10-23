@@ -1,0 +1,12 @@
+# Halloween story verification — 23 October 2026
+
+Approved scope and implementation are recorded in the [design](../superpowers/specs/2026-10-23-halloween-story-design.md) and [plan](../superpowers/plans/2026-10-23-halloween-story.md). The [gap audit](2026-10-23-halloween-story-gaps.md) distinguishes remaining art/device/network work from implemented functionality.
+
+- **314/314 Node tests** and production build pass. Coverage includes real escape interaction validation, authoritative solo/team outcome timing, optional B2 separation, 1–4 survivor timelines, exact intro-house reuse, physical key/switch contact, camera continuity, late speech offsets and resource disposal.
+- A fresh branch review found no Critical issues. Its portrait rescue jump, slow teaser download blocking the historical recap, and reduced-motion omission were reproduced and corrected with regression coverage. Historical picture now loads independently of unrelated creature GLBs; its soundtrack remains silent until the historical scene exists.
+- Browser rendering verifies original-head historical dive/sever/head-drop with no walkout, repaired-head teaser handoff, mounted key insertion, hooded keeper/switch gestures, B2 subtitles/return and portrait framing. A live B2 check holds teaser GLB downloads while rendering the historical elevator scene.
+- Production-build browser tests trigger the actual service exit with E in solo and real host/guest co-op. Co-op retains a shared cast/56-second clock and reaches authoritative victory with the host document hidden; both survivors escape and the private test iframe tears down.
+- The four local neural B2 speech files decode at 1.39, 2.56, 2.09 and 3.90 seconds, with measured peaks below 0.76. Production metallic processing of the original recording measured a 0.527 peak and a finite decaying tail in OfflineAudioContext.
+- Original monster and jumpscare MP3s match baseline c47865d byte-for-byte. Their SHA-256 values are `b222230d427fe61feb5ecd203bc90f33a2396ce0609d5e4309629a5d6c6cb26f` and `276cfda23660b1f4cfe23eb86ae442aed26ad3aa0d426e8c39068e2345e287d9` respectively.
+
+Browser checks use actual WebGL scenes, loaded survivor assets and real host/guest transport, but run under headless Chromium/software rendering. They do not establish real-phone frame rate or promise lag-free internet connections. The build retains its existing large-chunk advisory.

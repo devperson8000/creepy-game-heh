@@ -14,7 +14,7 @@ export function recapFrame(value){
  const p=THREE.MathUtils.clamp((t-1.6)/(RECAP_DURATION-2.2),0,1);
  return {phase:'recap',finaleTime:THREE.MathUtils.lerp(finalePlaybackTime(2),finalePlaybackTime(42.4),p),fade:ease(RECAP_DURATION-.6,RECAP_DURATION,t),subtitle:''};
 }
-export function prependFinaleRecap(film,{loadAsset=loadPlayerAvatarAsset}={}){
+export function prependFinaleRecap(film,{loadAsset=loadPlayerAvatarAsset,createHistoryAudio=createFinaleAudio}={}){
  let disposed=false,historical=null,failure=null,historyAudio=null,last=-1;
  const cast=[0,1].map(slot=>({id:`memory-${slot}`,name:slot?'Survivor':'You',slot}));
  const slate=new THREE.Scene(),camera=new THREE.OrthographicCamera(-8,8,4.5,-4.5,.1,10);camera.position.z=2;slate.background=new THREE.Color(0x030504);
@@ -25,24 +25,26 @@ export function prependFinaleRecap(film,{loadAsset=loadPlayerAvatarAsset}={}){
  const veil=new THREE.Mesh(new THREE.PlaneGeometry(2,2),veilMaterial);veil.position.z=-.1;veil.frustumCulled=false;veil.renderOrder=1000;
  veil.onBeforeRender=()=>{};
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL);
- const ready=Promise.all([film.scene.ready,loadAsset()]).then(([,asset])=>{if(disposed)return;historical=createFinaleScene({asset,cast,runnerId:cast[0].id,buttonId:cast[1].id,mouthTexture,quality:'low'});historical.resize(16/9);historical.scene.add(historical.camera);
+ const historyReady=Promise.resolve().then(loadAsset).then(asset=>{if(disposed)return;historical=createFinaleScene({asset,cast,runnerId:cast[0].id,buttonId:cast[1].id,mouthTexture,quality:'low'});historical.resize(16/9);historical.scene.add(historical.camera);
   // A camera-attached plane covers the exact frame for the final short fade.
   const fov=THREE.MathUtils.degToRad(historical.camera.fov),distance=.08;veil.geometry.dispose();veil.geometry=new THREE.PlaneGeometry(2*Math.tan(fov/2)*distance*16/9,2*Math.tan(fov/2)*distance);veil.position.z=-distance;historical.camera.add(veil);
  }).catch(error=>{failure=error;});
+ const ready=Promise.all([film.scene.ready,historyReady]).catch(error=>{failure=error;});
  function sample(time){const f=recapFrame(time);return f.phase==='teaser'?film.sample(f.teaserTime):{...f,time,shot:f.phase,subtitle:f.subtitle};}
  function render(renderer,time,options){
   const f=recapFrame(time);if(f.phase==='teaser'){film.scene.render(renderer,f.teaserTime,options);return;}
-  if(historical&&f.phase==='recap'){historical.sample(f.finaleTime);veilMaterial.opacity=f.fade;}
+  if(historical&&f.phase==='recap'){historical.sample(f.finaleTime,options);veilMaterial.opacity=f.fade;}
   const previous=renderer.getRenderTarget(),exposure=renderer.toneMappingExposure,auto=renderer.autoClear,viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest();
   try{renderer.setRenderTarget(film.scene.target);renderer.setViewport(0,0,film.scene.target.width,film.scene.target.height);renderer.setScissorTest(false);renderer.autoClear=true;renderer.toneMappingExposure=.85;
    renderer.render(f.phase==='recap'&&historical?historical.scene:slate,f.phase==='recap'&&historical?historical.camera:camera);
   }finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.toneMappingExposure=exposure;renderer.autoClear=auto;}
  }
  function stopHistory(){historyAudio?.dispose();historyAudio=null;}
- const audio={resume(){film.audio.resume();if(!historyAudio)historyAudio=createFinaleAudio();return historyAudio.resume();},update(time,options={}){
+ const audio={resume(){film.audio.resume();if(!historyAudio)historyAudio=createHistoryAudio();return historyAudio.resume();},update(time,options={}){
   const f=recapFrame(time);if(document.hidden){audio.pause();last=time;return;}
   if(f.phase==='teaser'){stopHistory();film.audio.update(f.teaserTime,options);}
-  else{film.audio.pause();if(time<last-.5||time-last>2)stopHistory();if(!historyAudio){historyAudio=createFinaleAudio(options);void historyAudio.resume();}historyAudio.setMuted(!!options.muted);historyAudio.setVolume(options.volume??.8);historyAudio.sample(f.finaleTime??0);}
+  else if(f.phase==='recap'&&historical){film.audio.pause();if(time<last-.5||time-last>2)stopHistory();if(!historyAudio){historyAudio=createHistoryAudio(options);void historyAudio.resume();}historyAudio.setMuted(!!options.muted);historyAudio.setVolume(options.volume??.8);historyAudio.sample(f.finaleTime);}
+  else{stopHistory();film.audio.pause();}
   last=time;
  },pause(){stopHistory();film.audio.pause();},dispose(){stopHistory();film.audio.dispose();}};
  function dispose(){if(disposed)return;disposed=true;historical?.dispose();film.scene.dispose();texture.dispose();mouthTexture.dispose();geometry.dispose();material.dispose();veil.geometry.dispose();veilMaterial.dispose();slate.clear();}

@@ -37,7 +37,7 @@ Interface: pure recapFrame(time) selects historical finale time or teaser-relati
 Files: new src/halloween-ending-{timeline,scene,audio,player}.js; extend opening-set, finale-state, game/coop integration, maze-world, game UI, test hub/scenarios; tests/halloween-ending.test.js and browser script.
 Interface: HALLOWEEN_ENDING_DURATION; halloweenEndingFrame(time,{count}) pure poses/camera; createHalloweenEndingScene({asset,cast,...}) sample/resize/dispose; createHalloweenEndingPlayer matches finale player; finale records variant:'house' and duration.
 - [x] Failing state/timeline/geometry tests for solo/2–4, host completion, continuous wall crossing, distinct solo/team rescue and title; implement physical B1 service exit and sampled shared-house cinematic.
-- [ ] Add password-only ending tester with scrub beats/casts and real solo/co-op completion checks; verify original finale remains; commit.
+- [x] Add password-only ending tester with scrub beats/casts and real solo/co-op completion checks; verify original finale remains; commit.
 
 ### Task 4: Mounted key panel, B2 direction and neural dialogue
 Files: halloween-world/state/experience; new b2-dialogue.js, b2-director.js, b2-voice.js; public/audio/halloween/b2-* and credits; tests/B2 interaction/director/audio.
@@ -47,5 +47,5 @@ Interface: shared B2 timeline derives recap/teaser start/end; b2Frame(elapsed,en
 
 ### Task 5: Integrated verification, audit and publication
 - [ ] Run full Node suite and build; sequential browser checks for new solo/co-op ending, B2/teaser recaps/voices, actual key panel interaction, opening, drawers/closets, release gate and private tester lifecycle. Capture/review representative frames.
-- [ ] Fresh final review; one evidence-backed fix pass. Audit assets, gameplay, presentation and deployment for remaining gaps and document priorities.
+- [x] Fresh final review; one evidence-backed fix pass. Audit assets, gameplay, presentation and deployment for remaining gaps and document priorities.
 - [ ] Commit, fast-forward original checkout, push main, verify deployment SHA/alias and live private/public flows. Report shipped changes and evidence-backed gaps.
