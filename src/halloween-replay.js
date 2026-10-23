@@ -1,4 +1,4 @@
-import {TEASER_START,TEASER_DURATION} from './teaser-timeline.js';
+import {TEASER_START,TEASER_PRESENTATION_DURATION} from './teaser-timeline.js';
 import * as THREE from 'three';
 import {createHalloweenExperience} from './halloween-experience.js';
 export function startHalloweenReplay(container,{onExit,updatedTeaser=false}){
@@ -11,6 +11,6 @@ export function startHalloweenReplay(container,{onExit,updatedTeaser=false}){
  let start=null;const loading=document.createElement('p');loading.className='round-loading';loading.textContent='Loading teaser…';document.body.append(loading);void experience.teaser.ready.then(()=>{if(!finished){if(experience.teaser.error){loading.setAttribute('role','alert');loading.textContent='Tape could not load. Return to the menu and try again.';}else{note.hidden=!experience.teaser.needlelimbsPending;start=performance.now();loading.remove();}}});function resize(){renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();}resize();window.addEventListener('resize',resize);
  function dispose(){if(finished)return;finished=true;renderer.setAnimationLoop(null);experience.dispose();loading.remove();note.remove();renderer.dispose();renderer.domElement.remove();back.remove();window.removeEventListener('resize',resize);window.removeEventListener('keydown',key);onExit();}
  function key(event){if(event.code==='Escape')dispose();if(event.code==='KeyM')muted=!muted;}window.addEventListener('keydown',key);
- back.onclick=dispose;renderer.setAnimationLoop(()=>{if(start===null)return;const t=(performance.now()-start)/1000;run.halloween.visit.elapsed=TEASER_START+Math.min(TEASER_DURATION-.05,t);experience.render(1/60);if(t>=TEASER_DURATION+1)dispose();});
+ back.onclick=dispose;renderer.setAnimationLoop(()=>{if(start===null)return;const t=(performance.now()-start)/1000;run.halloween.visit.elapsed=TEASER_START+Math.min(TEASER_PRESENTATION_DURATION-.05,t);experience.render(1/60);if(t>=TEASER_PRESENTATION_DURATION+1)dispose();});
  return {dispose,experience};
 }

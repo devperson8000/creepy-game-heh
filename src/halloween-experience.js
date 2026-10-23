@@ -51,7 +51,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,players=
  let lastMonitorFrame=null;
  function monitor(t,playing,hold=false,dead=false){
   screenMaterial.color.setHex(dead?0x000000:0xffffff);
-  if((playing||hold)&&!teaserScene.error){screenMaterial.map=teaserScene.target.texture;teaserScene.render(renderer,hold?24:t,{reducedMotion:reducedMotion(),quality:gamePreferences().quality});return;}
+  if((playing||hold)&&!teaserScene.error){screenMaterial.map=teaserScene.target.texture;teaserScene.render(renderer,hold?(TEASER_END-TEASER_START-.05):t,{reducedMotion:reducedMotion(),quality:gamePreferences().quality});return;}
   screenMaterial.map=texture;
   const frame=dead?'dead':teaserScene.error?'error':'idle';if(frame===lastMonitorFrame)return;lastMonitorFrame=frame;
   if(dead){ctx.fillStyle='#000';ctx.fillRect(0,0,768,448);texture.needsUpdate=true;return;}
@@ -73,7 +73,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,players=
   if(v.elapsed!==recordElapsed){recordElapsed=v.elapsed;recordAt=performance.now();}
   const elapsed=v.elapsed+(replay?0:Math.min(.35,(performance.now()-recordAt)/1000)),conversation=v.stage==='conversation';
   score.update(v.stage,elapsed,{muted:isMuted()||(conversation&&elapsed>=TEASER_START&&elapsed<TEASER_END),volume:prefs.volume});
-  stranger.visible=!q.seen&&(!conversation||elapsed<38.8);
+  stranger.visible=!q.seen&&(!conversation||elapsed<(TEASER_END+3.8));
   stranger.rotation.y=reducedMotion()?0:Math.sin(elapsed*.6)*.035;
   const gesture=conversation?Math.max(0,1-Math.abs(elapsed-8)/2):0;stranger.userData.leftArm.rotation.x=-.65-gesture*.55;stranger.userData.leftHand.position.z=.44+gesture*.15;
   returnButton.hidden=v.stage!=='archive';
@@ -90,19 +90,19 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,players=
    const monitorDistance=1.35/(2*Math.tan(camera.fov*Math.PI/360)*camera.aspect)*1.08;
    const positions=teaser?new THREE.Vector3(-.65,1.6,-1.94+monitorDistance):elapsed<3?new THREE.Vector3(-2.2,1.75,-.4):new THREE.Vector3(1.85,1.85,-1.4);
    camera.position.copy(positions);camera.lookAt(teaser?new THREE.Vector3(-.65,1.6,-2):new THREE.Vector3(.55,1.65,-3));
-   sub.textContent=teaser?sampleFilm(elapsed-TEASER_START).subtitle:elapsed<1?'':elapsed<3?'YOU: “Who are you?”':elapsed<6.2?'STRANGER: “Someone who knows what comes next.”':elapsed<TEASER_START?'STRANGER: “Watch carefully. Don’t look away.”':elapsed<38.4?'STRANGER: “That’s all I could recover. You should go.”':'';
-   fade.style.opacity=elapsed>=38.4&&elapsed<39.6?'1':'0';
+   sub.textContent=teaser?sampleFilm(elapsed-TEASER_START).subtitle:elapsed<1?'':elapsed<3?'YOU: “Who are you?”':elapsed<6.2?'STRANGER: “Someone who knows what comes next.”':elapsed<TEASER_START?'STRANGER: “Watch carefully. Don’t look away.”':elapsed<(TEASER_END+3.4)?'STRANGER: “That’s all I could recover. You should go.”':'';
+   fade.style.opacity=elapsed>=(TEASER_END+3.4)&&elapsed<(TEASER_END+4.6)?'1':'0';
    for(const [index,at] of [[0,3],[1,6.2],[2,TEASER_END]])if(elapsed>=at&&!audioPlayed.has(index)){audioPlayed.add(index);if(elapsed-at<1&&!document.hidden)void voices[index].play().catch(()=>{});}
    if(teaser)teaserAudio.update(elapsed-TEASER_START,{muted:isMuted(),volume:prefs.volume});else teaserAudio.pause();
-   monitor(elapsed-TEASER_START,teaser,elapsed>=TEASER_END&&elapsed<38.4,elapsed>=38.4);crt.intensity=elapsed>=38.4?0:teaser?4:1.3;
+   monitor(elapsed-TEASER_START,teaser,elapsed>=TEASER_END&&elapsed<(TEASER_END+3.4),elapsed>=(TEASER_END+3.4));crt.intensity=elapsed>=(TEASER_END+3.4)?0:teaser?4:1.3;
 
   }else{
    camera.position.set(0,1.65,2.3);camera.lookAt(0,1.5,4.3);fade.style.opacity=String(elapsed<.5?1-elapsed/.5:elapsed>(v.stage==='descent'?4.2:3.2)?Math.min(1,(elapsed-(v.stage==='descent'?4.2:3.2))/.65):0);sub.textContent='';
   }
   if(!conversation){monitor(0,false,false,q.seen);crt.intensity=q.seen?0:1.3;teaserAudio.pause();overlay.classList.remove('watching-tape');}
   const open=v.stage==='archive'?1:0;doorLeft.position.x=-.58-open;doorRight.position.x=.58+open;
-  rim.intensity=conversation&&elapsed>38.4?0:3.5;
-  lamp.intensity=conversation&&elapsed>38.4&&elapsed<39.6?0:10;
+  rim.intensity=conversation&&elapsed>(TEASER_END+3.4)?0:3.5;
+  lamp.intensity=conversation&&elapsed>(TEASER_END+3.4)&&elapsed<(TEASER_END+4.6)?0:10;
   for(const p of players())if((p.id??'solo')!==localId){if(asset&&!avatars.has(p.id)){const a=createPlayerAvatar(asset,p);avatars.set(p.id,a);scene.add(a.root);}avatars.get(p.id)?.update({...poseFor(p),interpolated:true},delta);}
   for(const [id,a] of avatars)if(!players().some(p=>p.id===id)){a.dispose();avatars.delete(id);}
   if(q.seen)rememberFootage();

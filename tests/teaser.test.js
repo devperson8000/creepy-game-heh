@@ -1,3 +1,4 @@
+import {B2_CONVERSATION_DURATION} from '../src/teaser-timeline.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createRun} from '../src/game-state.js';
@@ -7,8 +8,8 @@ test('B2 cannot finish the encounter before the full 25 second film and stranger
  const run=createRun(42,{halloween:true});run.phase='halloween';
  run.halloween.visit={id:'test',stage:'conversation',elapsed:0,startedAt:100};
  advanceHalloween(run,[],135);assert.equal(run.halloween.seen,false);assert.equal(run.halloween.visit.stage,'conversation');
- advanceHalloween(run,[],142.9);assert.equal(run.halloween.seen,false);
- advanceHalloween(run,[],143);assert.equal(run.halloween.seen,true);assert.equal(run.halloween.visit.stage,'archive');
+ advanceHalloween(run,[],100+B2_CONVERSATION_DURATION-.1);assert.equal(run.halloween.seen,false);
+ advanceHalloween(run,[],100+B2_CONVERSATION_DURATION);assert.equal(run.halloween.seen,true);assert.equal(run.halloween.visit.stage,'archive');
 });
 test('the teaser holds its title and samples consistently when seeking',async()=>{
  const {sampleTeaser,TEASER_DURATION}=await import('../src/teaser-timeline.js');

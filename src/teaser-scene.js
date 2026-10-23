@@ -1,3 +1,4 @@
+import {attachMechanicalHead} from './mechanical-head.js';
 import * as THREE from 'three';
 import {createCreature,applyIdle} from './creature.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
@@ -47,7 +48,7 @@ export function createTeaserScene(){
  const lamps=[];for(const z of [2,-3,-9.7,-15]){box(1.25,.035,.24,0,4.15,z,lampMat);const l=new THREE.PointLight(0xa0c8b9,14,7.5,2);l.position.set(0,3.85,z);scene.add(l);lamps.push(l);}
  const revealLight=new THREE.PointLight(0xa9bab0,9,5,2);scene.add(revealLight);
  const backLight=new THREE.PointLight(0x668c82,13,5,2);backLight.position.set(0,3.7,-15.6);scene.add(backLight);
- const creature=createCreature();scene.add(creature.root);creature.root.position.z=-15.3;
+ const creature=createCreature();attachMechanicalHead(creature);scene.add(creature.root);creature.root.position.z=-15.3;
  const bodyMat=material(0x030606),old=new Set();creature.root.traverse(o=>{if(o.isMesh&&o.material.userData.creatureBody){old.add(o.material);o.material=bodyMat;}});old.forEach(m=>m.dispose());
  const torch=new THREE.Group();scene.add(torch);const barrel=box(.07,.07,.3,0,0,0,steel);torch.add(barrel);barrel.position.set(0,0,0);const beam=new THREE.SpotLight(0xcfdcc0,22,13,.38,.75,1.5);torch.add(beam,beam.target);beam.target.position.set(.1,-.12,-9);
  const titleCanvas=document.createElement('canvas');titleCanvas.width=1280;titleCanvas.height=720;const ctx=titleCanvas.getContext('2d');ctx.fillStyle='#020504';ctx.fillRect(0,0,1280,720);ctx.textAlign='center';ctx.fillStyle='#829486';ctx.font='18px monospace';ctx.fillText('RECOVERED FOOTAGE / END OF TRANSMISSION',640,244);ctx.fillStyle='#e4e7db';ctx.font='bold 82px sans-serif';ctx.fillText('MONOCHROME',590,380);ctx.fillStyle='#c29d68';ctx.fillText('II',985,380);ctx.fillRect(457,434,366,1);
@@ -65,7 +66,7 @@ export function createTeaserScene(){
    if(id==='crawler')actor.sample(u,{position:[-3.5+progress*7,0,-9.7],yaw:Math.PI/2,pitch:.65,progress});
    if(id==='maw')actor.sample(u,{position:[-3.35+amount*.32,-.12,-5.15],yaw:.65,lean:-amount*.08,progress});
   }}
-  applyIdle(creature,{sway:0,pitch:0,yaw:0,arm:0});creature.root.position.set(0,0,-15.3);creature.root.visible=u>=20&&u<20.65;
+  applyIdle(creature,{sway:0,pitch:0,yaw:0,arm:0});creature.mechanical.sample(u,{jaw:.3});creature.root.position.set(0,0,-15.3);creature.root.visible=u>=20&&u<20.65;
   doors[0].position.x=-.52-Math.min(1,u/1.2);doors[1].position.x=.52+Math.min(1,u/1.2);
   for(let i=0;i<lamps.length;i++)lamps[i].intensity=u>=20.2?0:14;
   if(u<10)revealLight.position.set(1.1,3.1,-6.5);else if(u<15)revealLight.position.set(0,2.5,-9.1);else revealLight.position.set(-1.5,2.2,-4.5);
@@ -84,6 +85,6 @@ export function createTeaserScene(){
   const previous=renderer.getRenderTarget(),exposure=renderer.toneMappingExposure,auto=renderer.autoClear,viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest();
   try{renderer.setRenderTarget(target);renderer.setViewport(0,0,target.width,target.height);renderer.setScissorTest(false);renderer.autoClear=true;renderer.toneMappingExposure=1.05;renderer.render(scene,camera);}finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.toneMappingExposure=exposure;renderer.autoClear=auto;}
  }
- function dispose(){if(disposed)return;disposed=true;survivor?.dispose();monsters.forEach(a=>a.dispose());const gs=new Set(geometries),ms=new Set(materials);scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material)ms.add(o.material);});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());target.dispose();}
+ function dispose(){if(disposed)return;disposed=true;survivor?.dispose();creature.mechanical?.dispose();monsters.forEach(a=>a.dispose());const gs=new Set(geometries),ms=new Set(materials);scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material)ms.add(o.material);});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());target.dispose();}
  return {scene,camera,target,creature,monsters,ready,sample,render,dispose,get survivor(){return survivor;},get error(){return loadError;},get state(){return lastSample;}};
 }

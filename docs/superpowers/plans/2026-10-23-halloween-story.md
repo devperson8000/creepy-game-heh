@@ -30,8 +30,8 @@ Interface: attachMechanicalHead(body) returns {root,sample,dispose}; createMonst
 ### Task 2: Historical recap before the teaser
 Files: new src/teaser-recap.js; modify teaser-playback, teaser-timeline and B2 time consumers; tests/teaser-recap.test.js.
 Interface: pure recapFrame(time) selects historical finale time or teaser-relative time; wrapper scene exposes existing {target,ready,render,dispose,error}; audio pauses/resumes matching the same time.
-- [ ] Failing tests for PREVIOUSLY, sever/head-drop sample and no walkout, seek/teardown; implement bounded recap using original finale scene/audio and then current teaser.
-- [ ] Verify both teaser edits, offsets and mute/late seek; commit.
+- [x] Failing tests for PREVIOUSLY, sever/head-drop sample and no walkout, seek/teardown; implement bounded recap using original finale scene/audio and then current teaser.
+- [x] Verify both teaser edits, offsets and mute/late seek; commit.
 
 ### Task 3: House escape and authoritative gameplay integration
 Files: new src/halloween-ending-{timeline,scene,audio,player}.js; extend opening-set, finale-state, game/coop integration, maze-world, game UI, test hub/scenarios; tests/halloween-ending.test.js and browser script.

@@ -24,7 +24,7 @@ test('the key requires the invitation and all three sequential seals; repeats ne
  catchPlayer(r);retryRun(r);assert.equal(r.halloween.key,true);assert.equal(r.halloween.stage,5);
 });
 test('B2 requires its key, everyone upstairs and no downed teammates, then restores B1 poses',async()=>{
- const {interactHalloween,advanceHalloween}=await load(),r=createRun(42,{halloween:true});
+ const {interactHalloween,advanceHalloween,B2_DURATION}=await load(),r=createRun(42,{halloween:true});
  const players=[{id:'a',slot:0,status:'alive',x:-2.6,z:-31,height:3.6,yaw:0,pitch:0},{id:'b',slot:1,status:'alive',x:10,z:10,height:0,yaw:1,pitch:0}];
  assert.equal(interactHalloween(r,'halloween:b2-panel',{players,now:10}).ok,false);
  r.halloween.key=true;r.halloween.stage=5;
@@ -37,8 +37,8 @@ test('B2 requires its key, everyone upstairs and no downed teammates, then resto
  assert.ok(players.every(p=>p.z<4&&p.height===0));
  Object.assign(players[0],{x:0,z:-1.2});advanceHalloween(r,players,17);
  assert.equal(r.halloween.visit.stage,'conversation');
- advanceHalloween(r,players,60);assert.equal(r.halloween.seen,true);assert.equal(r.halloween.visit.stage,'archive');
- assert.equal(interactHalloween(r,'halloween:return',{players,now:61}).ok,true);advanceHalloween(r,players,66);
+ advanceHalloween(r,players,17+B2_DURATION.conversation);assert.equal(r.halloween.seen,true);assert.equal(r.halloween.visit.stage,'archive');
+ assert.equal(interactHalloween(r,'halloween:return',{players,now:18+B2_DURATION.conversation}).ok,true);advanceHalloween(r,players,23+B2_DURATION.conversation);
  assert.equal(r.phase,'playing');assert.equal(r.halloween.visit,null);
  for(let i=0;i<players.length;i++)for(const key of ['x','z','height','yaw','pitch'])assert.equal(players[i][key],poses[i][key]);
 });
