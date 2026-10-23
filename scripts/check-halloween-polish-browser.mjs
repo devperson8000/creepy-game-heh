@@ -14,7 +14,7 @@ try{
   await page.goto(base);await page.locator('#lobby-singleplayer').waitFor();assert.match(await page.locator('.halloween-countdown').innerText(),/Deeper B1 maze/);
   for(const width of [1050,390,320]){await page.setViewportSize({width,height:760});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);if(width===390)await shot('countdown-mobile');}await page.setViewportSize({width:1050,height:760});
  }
- await page.goto(base+'/testhalloween');await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Unlock tests'}).click();
+ await page.goto(base+'/testhalloween');await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Unlock tests'}).click();await page.locator('#halloween-test-hub').waitFor();
  if(!mapOnly){
   assert.equal(await page.getByRole('button',{name:'Opening house introduction',exact:true}).count(),1);
   await page.evaluate(()=>localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',volume:0,reducedMotion:false})));
