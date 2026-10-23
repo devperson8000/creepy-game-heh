@@ -31,15 +31,18 @@ const instructions={boards:'The way downstairs is open.',key:'Key found. Return 
 const reasons={'wrong-code':'Access denied. Check the four-digit clue.','locked':'The elevator needs four banked keys and the code.','occupied':'Someone is already hiding here.','too-far':'Move closer.','blocked':'Something blocks the way.','unavailable':'That action is no longer available.'};
 
 /** The lobby owner runs one simulation; peers submit inputs, never positions or monster state. */
-export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.now()/1000}={}){
+export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.now()/1000,checkpoint}={}){
  const groundHeight=world.groundHeight??legacyGroundHeight;
  const enemy=createEnemy(state.run.layout),ambush=createAmbush(state.seed,{chance:ambushChance});
  const remoteMovement=new Map(),remoteAt=new Map();
  const drawerRequests=new Map();
  const inputs=new Map(),footsteps=new Map(),noisyUntil=new Map(),notices=[];
- let pendingNoise=[],sequence=0,noticeId=0,ambushResult={silent:false,triggered:false,targetId:null},reveal=0;
+ let pendingNoise=[],sequence=checkpoint?.sequence??0,noticeId=checkpoint?.notices?.at(-1)?.id??0,ambushResult={silent:false,triggered:false,targetId:null},reveal=0;
  let huntClockAt=now(),clockIsRunning=false;
  const navigation=world.enemyNavigation??{};
+ if(checkpoint?.enemy){const e=checkpoint.enemy;enemy.position={...e.position};enemy.yaw=e.yaw;enemy.mode=e.mode;enemy.targetId=e.targetId;enemy.released=!!e.active;reveal=e.reveal??0;}
+ if(checkpoint?.recovery){Object.assign(enemy,checkpoint.recovery.enemy);Object.assign(ambush,checkpoint.recovery.ambush);enemy.path=[];enemy.repath=0;}
+ const savedEnemy=()=>Object.fromEntries(['released','lastSeen','lastHeard','lostFor','patrolIndex','searchRemaining','sensedBy','idleFor','roamRemaining','areaOrigin','areaTime'].map(k=>[k,enemy[k]&&typeof enemy[k]==='object'?{...enemy[k]}:enemy[k]]));
  function tell(playerId,message){notices.push({id:++noticeId,playerId,message});if(notices.length>24)notices.shift();}
  function setInput(id,input){
   if(!['playing','halloween'].includes(state.run.phase)||!state.players.has(id)||!input||!['forward','right','yaw','pitch'].every(k=>Number.isFinite(input[k])))return false;
@@ -150,7 +153,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
   }
  }
  function enemySnapshot(){return {position:{...enemy.position},yaw:enemy.yaw,mode:enemy.mode,active:huntActive(state.run),moving:enemy.path.length>0,targetId:enemy.targetId,silent:ambushResult.silent,silentTargetId:ambushResult.targetId,reveal};}
- function snapshot(){return {sequence:++sequence,state:serializeCoopState(state),enemy:enemySnapshot(),huntClock:{hostAt:huntClockAt,running:clockIsRunning&&state.run.phase==='playing'},notices:[...notices]};}
+ function snapshot(){return {sequence:++sequence,state:serializeCoopState(state),enemy:enemySnapshot(),huntClock:{hostAt:huntClockAt,running:clockIsRunning&&state.run.phase==='playing'},notices:[...notices],recovery:{enemy:savedEnemy(),ambush:{...ambush}}};}
  function removePlayer(id){inputs.delete(id);remoteMovement.delete(id);remoteAt.delete(id);footsteps.delete(id);noisyUntil.delete(id);removeCoopPlayer(state,id);}
  return {state,enemy,setInput,interact,advance,snapshot,enemySnapshot,removePlayer};
 }

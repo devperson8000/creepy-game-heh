@@ -28,5 +28,5 @@ export function createArrival({halloween=false}={}){
   if(p.done){dispose();return true;}return false;
  }
  function dispose(){if(!active)return;active=false;voice?.dispose();document.removeEventListener('keydown',onKey);root.remove();document.body.classList.remove('arrival-active');}
- return {update,dispose,get active(){return active;},get elapsed(){return elapsed;}};
+ return {update,dispose,pause:()=>voice?.pause(),get active(){return active;},get elapsed(){return elapsed;}};
 }

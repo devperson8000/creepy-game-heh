@@ -204,7 +204,7 @@ test('leave requests survive page navigation without applying keepalive to large
   assert.notEqual(requests[1].init.keepalive, true);
 });
 
-test('server channel closure produces an explicit realtime error while manual close remains quiet', async t => {
+test('server channel closure enters recovery while manual close remains quiet', async t => {
   const b = backend(), events = []; let subscription;
   b.client.channel = () => ({ on() { return this; }, subscribe(callback) { subscription = callback; queueMicrotask(() => callback('SUBSCRIBED')); return this; } });
   const client = createLobbyClient({ client: b.client });
@@ -212,7 +212,7 @@ test('server channel closure produces an explicit realtime error while manual cl
   client.subscribe(event => events.push(event));
   await client.connect();
   subscription('CLOSED');
-  assert.ok(events.some(event => event.type === 'error' && event.code === 'REALTIME_ERROR'));
+  assert.ok(events.some(event => event.type === 'connection' && event.status === 'reconnecting'));assert.equal(client.connected,true);
   const before = events.filter(event => event.type === 'error').length;
   await client.close();
   subscription('CLOSED');
@@ -285,4 +285,36 @@ test('voice signalling targets accepted members and survives waiting-to-game tra
  b.values.set('game_room',{data:{...room,status:'running',seed:123,members:[...room.members,{id:'peer',slot:1}]}});client.send('ready',{ready:true});await tick();await tick();
  assert.equal(b.subscriptions.filter(h=>h.filter.event==='voice').length,count);
  assert.equal(client.send('voice',{to:'peer',signal:{type:'state',muted:true}}),true);
+});
+
+test('temporary recovery reuses the authenticated identity and fetches current authority without restarting the room',async t=>{
+ const b=backend(),events=[],running={...room,status:'running',seed:123,ownerId:'other',ownerEpoch:2};b.values.set('game_room',{data:running});b.values.set('game_recover',{data:{room:running,snapshot:{sequence:20,authority:{ownerId:'other',epoch:2}},serverNow:100}});const client=createLobbyClient({client:b.client});t.after(()=>client.close());client.subscribe(e=>events.push(e));await client.connect();await client.recover();assert.equal(client.id,'user-1');assert.equal(b.calls.filter(([name])=>name==='auth').length,1);assert.equal(events.filter(e=>e.type==='started').length,1);assert.equal(events.find(e=>e.type==='recovered').snapshot.sequence,20);assert.ok(b.calls.some(([name])=>name==='game_support_recovery'));
+});
+test('a failed transport recovery keeps the identity and can retry; a late result after close is ignored',async t=>{
+ const b=backend(),events=[];b.values.set('game_room',{data:{...room,status:'running',seed:123}});const client=createLobbyClient({client:b.client});t.after(()=>client.close());client.subscribe(e=>events.push(e));await client.connect();b.values.set('game_recover',{error:{message:'temporary network failure'}});await assert.rejects(client.recover(),/temporary network failure/);assert.equal(client.id,'user-1');let release;const rpc=b.client.rpc;b.client.rpc=async(name,args)=>name==='game_recover'?new Promise(r=>release=r):rpc(name,args);const recovering=client.recover();await tick();const closing=client.close({leave:false});release({data:{room:{...room,status:'running',seed:123},snapshot:{sequence:5}}});await recovering;await closing;assert.equal(events.some(e=>e.type==='recovered'),false);assert.equal(b.calls.filter(([name])=>name==='game_leave').length,0,'reload suspension does not leave the lobby');
+});
+test('an authenticated page reload resumes its current checkpoint instead of signing in as another anonymous user',async t=>{
+ const b=backend(),events=[],running={...room,status:'running',seed:123,ownerEpoch:1};b.client.auth.getSession=async()=>({data:{session:{user:{id:'user-1'}}}});b.values.set('game_room',{data:running});b.values.set('game_recover',{data:{room:running,snapshot:{sequence:12,state:{run:{halloween:{maze:true},initialPlayerCount:4}}}}});const client=createLobbyClient({client:b.client,restoreSession:true});t.after(()=>client.close());client.subscribe(e=>events.push(e));await client.connect();assert.equal(b.calls.filter(([name])=>name==='auth').length,0);const start=events.find(e=>e.type==='started');assert.equal(start.checkpoint.sequence,12);assert.equal(start.ownerEpoch,1);assert.equal(start.halloween,true);assert.ok(b.calls.some(([name,args])=>name==='game_recover'&&args.p_resume===true));
+});
+
+test('an owner flushes the final checkpoint before leaving and retries a rate-limited flush', async () => {
+ const b=backend(),original=b.client.rpc;let publishes=0;
+ b.values.set('game_room',{data:{...room,status:'running',seed:17}});
+ b.client.rpc=async(name,args)=>{if(name==='game_publish_snapshot'&&++publishes===1){b.calls.push([name,args]);return {error:{message:'RATE_LIMIT'}};}return original(name,args);};
+ const client=createLobbyClient({client:b.client});await client.connect();b.calls.length=0;
+ const checkpoint={sequence:42,authority:{ownerId:client.id,epoch:0}};await client.close({checkpoint});
+ assert.deepEqual(b.calls.map(([name])=>name),['game_publish_snapshot','game_publish_snapshot','game_leave']);assert.deepEqual(b.calls[1][1],{p_snapshot:checkpoint});
+});
+
+test('suspending a guest never publishes an owner checkpoint or leaves the room', async () => {
+ const b=backend();b.values.set('game_room',{data:{...room,ownerId:'other',status:'running',seed:1}});
+ const client=createLobbyClient({client:b.client});await client.connect();b.calls.length=0;
+ await client.close({leave:false,checkpoint:{sequence:42}});assert.deepEqual(b.calls,[]);
+});
+
+test('only bounded unload checkpoints opt into keepalive', async () => {
+ const {createMultiplayerFetch}=await import('../src/lobby-client.js'),requests=[];let unloading=false;
+ const fetcher=createMultiplayerFetch(async(url,init)=>{requests.push(init);return new Response(null,{status:204});},{isSuspending:()=>unloading});
+ const url='https://project.supabase.co/rest/v1/rpc/game_publish_snapshot';await fetcher(url,{body:'{}'});unloading=true;await fetcher(url,{body:'{}'});await fetcher(url,{body:'x'.repeat(50000)});
+ assert.notEqual(requests[0].keepalive,true);assert.equal(requests[1].keepalive,true);assert.notEqual(requests[2].keepalive,true);
 });

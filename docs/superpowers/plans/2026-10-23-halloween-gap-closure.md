@@ -47,7 +47,7 @@ Interface: audio.update(distance,active,delta,{listener,source,occluded}) retain
 ### Task 5: Authenticated recovery
 Files: src/lobby-client.js, src/coop-game.js, snapshot restore helper/simulation, SQL migration only if account available; tests.
 Interface: recover same client identity and request current authoritative snapshot; owner transitions are server-backed and restore existing state.
-- [ ] Inspect account/schema/docs; failing transient recovery/authority/state restore tests.
+- [x] Inspect account/schema/docs; failing transient recovery/authority/state restore tests.
 - [ ] Implement bounded reconnect/fresh snapshot and server succession where available; verify actual network interruption and old authority rejection, commit.
 
 ### Task 6: Integrated QA, audit and publication

@@ -17,6 +17,7 @@ for migration in supabase/migrations/*.sql; do run_sql < "$migration" >> "$logs/
 run_sql < supabase/tests/movement.sql > "$logs/movement.log"
 run_sql < supabase/tests/security.sql > "$logs/security.log"
 run_sql < supabase/tests/expiry.sql > "$logs/expiry.log"
+run_sql < supabase/tests/recovery.sql > "$logs/recovery.log"
 run_sql < supabase/tests/concurrency.sql > "$logs/concurrency.log"
 (printf '%s\n' "begin; set local role authenticated; select set_config('request.jwt.claim.sub','10000000-0000-0000-0000-000000000001',true); select public.game_approve('10000000-0000-0000-0000-000000000004',true); select pg_sleep(0.2); commit;" | run_sql > "$logs/a.log" 2>&1) &
 first=$!

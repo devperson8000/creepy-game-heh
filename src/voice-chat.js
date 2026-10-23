@@ -142,7 +142,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   else if(e.type==='voice')void signal(e.playerId,e.signal).catch(()=>{notice='Voice connection interrupted. You can keep playing.';render();});
   else if(e.type==='voiceReady')for(const id of peers.keys()){send(id,{type:'hello'});send(id,{type:'state',muted:muted()});}
   else if(['left','roomClosed','disconnected'].includes(e.type))reset();
-  else if(e.type==='connection'&&e.status==='closed')dispose();
+  else if(e.type==='connection'&&['closed','suspended'].includes(e.status))dispose();
  });
  const timer=setInterval(()=>{
   if(!roomId||disposed)return;let changed=false;const now=performance.now();

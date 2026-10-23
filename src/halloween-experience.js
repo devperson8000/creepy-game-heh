@@ -60,7 +60,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  function render(delta){
   const q=run.halloween,v=q?.visit;if(!v){finish();return false;}
   if(!active){void prepareKeeper();active=true;overlay.hidden=false;input.clear();resumeScore();document.body.classList.add('b2-active');}
-  const cinematic=v.stage!=='archive',key=`${v.id}:${v.stage}:${v.startedAt}`;
+  const cinematic=v.stage!=='archive',key=`${v.id}:${v.stage}`;
   if(key!==stageKey){stageKey=key;recordElapsed=-1;voice.pause();teaserAudio.pause();input.clear();
    if(v.stage==='unlock')unlockEntry=viewPose();if(v.stage==='conversation')entryPose=viewPose();
    if(v.stage==='archive'){const own=players().find(p=>(p.id??'solo')===localId);input.setView(own?.yaw??0,own?.pitch??0);}if(cinematic)document.exitPointerLock?.();
@@ -102,7 +102,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  }
  function dispose(){if(disposed)return;disposed=true;finish(false);reveal?.remove();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',unlockKey);score.dispose();voice.dispose();teaserAudio.dispose();teaserScene.dispose();renderer.domElement.removeEventListener('pointerdown',resumeScore);overlay.remove();avatars.forEach(a=>a.dispose());keeper.dispose();root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});resources.forEach(r=>r.dispose());}
 
- return {render,finish,dispose,scene,get stranger(){return stranger;},get keeper(){return keeper;},get keeperReady(){return prepareKeeper();},voice,switchButton,overlay,teaser:teaserScene};
+ return {render,finish,dispose,pause(){voice.pause();score.pause();teaserAudio.pause();},scene,get stranger(){return stranger;},get keeper(){return keeper;},get keeperReady(){return prepareKeeper();},voice,switchButton,overlay,teaser:teaserScene};
 }
 export function createHalloweenQuestUI(root,run){
  const card=document.createElement('aside');card.className='halloween-quest';card.hidden=true;root.append(card);let previous='';

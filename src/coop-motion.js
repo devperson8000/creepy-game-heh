@@ -66,6 +66,7 @@ const angle=(a,b,t)=>a+Math.atan2(Math.sin(b-a),Math.cos(b-a))*t;
 export function createPoseBuffer({delay=.1,extrapolation=.1,adaptive=false}={}){
  let frames=[],spacing=delay/2,targetDelay=delay,lastNow=null,lastSample=-Infinity;
  return {
+  clear(){frames=[];spacing=delay/2;targetDelay=delay;lastNow=null;lastSample=-Infinity;},
   push(time,pose){
    if(!Number.isFinite(time)||!pose||!Number.isFinite(pose.x)||!Number.isFinite(pose.z))return;
    if(frames.length&&time<=frames.at(-1).time)return;

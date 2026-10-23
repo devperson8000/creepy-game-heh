@@ -1,3 +1,4 @@
+import {restoreCoopAuthority,acceptsAuthority} from './coop-recovery.js';
 import {createHalloweenEndingPlayer} from './halloween-ending-player.js';
 import {attachMechanicalHead} from './mechanical-head.js';
 import {halloweenTargetInfo,canMoveB2} from './halloween-state.js';
@@ -30,9 +31,10 @@ import {createArrival} from './arrival.js';
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience();
  const arrival=createArrival({halloween:session.halloween===true});
- const state=createCoopState(session.seed,session.players,{halloween:session.halloween===true,maze:session.maze!==false,drawerRows:session.drawerRows}),run=state.run;
+ const savedRun=session.checkpoint?.state?.run;const state=createCoopState(session.seed,session.players,{halloween:savedRun?!!savedRun.halloween:session.halloween===true,maze:savedRun?.halloween?.maze??session.maze!==false,drawerRows:savedRun?.halloween?.drawerRows??session.drawerRows,initialPlayerCount:savedRun?.initialPlayerCount??session.players.length}),run=state.run;
  state.ownerId=session.ownerId;
- const localId=client.id,isHost=localId===session.ownerId;
+ const localId=client.id;session.ownerEpoch??=0;let isHost=localId===session.ownerId;state.ownerEpoch=session.ownerEpoch;
+ if(session.checkpoint){restoreCoopAuthority(state,session.checkpoint,{members:session.players,ownerId:session.ownerId,epoch:session.ownerEpoch,rebase:isHost});arrival.dispose();}
  if(!state.players.has(localId))throw new Error('You are not a member of this round.');
  const world=createWorld(run),groundHeight=world.groundHeight??legacyGroundHeight,ui=createGameUI(),revivePrompts=createRevivePrompts(ui.root);
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;container.append(renderer.domElement);
@@ -61,12 +63,13 @@ export function startCoopGame(container,{client,session}){
   return !first||first.object.userData.interactId===target.id||first.distance>length-.08;
  };
  const b1CanMove=world.canMove;world.canMove=(x,z)=>run.phase==='halloween'?canMoveB2(x,z):b1CanMove(x,z);world.canMove.gameplay=()=>run.layout.halloweenMaze&&run.phase!=='halloween'?'maze':'legacy';world.canMove.groundHeight=p=>run.phase==='halloween'?0:groundHeight(p);
- const simulation=isHost?createCoopSimulation(state,world):null;
+ let simulation=isHost?createCoopSimulation(state,world,{checkpoint:session.checkpoint}):null;
  const drawerRequests=createDrawerRequests({send:action=>client.send('action',{action})});
- let enemyView={position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
- let latestSequence=-1,lastNotice=0,scareStatus=null,lastStatus='alive',outcome=null,spectateId=null,lastSnapshotAt=performance.now(),leaving=false;
+ let enemyView=session.checkpoint?.enemy??{position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
+ let latestSequence=session.checkpoint?.sequence??-1,lastNotice=0,scareStatus=null,lastStatus=state.players.get(localId).status,outcome=null,spectateId=null,lastSnapshotAt=performance.now(),leaving=false;
  let hold=0,holdId=null,latched=false,buffer='',inputClock=0,snapshotClock=0,disconnected=false,surfaceDistance=Infinity,surfaceHit=null;
- let huntClockStamp=null;
+ let huntClockStamp=session.checkpoint?.huntClock??null;
+ let recovering=false,recoveryAt=0,nextRecoveryAt=0,recoveryAttempt=null;
  const avatars=new Map(),noiseSequences=new Map(),poseBuffers=new Map(),enemyBuffer=createPoseBuffer({adaptive:true});let avatarAsset;
  const prediction=createMovementPrediction(state.players.get(localId),world.canMove);
  let peerProofAt=0,proofSnapshotClock=0;
@@ -89,7 +92,7 @@ export function startCoopGame(container,{client,session}){
   const own=local(),huntElapsed=isHost||!hostClock.ready?run.huntElapsed:sampleHuntElapsed(run,{...huntClockStamp,hostNow:hostClock.sample()});
   return {...run,huntElapsed,carried:own?.carried??new Set(),hidden:!!watched?.hidden,teamKeyCount:run.banked.size+[...state.players.values()].reduce((n,p)=>n+p.carried.size,0)};
  }
- async function leave(){if(leaving)return;leaving=true;finale?.dispose();await Promise.race([client.close(),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
+ async function leave(){if(leaving)return;leaving=true;finale?.dispose();await Promise.race([client.close({checkpoint:authorityCheckpoint()}),new Promise(resolve=>setTimeout(resolve,2000))]);location.assign(location.pathname);}
  function resume(){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
  function screen(kind){
   if(kind==='lost'){arrival.dispose();finale?.dispose();finaleFinished=true;}
@@ -107,7 +110,7 @@ export function startCoopGame(container,{client,session}){
   card.querySelector('a')?.remove();
   const secondary=ui.el('new-run');if(secondary){secondary.textContent='Leave this session';secondary.addEventListener('click',leave);}
  }
- function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(disconnected||run.phase!=='playing')return;if(ui.overlay==='pause')resume();else if(!ui.overlay)screen('pause');}
+ function pause(){if(recovering)return;if(ui.overlay==='keypad'){closeKeypad();return;}if(disconnected||run.phase!=='playing')return;if(ui.overlay==='pause')resume();else if(!ui.overlay)screen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void audio.resume();void ambience.resume();});
  input.setView(local().yaw);
  const questUI=createHalloweenQuestUI(ui.root,run);
@@ -128,6 +131,7 @@ export function startCoopGame(container,{client,session}){
   if(ui.overlay==='keypad'){if(/^\d$/.test(event.key)){event.preventDefault();digit(event.key);}else if(event.key==='Backspace'){event.preventDefault();digit('←');}else if(event.key==='Enter'){event.preventDefault();digit('✓');}}
  });
  function sendAction(targetId,code='interact'){
+  if(recovering||disconnected)return;
   if(isHost)simulation.interact(localId,{targetId,code});else if(!client.send('action',{action:{targetId,code}}))ui.toast('Waiting for the connection. Release E and try again.');
  }
  function closeKeypad(){ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();void audio.resume();void ambience.resume();}
@@ -161,6 +165,7 @@ export function startCoopGame(container,{client,session}){
   if(jumpscare.active)return;ui.overlay='jumpscare';ui.el('game-screen').hidden=true;ui.el('keypad-dialog').hidden=true;ui.el('jumpscare-border').hidden=false;document.body.classList.add('jumpscare-active');input.clear();document.exitPointerLock?.();jumpscare.start();audio.playJumpscare();scareStatus=true;
  }
  function receiveSnapshot(snapshot,authenticated=false){
+  if(!acceptsAuthority(snapshot,session))return;
   if(authenticated&&snapshot?.state?.seed===state.seed){const proof=snapshot.peerProofs?.[localId];if(typeof proof==='string'&&/^[a-f0-9]{64}$/.test(proof))ownerFingerprint=proof;
    const accepted=snapshot.peerAcknowledged?.[localId];if(typeof accepted==='string'&&/^[a-f0-9]{64}$/.test(accepted))acceptedFingerprint=accepted;
   }
@@ -182,6 +187,20 @@ export function startCoopGame(container,{client,session}){
   enemyView=snapshot.enemy??enemyView;recordPoses();
   for(const notice of snapshot.notices??[])if(notice.id>lastNotice){if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);}
  }
+ const reconnect=document.createElement('aside');reconnect.id='coop-recovery';reconnect.hidden=true;reconnect.setAttribute('role','status');reconnect.innerHTML='<strong>Restoring connection…</strong><p>Stay with your team.</p><button type="button" data-retry>Retry now</button><button type="button" data-leave>Leave session</button>';document.body.append(reconnect);
+ function beginRecovery(){if(leaving||disconnected)return;if(!recovering){recovering=true;recoveryAt=performance.now();reconnect.hidden=false;input.clear();drawerRequests.clear();hold=0;holdId=null;latched=false;audio.pause();ambience.pause();arrival.pause?.();experience.pause();finale?.setMuted?.(true);document.exitPointerLock?.();}void attemptRecovery();}
+ function attemptRecovery(){if(!recovering||recoveryAttempt||performance.now()<nextRecoveryAt)return;nextRecoveryAt=performance.now()+2000;if(!client.recover){disconnected=true;recovering=false;reconnect.hidden=true;screen('lost');return;}recoveryAttempt=client.recover().catch(()=>{}).finally(()=>{recoveryAttempt=null;});return recoveryAttempt;}
+ function recovered(event){if(leaving||disconnected||!event.lobby)return;const lobby=event.lobby,checkpoint=event.snapshot,changed=lobby.ownerId!==session.ownerId||(lobby.ownerEpoch??0)!==session.ownerEpoch;
+  if(checkpoint?.state?.seed!==state.seed)return;
+  session.ownerId=lobby.ownerId;session.ownerEpoch=lobby.ownerEpoch??0;session.players=lobby.members;isHost=localId===session.ownerId;
+  restoreCoopAuthority(state,checkpoint,{members:lobby.members,ownerId:session.ownerId,epoch:session.ownerEpoch,rebase:changed||isHost});
+  if(!local()){disconnected=true;recovering=false;reconnect.hidden=true;screen('lost');return;}
+  simulation=isHost?createCoopSimulation(state,world,{checkpoint}):null;enemyView=checkpoint.enemy??enemyView;latestSequence=checkpoint.sequence??-1;lastSnapshotAt=performance.now();huntClockStamp=changed?{hostAt:Date.now()/1000,running:false}:checkpoint.huntClock;prediction.reset();input.clear();input.setView(local().yaw??Math.PI,local().pitch??0);correction.x=0;correction.z=0;poseBuffers.clear();enemyBuffer.clear();recordPoses();hostClock.reset();clockEchoes.clear();finaleClock.reset();nextClockPing=performance.now()+50;
+  if(changed){ownerFingerprint=null;acceptedFingerprint=null;peerFingerprints.clear();proofSnapshotClock=1;}
+  recovering=false;reconnect.hidden=true;finale?.setMuted?.(audio.muted);if(run.phase==='playing'&&!ui.overlay){void audio.resume();void ambience.resume();}renderer.domElement.focus();
+ }
+ reconnect.querySelector('[data-retry]').onclick=()=>{nextRecoveryAt=0;void attemptRecovery();};reconnect.querySelector('[data-leave]').onclick=leave;
+ const offline=()=>beginRecovery(),online=()=>{if(recovering){nextRecoveryAt=0;void attemptRecovery();}};window.addEventListener('offline',offline);window.addEventListener('online',online);
  const offGameplay=client.voice?.subscribeGameplay(event=>{
   if(event.type==='snapshot'&&event.playerId===session.ownerId&&peerReady(event.playerId))receiveSnapshot(event.payload.snapshot);
   if(isHost&&event.type==='input'&&state.players.has(event.playerId)&&peerReady(event.playerId))simulation.setInput(event.playerId,event.payload.input);
@@ -194,9 +213,12 @@ export function startCoopGame(container,{client,session}){
    else if(event.action?.targetId==='finale-clock'&&state.players.has(event.playerId)&&Number.isFinite(Number(event.action.code)))clockEchoes.set(event.playerId,{clientSent:Number(event.action.code),hostReceived:Date.now()/1000});
    else simulation.interact(event.playerId,event.action);
   }
-  if(isHost&&event.type==='lobby'&&event.lobby){const ids=new Set(event.lobby.members.map(p=>p.id));for(const id of state.players.keys())if(!ids.has(id))simulation.removePlayer(id);}
-  if(!leaving&&(event.type==='roomClosed'||event.type==='connection'&&event.status==='closed'||event.type==='error'&&event.code==='REALTIME_ERROR')){disconnected=true;screen('lost');}
-  if(event.type==='error'&&event.code!=='RATE_LIMIT'&&!drawerRequests.pending)ui.toast(event.message);
+  if(event.type==='recovered'){recovered(event);return;}
+  if(event.type==='lobby'&&event.lobby&&(event.lobby.ownerId!==session.ownerId||(event.lobby.ownerEpoch??0)!==session.ownerEpoch)){beginRecovery();return;}
+  if(isHost&&!recovering&&event.type==='lobby'&&event.lobby){const ids=new Set(event.lobby.members.map(p=>p.id));for(const id of state.players.keys())if(!ids.has(id))simulation.removePlayer(id);}
+  if(!leaving&&(event.type==='connection'&&event.status==='reconnecting'||event.type==='error'&&['REALTIME_ERROR','CONNECTION_ERROR'].includes(event.code)))beginRecovery();
+  if(!leaving&&(event.type==='roomClosed'||event.type==='connection'&&event.status==='closed')){disconnected=true;recovering=false;reconnect.hidden=true;screen('lost');}
+  if(event.type==='error'&&!recovering&&event.code!=='RATE_LIMIT'&&!drawerRequests.pending)ui.toast(event.message);
  });
  void loadPlayerAvatarAsset().then(asset=>{
   avatarAsset=asset;
@@ -223,13 +245,14 @@ export function startCoopGame(container,{client,session}){
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);finale?.resize();}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{arrival.dispose();experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
- screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
+ window.addEventListener('pagehide',()=>{leaving=true;reconnect.remove();window.removeEventListener('offline',offline);window.removeEventListener('online',online);arrival.dispose();experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();drawerRequests.clear();revivePrompts.dispose();client.close({leave:false,checkpoint:authorityCheckpoint()});finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ screen('menu');ui.hideScreen();ui.overlay=session.checkpoint?null:'arrival';if(session.checkpoint&&local().status!=='alive'&&run.phase==='playing')screen('spectate');let previous=performance.now(),time=0;
+ function authorityCheckpoint(){if(!isHost||!simulation)return null;const snapshot=simulation.snapshot();snapshot.authority={ownerId:session.ownerId,epoch:session.ownerEpoch};return snapshot;}
  function broadcast(wallDelta){
   if(isHost&&!disconnected){
    snapshotClock+=wallDelta;proofSnapshotClock+=wallDelta;
    if(snapshotClock>=.05){
-    snapshotClock%=.05;const snapshot=simulation.snapshot();
+    snapshotClock%=.05;const snapshot=authorityCheckpoint();
     snapshot.clockSync={echoes:Object.fromEntries([...clockEchoes].filter(([id])=>state.players.has(id)).map(([id,echo])=>[id,{...echo,hostSent:Date.now()/1000}]))};
     snapshot.peerAcknowledged=Object.fromEntries(peerFingerprints);
     snapshot.peerProofs=Object.fromEntries([...state.players.keys()].filter(id=>id!==localId).map(id=>[id,client.voice?.localFingerprint?.(id)]));
@@ -265,7 +288,8 @@ export function startCoopGame(container,{client,session}){
   let own=local();if(!own)return;
   if(own.hidden!==lastOwnHidden){if(own.hidden)input.setView(world.targets.get(own.closetId)?.hideYaw??Math.PI,0);lastOwnHidden=own.hidden;}
   const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||!(run.phase==='playing'||run.phase==='halloween'&&run.halloween.visit.stage==='archive')||own.status!=='alive'};
-  if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:10000)){disconnected=true;screen('lost');}
+  if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:2000))beginRecovery();
+  if(recovering){if(now-recoveryAt>95000){recovering=false;disconnected=true;reconnect.hidden=true;screen('lost');}else void attemptRecovery();return;}
   if(isHost){
    simulation.setInput(localId,command);
    if(!disconnected){
@@ -361,5 +385,5 @@ export function startCoopGame(container,{client,session}){
  const backgroundTimer=setInterval(()=>{if(document.hidden)frame();},100);
  window.addEventListener('pagehide',()=>clearInterval(backgroundTimer),{once:true});
  function scaredOrWatching(){return scareStatus||ui.overlay==='pause'||local()?.status==='alive';}
- return {state,run,world,simulation,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival,experience,get finale(){return finale;}};
+ return {state,run,world,get simulation(){return simulation;},get recovering(){return recovering;},requestRecovery:beginRecovery,camera,renderer,ui,input,torch,monsterAudio:audio,jumpscare,avatars,client,session,arrival,experience,get finale(){return finale;}};
 }
