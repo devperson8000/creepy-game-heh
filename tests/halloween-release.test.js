@@ -28,3 +28,6 @@ test('a guest pins its seasonal layout only from the matching authenticated sess
 test('the host snapshot pins both the seasonal flag and maze edition for late-joining guests',async()=>{
  const {waitForHalloweenSession}=await import('../src/halloween-session.js');for(const maze of [false,true]){let receive;const pending=waitForHalloweenSession({subscribe(fn){receive=fn;return()=>{};}},{seed:42},{timeout:500});receive({type:'snapshot',snapshot:{state:{seed:42,run:{halloween:maze?{maze:true}:{stage:0}}}}});assert.equal((await pending).maze,maze);}
 });
+test('guests use the host’s cabinet drawer count, including existing single-drawer rounds',async()=>{
+ const {waitForHalloweenSession}=await import('../src/halloween-session.js');for(const rows of [undefined,3]){let receive;const pending=waitForHalloweenSession({subscribe(fn){receive=fn;return()=>{};}},{seed:42},{timeout:500});receive({type:'snapshot',snapshot:{state:{seed:42,run:{halloween:{maze:true,...(rows?{drawerRows:rows}:{})}}}}});assert.equal((await pending).drawerRows,rows??1);}
+});

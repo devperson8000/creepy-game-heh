@@ -20,7 +20,7 @@ export function requestHalloweenTestAccess({onAuthorized,onCancel=()=>{}}){
  dialog.showModal();field.focus();return {dispose:()=>dialog.close()};
 }
 const cases=[
- ['new-gameplay','Test new gameplay','Explore the deep narrow maze, single-drawer rooms and recessed closets. Test stamina and switch on the hunt.'],
+ ['new-gameplay','Test new gameplay','Explore the deep narrow maze, three-drawer cabinets and recessed closets. Test stamina and switch on the hunt.'],
  ['full','Full Halloween gameplay','Play the complete B1 quest from the beginning.'],
  ['coop','Play with friends','Host the Halloween update before release; friends join your normal lobby.'],
  ['map','Decorated map','Explore pumpkins, webs and skeletons. Jump between rooms with the hunt paused.'],

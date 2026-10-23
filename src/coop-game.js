@@ -27,7 +27,7 @@ import {createArrival} from './arrival.js';
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience();
  const arrival=createArrival();
- const state=createCoopState(session.seed,session.players,{halloween:session.halloween===true,maze:session.maze!==false}),run=state.run;
+ const state=createCoopState(session.seed,session.players,{halloween:session.halloween===true,maze:session.maze!==false,drawerRows:session.drawerRows}),run=state.run;
  state.ownerId=session.ownerId;
  const localId=client.id,isHost=localId===session.ownerId;
  if(!state.players.has(localId))throw new Error('You are not a member of this round.');

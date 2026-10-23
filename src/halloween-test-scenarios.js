@@ -20,7 +20,7 @@ export function setupHalloweenTest(game,scenario){
    if(action==='stamina'){player.stamina=1;player.exhausted=false;player.staminaRest=0;return true;}
    if(action==='closet'){const t=world.closets[closetIndex++%world.closets.length];if(!t)return false;Object.assign(player,t.exit);input.clear();input.setView(t.hideYaw+Math.PI,0);ui.hideScreen();return true;}
    const r=action==='stairs'?run.layout.entrance:action==='drawer'?run.layout.rooms[room++%run.layout.rooms.length]:null;if(!r)return false;
-   const p=worldPoint(r),n=r.normal??{x:0,z:1};Object.assign(player,{x:p.x+n.x*.55,z:p.z+n.z*.55,height:world.groundHeight?.(p)??0});input.clear();const drawer=action==='drawer'?world.targets.get('drawer-'+run.layout.rooms.indexOf(r)):null;const point=drawer?.mesh.getWorldPosition(game.camera.position.clone());input.setView(Math.atan2(n.x,n.z),point?Math.atan2(point.y-player.height-1.65,Math.hypot(point.x-player.x,point.z-player.z)):0);ui.hideScreen();return true;
+   const p=worldPoint(r),n=r.normal??{x:0,z:1};Object.assign(player,{x:p.x+n.x*.55,z:p.z+n.z*.55,height:world.groundHeight?.(p)??0});input.clear();const rows=q.drawerRows??1,drawer=action==='drawer'?world.targets.get('drawer-'+(run.layout.rooms.indexOf(r)*rows+rows-1)):null;const point=drawer?.mesh.getWorldPosition(game.camera.position.clone());input.setView(Math.atan2(n.x,n.z),point?Math.atan2(point.y-player.height-1.65,Math.hypot(point.x-player.x,point.z-player.z)):0);ui.hideScreen();return true;
   }
 
   if(value==='room-next'&&scenario==='map'){

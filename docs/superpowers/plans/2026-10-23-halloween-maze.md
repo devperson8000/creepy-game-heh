@@ -23,7 +23,7 @@
 - Public access to test shortcuts or early gameplay: private route authorization and release checks.
 
 ### Task 1: Seeded maze and geometry
-- [x] Write and run failing size, reachability, one-drawer-per-room and depth tests.
+- [x] Write and run failing size, reachability, cabinet drawer count and depth tests.
 - [x] Implement `createMazeLayout(seed,{playerCount})`, maze ground height and dedicated `createMazeWorld(run)` with cell navigation, drawer rooms, recessed closets and decoration adaptation.
 - [x] Verify geometry, key spread, all interaction approaches and monster traversal across seeds.
 
@@ -51,3 +51,13 @@
 - Production-bundle menu regression passed removed home entry, disabled old test URLs, private-route cancellation, phone layout and ordinary solo/multiplayer navigation.
 - Release browser regression passed spoofed future device time/preview query rejection and exact server-deadline activation of the 55-cell maze.
 - Original `public/audio/monster.mp3` SHA-256 unchanged.
+
+## Cabinet correction — October 23
+
+The user clarified that each room should contain one cabinet with three drawers. The current design now keeps three separately selectable, animated drawers per cabinet (72/84/96 drawers for the three map sizes). Four keys remain distributed across deeper bands of the maze. Cabinet frame selection accounts for the lower floor height, and the room inspection shortcut aims at the correct cabinet’s top drawer.
+
+Co-op snapshots pin the drawer count for the round, preserving IDs when a new client joins an existing preview hosted by the earlier single-drawer build. Normal pre-release layouts are unchanged.
+
+Failing tests first reproduced the missing drawers and missing host drawer-count metadata. Regression coverage also checks lower-floor selection and independent animation. The corrected suite passes all 286 tests; the production build passes. The gameplay browser check opened all three drawers with E, opened the next cabinet’s correct drawer, and rechecked closet use, stamina, hunt release and the clear stairs.
+
+The authenticated co-op browser regression also passed: host and guest generated the same 72 drawers in 24 cabinets, and real database transport replicated sprinting without backward position corrections in the sampled movement.

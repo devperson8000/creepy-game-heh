@@ -70,24 +70,28 @@ export function createMazeWorld(run){
  const screen=box(.46,.16,.03,-1.03,5.38,-32.68,new THREE.MeshBasicMaterial({color:0x525953}));screen.userData.interactId='keypad';
  for(let r=0;r<3;r++)for(let c=0;c<3;c++){const button=box(.095,.085,.035,-1.17+c*.14,5.12-r*.13,-32.67,metal);button.userData.interactId='keypad';}
  sign('CODE',.6,.2,-1.03,5.75,-32.65,{size:72});
- // One shallow single drawer in each small dead-end room, facing its doorway.
+ // One cabinet per small room, with three independently searchable drawers.
  const hitMaterial=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false});
- layout.rooms.forEach((room,id)=>{
+ const rows=run.halloween.drawerRows;
+ layout.rooms.forEach((room,index)=>{
   const p=worldPoint(room),n=room.normal,g=new THREE.Group();g.position.set(p.x-n.x*.83,floor,p.z-n.z*.83);g.rotation.y=Math.atan2(n.x,n.z);scene.add(g);
-  box(.91,.84,.6,0,.42,0,wood,g);box(.98,.065,.65,0,.88,0,metal,g);
-  const drawer=new THREE.Group();drawer.position.set(0,.6,0);g.add(drawer);
-  const face=box(.83,.26,.055,0,0,.33,wood,drawer);face.userData.interactId=`drawer-${id}`;
-  const handle=box(.2,.025,.05,0,0,.37,metal,drawer);handle.userData.interactId=`drawer-${id}`;
-  box(.77,.035,.47,0,-.11,.03,wood,drawer);for(const x of [-.39,.39])box(.025,.16,.49,x,-.045,.03,wood,drawer);
-  const key=new THREE.Group(),ring=new THREE.Mesh(new THREE.TorusGeometry(.06,.016,8,16),white);ring.rotation.x=Math.PI/2;key.add(ring);box(.025,.025,.19,0,0,.12,white,key);box(.07,.025,.025,.025,0,.19,white,key);key.position.set(0,-.07,.08);drawer.add(key);
-  drawer.traverse(m=>{if(m.isMesh){m.userData.drawerPart=true;m.userData.interactId=`drawer-${id}`;if(!rayMeshes.includes(m))rayMeshes.push(m);}});
-  const hit=box(.95,.34,.025,0,.6,.39,hitMaterial,g);hit.userData.interactId=`drawer-${id}`;hit.userData.interactionProxy=true;
-  g.traverse(m=>{if(m.isMesh)m.userData.interactId=`drawer-${id}`;});
-  targets.set(`drawer-${id}`,{id:`drawer-${id}`,type:'drawer',drawerId:id,mesh:face});drawerViews.push({drawer,key,id});
+  const cabinetHeight=rows===3?1.42:.84;
+  box(.91,cabinetHeight,.055,0,cabinetHeight/2,-.275,wood,g);for(const x of [-.455,.455])box(.055,cabinetHeight,.6,x,cabinetHeight/2,0,wood,g);box(.91,.055,.6,0,.0275,0,wood,g);box(.98,.065,.65,0,cabinetHeight+.04,0,metal,g);
+  for(let row=0;row<rows;row++){
+   const id=index*rows+row,y=rows===3?.25+row*.42:.6,drawer=new THREE.Group();drawer.position.set(0,y,0);g.add(drawer);
+   const face=box(.83,rows===3?.36:.26,.055,0,0,.33,wood,drawer);face.userData.interactId=`drawer-${id}`;
+   const handle=box(.2,.025,.05,0,0,.37,metal,drawer);handle.userData.interactId=`drawer-${id}`;
+   const bottom=rows===3?-.155:-.11;box(.77,.035,.47,0,bottom,.03,wood,drawer);for(const x of [-.39,.39])box(.025,.2,.49,x,bottom+.08,.03,wood,drawer);
+   const key=new THREE.Group(),ring=new THREE.Mesh(new THREE.TorusGeometry(.06,.016,8,16),white);ring.rotation.x=Math.PI/2;key.add(ring);box(.025,.025,.19,0,0,.12,white,key);box(.07,.025,.025,.025,0,.19,white,key);key.position.set(0,rows===3?-.12:-.07,.08);drawer.add(key);
+   drawer.traverse(m=>{if(m.isMesh){m.userData.drawerPart=true;m.userData.interactId=`drawer-${id}`;if(!rayMeshes.includes(m))rayMeshes.push(m);}});
+   const hit=box(.95,rows===3?.4:.34,.025,0,y,.39,hitMaterial,g);hit.userData.interactId=`drawer-${id}`;hit.userData.interactionProxy=true;
+   targets.set(`drawer-${id}`,{id:`drawer-${id}`,type:'drawer',drawerId:id,mesh:face});drawerViews.push({drawer,key,id});
+  }
+  g.traverse(m=>{if(m.isMesh&&!m.userData.interactId){if(rows===1)m.userData.interactId=`drawer-${index}`;else{m.userData.cabinetIndex=index;m.userData.cabinetFloor=floor;}}});
   collider(g.position.x,g.position.z,Math.abs(n.x)? .6:.94,Math.abs(n.z)?.6:.94);
-  const at={x:p.x+n.x*.69,z:p.z+n.z*.69};sign(run.halloween?.rooms[0]===id?'— / —':String(id+1).padStart(2,'0'),.35,.18,at.x,floor+2.08,at.z,{rotation:Math.atan2(n.x,n.z),size:130});
+  const at={x:p.x+n.x*.69,z:p.z+n.z*.69};sign(run.halloween?.rooms[0]===index?'— / —':String(index+1).padStart(2,'0'),.35,.18,at.x,floor+2.08,at.z,{rotation:Math.atan2(n.x,n.z),size:130});
   const frame=new THREE.Group();frame.position.set(p.x+n.x*1.28,floor,p.z+n.z*1.28);frame.rotation.y=Math.atan2(n.x,n.z);scene.add(frame);for(const x of [-.92,.92])box(.06,2.6,.09,x,1.3,0,metal,frame);box(1.9,.08,.09,0,2.59,0,metal,frame);
-  if(id%3===0)fixture(p.x,floor+2.5,p.z,5);
+  if(index%3===0)fixture(p.x,floor+2.5,p.z,5);
  });
  layout.closets.forEach((cell,index)=>{
   const p=worldPoint(cell),n=cell.normal,w=halfWall(cell.x,cell.z)*2,g=new THREE.Group();g.position.set(p.x,floor,p.z);g.rotation.y=Math.atan2(n.x,n.z);scene.add(g);

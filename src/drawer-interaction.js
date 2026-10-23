@@ -3,7 +3,7 @@ export function drawerTargetFromHit(targets,hit){
  const data=hit.object.userData,direct=targets.get(data.interactId);
  if(direct)return direct;
  if(!Number.isInteger(data.cabinetIndex))return undefined;
- const row=Math.max(0,Math.min(2,Math.round((hit.point.y-.25)/.42)));
+ const row=Math.max(0,Math.min(2,Math.round((hit.point.y-(data.cabinetFloor??0)-.25)/.42)));
  return targets.get(`drawer-${data.cabinetIndex*3+row}`);
 }
 export function retainDrawerTarget(candidate,heldId,targets,holding){
