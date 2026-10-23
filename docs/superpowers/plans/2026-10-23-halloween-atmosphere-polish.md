@@ -38,4 +38,6 @@ Interfaces: `createHalloweenDecorationPlan(layout,seed)` returns room/wall ancho
 Files: modify `src/halloween-countdown.js`, its CSS, `src/halloween-test-page.js`, `src/halloween-test-scenarios.js`, `src/main.js`; add `scripts/check-halloween-polish-browser.mjs`.
 - [x] Add failing browser expectations for opening preview, actual code reading, decorated rooms/corridors and mobile anticipation card.
 - [x] Add faithful upcoming-feature copy and password-only opening preview using existing cinematic lifecycle; preserve skip and fullscreen controls.
-- [ ] Run `npm test`, build, opening/quest/gameplay/release/browser regressions; review branch, fix findings, push main and verify live.
+- [x] Run `npm test`, build, opening/quest/gameplay/release/browser regressions; review branch and fix findings.
+
+Publication: push the verified branch to main, then check the production commit, release gate and private previews.
