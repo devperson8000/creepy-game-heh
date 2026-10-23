@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body,#scene{width:100%;height:100%;margin:0;background:#000}</style></head><body><div id="scene"></div><script type="module">
+import {WebGLRenderer} from 'three';import {createHalloweenEndingPlayer} from '/src/halloween-ending-player.js';import {loadPlayerAvatarAsset} from '/src/player-avatar.js';import '/src/finale.css';
+const renderer=new WebGLRenderer();document.querySelector('#scene').append(renderer.domElement);renderer.compileAsync=()=>Promise.reject(new Error('forced cinematic shader warm-up failure'));window.borrowedRenderer=renderer;
+const asset=await loadPlayerAvatarAsset();const player=createHalloweenEndingPlayer({container:document.querySelector('#scene'),renderer,asset,cast:[{id:'solo',slot:0}],runnerId:'solo',preview:true});
+try{await player.ready;window.monochromeEnding=player;}catch(error){window.warmupFailure=error.message;}finally{window.warmupSettled=true;}
+</script></body></html>

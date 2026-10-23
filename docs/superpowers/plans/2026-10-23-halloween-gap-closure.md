@@ -29,14 +29,14 @@ Interface: mazeWallHalf(layout,x,z), buildMazeWallSurfaces(layout) returns bound
 ### Task 2: Imported black hooded keeper
 Files: public/models/b2/, docs/assets/b2-keeper/, conversion script; src/hooded-stranger.js or new source-backed keeper module; B2 integration/tests.
 Interface: loadKeeperAsset(), createHoodedStranger({asset}) retains root/sample/dispose/fingerTip; fallback supports same interface.
-- [ ] Download verified free rigged source, inspect rig/materials and licence; failing real-asset/gesture bounds tests.
-- [ ] Convert/adapt black faceless clothing, rigged head/hand animation and owned disposal; review actual B2 poses/phone, credit and commit.
+- [x] Download verified free rigged source, inspect rig/materials and licence; failing real-asset/gesture bounds tests.
+- [x] Convert/adapt black faceless clothing, rigged head/hand animation and owned disposal; review actual B2 poses/phone, credit and commit.
 
 ### Task 3: Deferred B2/performance and continuity
 Files: src/halloween-experience.js, teaser loading, cinematic lifecycle, arrival; tests plus browser request/cancellation checks.
 Interface: existing experience facade; deferred playback created at archive approach, clock authority retained. Arrival opts into Halloween continuity cue.
-- [ ] Failing no-early-GLB/cancel/late-load tests and suit cue checks.
-- [ ] Defer archive media, ensure error/cancel fallback and warm-up, add suited wake-up cue/update stale copy; verify cold/warm flow and commit.
+- [x] Failing no-early-GLB/cancel/late-load tests and suit cue checks.
+- [x] Defer archive media, ensure error/cancel fallback and warm-up, add suited wake-up cue/update stale copy; verify cold/warm flow and commit.
 
 ### Task 4: Spatial monster sound
 Files: src/monster-audio.js; new spatial helper; game/coop callers; audio/raycast tests.

@@ -1,5 +1,5 @@
 import {B2_INTRO_DURATION} from './b2-dialogue.js';
-import {RECAP_DURATION} from './teaser-recap.js';
+import {RECAP_DURATION} from './teaser-recap-timeline.js';
 /** Shared edit. Co-op uses the host's encounter clock. Creature names stay off-screen. */
 import {NEEDLELIMBS_READY} from './teaser-edition.js';
 import {sampleNeedlelimbsTeaser,NEEDLELIMBS_VOICES,NEEDLELIMBS_MONSTER_CUE,NEEDLELIMBS_SOUND_CUES} from './needlelimbs-timeline.js';

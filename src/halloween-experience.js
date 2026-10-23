@@ -2,7 +2,7 @@ import {createHoodedStranger} from './hooded-stranger.js';
 import {loadKeeperAsset} from './imported-keeper.js';
 import {b2Frame} from './b2-director.js';
 import {createB2Voice} from './b2-voice.js';
-import {createTeaserPlayback} from './teaser-playback.js';
+import {createDeferredTeaser} from './deferred-teaser.js';
 import {TEASER_START,TEASER_END} from './teaser-timeline.js';
 import {createHalloweenAudio} from './halloween-audio.js';
 import * as THREE from 'three';
@@ -26,7 +26,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  for(let i=0;i<15;i++){const p=box(.22,.005,.29,Math.sin(i*2.4)*2.8,.01,Math.cos(i*1.7)*2.3,paper);p.rotation.y=i*2.1;}
  box(1.55,1.04,.24,-.65,1.57,-2.07);box(1.35,.79,.015,-.65,1.6,-1.94,screenMaterial);box(.32,.3,.25,-.65,1.04,-2.1);
  let keeper=createHoodedStranger(),stranger=keeper.root,keeperLoading=null;root.add(stranger);
- function prepareKeeper(){keeperLoading??=loadKeeperAsset().then(asset=>{if(disposed)return;const replacement=createHoodedStranger({asset});keeper.dispose();keeper=replacement;stranger=keeper.root;root.add(stranger);}).catch(()=>{});return keeperLoading;}
+ function prepareKeeper(){void prepareAvatars();keeperLoading??=loadKeeperAsset().then(asset=>{if(disposed)return;const replacement=createHoodedStranger({asset});keeper.dispose();keeper=replacement;stranger=keeper.root;root.add(stranger);}).catch(()=>{});return keeperLoading;}
  const switchBase=box(.19,.025,.16,.4,1.015,-2.13,metal),switchButton=box(.085,.065,.085,.4,1.065,-2.13,mat(0x66543b,{emissive:0x8b6431,emissiveIntensity:.3}));switchButton.name='archive-monitor-switch';
  box(.65,.025,.2,-.6,.99,-1.28,metal);for(let row=0;row<3;row++)for(let col=0;col<9;col++)box(.045,.012,.035,-.85+col*.061,1.01,-1.22-row*.05,paper);
  const rim=new THREE.PointLight(0x75938f,3.5,4);rim.position.set(1.3,2.7,-3.5);scene.add(rim);
@@ -38,19 +38,19 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  const doorLeft=box(1.15,2.8,.12,-.58,1.4,3.2),doorRight=box(1.15,2.8,.12,.58,1.4,3.2);
  const overlay=document.createElement('section');overlay.className='b2-overlay';overlay.hidden=true;overlay.innerHTML='<div class="b2-top"><div><small>RESTRICTED SERVICE ACCESS</small><strong>B2 / THE ARCHIVE</strong></div><button class="b2-mute">Sound on · M</button></div><div class="b2-letterbox"></div><p class="b2-subtitle" aria-live="polite"></p><div class="b2-fade"></div><div class="b2-bottom"><p class="b2-hint"></p><button class="b2-return" hidden>Return to B1</button></div>';
  document.body.append(overlay);const el=s=>overlay.querySelector(s),sub=el('.b2-subtitle'),fade=el('.b2-fade'),hint=el('.b2-hint'),returnButton=el('.b2-return');returnButton.onclick=()=>{renderer.domElement.focus();onReturn();};el('.b2-mute').onclick=()=>{onMute();resumeScore();renderer.domElement.focus();};
- const score=createHalloweenAudio(),{scene:teaserScene,audio:teaserAudio,sample:sampleFilm}=createTeaserPlayback({preview:replay&&teaserPreview});
+ const score=createHalloweenAudio(),{scene:teaserScene,audio:teaserAudio,sample:sampleFilm}=createDeferredTeaser();
  const voice=createB2Voice();const resumeScore=()=>{score.resume();teaserAudio.resume();voice.resume();};renderer.domElement.addEventListener('pointerdown',resumeScore);overlay.addEventListener('pointerdown',resumeScore);const unlockKey=()=>{if(active)resumeScore();};document.addEventListener('keydown',unlockKey);
  const visibility=()=>{if(document.hidden){voice.pause();score.pause();teaserAudio.pause();}};document.addEventListener('visibilitychange',visibility);
- const avatars=new Map();let asset,disposed=false;void loadPlayerAvatarAsset().then(a=>{if(!disposed)asset=a;}).catch(()=>{});
+ const avatars=new Map();let asset,disposed=false,avatarLoading=null;function prepareAvatars(){avatarLoading??=loadPlayerAvatarAsset().then(a=>{if(!disposed)asset=a;}).catch(()=>{});return avatarLoading;}
  let active=false,stageKey='',recordElapsed=-1,recordAt=0,interactHeld=false,entryPose=null,unlockEntry=null,reveal=null;
  let lastMonitorFrame=null;
  function monitor(t,playing,hold=false,dead=false){
   screenMaterial.color.setHex(dead?0x000000:0xffffff);
-  if((playing||hold)&&!teaserScene.error){screenMaterial.map=teaserScene.target.texture;teaserScene.render(renderer,hold?(TEASER_END-TEASER_START-.05):t,{reducedMotion:reducedMotion(),quality:gamePreferences().quality});return;}
+  if((playing||hold)&&teaserScene.target&&!teaserScene.error){screenMaterial.map=teaserScene.target.texture;teaserScene.render(renderer,hold?(TEASER_END-TEASER_START-.05):t,{reducedMotion:reducedMotion(),quality:gamePreferences().quality});return;}
   screenMaterial.map=texture;
-  const frame=dead?'dead':teaserScene.error?'error':'idle';if(frame===lastMonitorFrame)return;lastMonitorFrame=frame;
+  const frame=dead?'dead':teaserScene.error?'error':playing||hold?'loading':'idle';if(frame===lastMonitorFrame)return;lastMonitorFrame=frame;
   if(dead){ctx.fillStyle='#000';ctx.fillRect(0,0,768,448);texture.needsUpdate=true;return;}
-  ctx.fillStyle='#06100f';ctx.fillRect(0,0,768,448);ctx.fillStyle='#5b7770';ctx.font='22px monospace';ctx.fillText('B2 / RECOVERED SIGNAL',55,80);ctx.font='16px monospace';ctx.fillText(teaserScene.error?'TAPE UNAVAILABLE / TRY REPLAY':'NO LIVE SIGNAL',55,119);
+  ctx.fillStyle='#06100f';ctx.fillRect(0,0,768,448);ctx.fillStyle='#5b7770';ctx.font='22px monospace';ctx.fillText('B2 / RECOVERED SIGNAL',55,80);ctx.font='16px monospace';ctx.fillText(teaserScene.error?'SIGNAL LOST / TRY REPLAY':playing||hold?'RECOVERING SIGNAL…':'NO LIVE SIGNAL',55,119);
   ctx.fillStyle='rgba(0,0,0,.22)';for(let y=0;y<448;y+=4)ctx.fillRect(0,y,768,1);texture.needsUpdate=true;
  }
  function viewPose(){camera.updateMatrixWorld();const d=camera.getWorldDirection(new THREE.Vector3());return {position:camera.position.toArray(),look:camera.position.clone().add(d).toArray()};}

@@ -10,8 +10,9 @@ export function createHalloweenEndingPlayer({container,renderer:borrowed,asset,c
  const root=document.createElement('section');root.className='finale-ui halloween-ending-ui';root.setAttribute('aria-label',preview?'Halloween house ending preview':'Halloween house escape');
  root.innerHTML='<div class="finale-grain"></div><div class="finale-fade"></div><div class="finale-title" role="status" hidden><h1>YOU ESCAPED THE HOUSE.</h1><p>KEEP WALKING.</p></div><div class="finale-top"><span>MONOCHROME</span><span>THE HOUSE REMEMBERS</span></div><p class="ending-caption" role="status"></p><div class="finale-controls"><button class="finale-button ending-sound" type="button">Enable sound</button></div>';
  document.body.append(root);document.body.classList.add('finale-active');const fade=root.querySelector('.finale-fade'),title=root.querySelector('.finale-title'),caption=root.querySelector('.ending-caption'),sound=root.querySelector('.ending-sound');
- let disposed=false,complete=false,time=0,origin=performance.now(),warmed=false;
- const ready=renderer.compileAsync(scene.scene,scene.camera).then(()=>{if(disposed)return;warmed=true;origin=performance.now()-time*1000;sample(time);if(owned)renderer.setAnimationLoop(()=>sample((performance.now()-origin)/1000));});
+ let disposed=false,complete=false,time=0,origin=performance.now(),warmed=false,failure=null;
+ function startClock(){if(disposed)return;origin=performance.now()-time*1000;sample(time);if(owned)renderer.setAnimationLoop(()=>sample((performance.now()-origin)/1000));}
+ const ready=Promise.resolve().then(()=>renderer.compileAsync(scene.scene,scene.camera)).then(()=>{if(disposed)return;warmed=true;startClock();}).catch(error=>{failure=error;if(disposed)return;warmed=false;root.style.backgroundColor='#030606';if(preview){const notice=document.createElement('p');notice.className='ending-preview-error';notice.setAttribute('role','alert');notice.textContent='Animation preview could not render. Try replaying with lower graphics.';root.append(notice);}startClock();});
  function label(){sound.textContent=audio.muted?'Sound off':audio.unlocked?'Sound on':'Enable sound';sound.setAttribute('aria-pressed',String(audio.muted));sound.setAttribute('aria-label',audio.muted?'Unmute ending':'Mute ending');}
  function setMuted(value){audio.setMuted(value);label();}sound.onclick=()=>{setMuted(audio.unlocked?!audio.muted:false);onMuteChange(audio.muted);void audio.resume().then(label);};
  const unlock=()=>{void audio.resume().then(()=>{if(!disposed)label();});};document.addEventListener('pointerdown',unlock);document.addEventListener('keydown',unlock);
@@ -24,7 +25,7 @@ export function createHalloweenEndingPlayer({container,renderer:borrowed,asset,c
  }
  function dispose(){if(disposed)return;disposed=true;if(owned)renderer.setAnimationLoop(null);audio.dispose();scene.dispose();root.remove();window.removeEventListener('resize',resize);document.removeEventListener('pointerdown',unlock);document.removeEventListener('keydown',unlock);document.body.classList.remove('finale-active');if(owned){renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();}}
  window.addEventListener('resize',resize);resize();label();
- return {sample,resize,dispose,setMuted,command,ready,renderer,get scene(){return scene;},get time(){return time;},get castCount(){return cast.length;}};
+ return {sample,resize,dispose,setMuted,command,ready,renderer,get error(){return failure;},get scene(){return scene;},get time(){return time;},get castCount(){return cast.length;}};
 }
 export async function startHalloweenEndingPreview(container,{onComplete=()=>{}}={}){
  const loading=document.createElement('p');loading.className='round-loading';loading.textContent='Preparing the way back…';document.body.append(loading);try{const asset=await loadPlayerAvatarAsset(),cast=[0,1].map(slot=>({id:`ending-${slot}`,name:slot?'Survivor':'You',slot}));const player=createHalloweenEndingPlayer({container,asset,cast,runnerId:cast[0].id,preview:true,onComplete});await player.ready;return player;}finally{loading.remove();}

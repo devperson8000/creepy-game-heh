@@ -66,7 +66,7 @@ try {
   if(testFrame){
    let busy=false,started=false,stopped=false,scenario=null,timer=null,testMenu=null,replay=null;
    const post=type=>window.parent.postMessage({type},location.origin);
-   window.disposeHalloweenTest=async()=>{stopped=true;clearInterval(timer);testMenu?.dispose();replay?.dispose();window.monochrome?.renderer.setAnimationLoop(null);window.monochrome?.ending?.dispose();window.monochrome?.finale?.dispose();window.monochrome?.world.halloween?.dispose();window.monochrome?.renderer.dispose();window.monochrome?.renderer.forceContextLoss();if(testClient)await Promise.race([testClient.close(),new Promise(resolve=>setTimeout(resolve,1000))]);};
+   window.disposeHalloweenTest=async()=>{stopped=true;clearInterval(timer);testMenu?.dispose();replay?.dispose();window.monochrome?.renderer.setAnimationLoop(null);window.monochrome?.arrival?.dispose();window.monochrome?.experience?.dispose();window.monochrome?.monsterAudio?.dispose();window.monochrome?.ending?.dispose();window.monochrome?.finale?.dispose();window.monochrome?.world.halloween?.dispose();window.monochrome?.renderer.dispose();window.monochrome?.renderer.forceContextLoss();if(testClient)await Promise.race([testClient.close(),new Promise(resolve=>setTimeout(resolve,1000))]);};
    window.addEventListener('message',async event=>{
     if(stopped||event.origin!==location.origin||event.source!==window.parent)return;
     if(event.data?.type==='halloween-test-command'&&started&&typeof event.data.command==='string'){if(!scenario?.command(event.data.command))replay?.command?.(event.data.command);return;}

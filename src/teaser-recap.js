@@ -1,19 +1,10 @@
 import * as THREE from 'three';
-import {finalePlaybackTime} from './finale-state.js';
+import {RECAP_DURATION,recapFrame} from './teaser-recap-timeline.js';
+export {RECAP_DURATION,recapFrame} from './teaser-recap-timeline.js';
 import {createFinaleScene} from './finale-scene.js';
 import {createFinaleAudio} from './finale-audio.js';
 import {loadPlayerAvatarAsset} from './player-avatar.js';
 import {JUMPSCARE_MOUTH_URL} from './jumpscare.js';
-export const RECAP_DURATION=15;
-const ease=(a,b,t)=>THREE.MathUtils.smoothstep(t,a,b);
-/** Historical Monochrome: stop before choreography second 44, where the walkout starts. */
-export function recapFrame(value){
- const t=Math.max(0,Number.isFinite(value)?value:0);
- if(t>=RECAP_DURATION)return {phase:'teaser',teaserTime:t-RECAP_DURATION,fade:0,subtitle:''};
- if(t<1.6)return {phase:'previously',finaleTime:0,fade:1-ease(0,.35,t),subtitle:'PREVIOUSLY…'};
- const p=THREE.MathUtils.clamp((t-1.6)/(RECAP_DURATION-2.2),0,1);
- return {phase:'recap',finaleTime:THREE.MathUtils.lerp(finalePlaybackTime(2),finalePlaybackTime(42.4),p),fade:ease(RECAP_DURATION-.6,RECAP_DURATION,t),subtitle:''};
-}
 export function prependFinaleRecap(film,{loadAsset=loadPlayerAvatarAsset,createHistoryAudio=createFinaleAudio}={}){
  let disposed=false,historical=null,failure=null,historyAudio=null,last=-1;
  const cast=[0,1].map(slot=>({id:`memory-${slot}`,name:slot?'Survivor':'You',slot}));

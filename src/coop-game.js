@@ -28,7 +28,7 @@ import {createArrival} from './arrival.js';
 
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience();
- const arrival=createArrival();
+ const arrival=createArrival({halloween:session.halloween===true});
  const state=createCoopState(session.seed,session.players,{halloween:session.halloween===true,maze:session.maze!==false,drawerRows:session.drawerRows}),run=state.run;
  state.ownerId=session.ownerId;
  const localId=client.id,isHost=localId===session.ownerId;
@@ -221,7 +221,7 @@ export function startCoopGame(container,{client,session}){
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);finale?.resize();}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ window.addEventListener('pagehide',()=>{arrival.dispose();experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
  screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
  function broadcast(wallDelta){
   if(isHost&&!disconnected){
@@ -346,7 +346,7 @@ export function startCoopGame(container,{client,session}){
   if(arrival.active){
    torch.model.position.y-=.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
    torch.beam.intensity=arrival.elapsed>6.7&&torch.on?torch.power:0;
-   if((avatarAsset||arrival.elapsed<6.4)&&arrival.update(document.hidden?wallDelta:delta,camera,own)){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
+   if((avatarAsset||arrival.elapsed<6.4)&&arrival.update(document.hidden?wallDelta:delta,camera,own,{muted:audio.muted,volume:gamePreferences().volume})){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
   }
   if(!document.hidden&&jumpscare.active){renderer.toneMappingExposure=1;jumpscare.render(renderer);const border=ui.el('jumpscare-border');border.style.opacity=String(jumpscare.borderOpacity);border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);}
   else if(!document.hidden&&(!ui.overlay||arrival.active||renderDirty||lastOverlay!==ui.overlay)){renderer.render(world.scene,camera);renderDirty=false;if(own.status==='alive'&&(!arrival.active||arrival.elapsed>9.5))torch.render(renderer);}
