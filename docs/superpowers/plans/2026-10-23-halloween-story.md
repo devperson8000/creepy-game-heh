@@ -46,6 +46,6 @@ Interface: shared B2 timeline derives recap/teaser start/end; b2Frame(elapsed,en
 - [x] Generate local neural speech with existing licensed tooling, verify full-file duration/peak and timing; implement audio-clock scheduling and smooth scene entry/exit; commit.
 
 ### Task 5: Integrated verification, audit and publication
-- [ ] Run full Node suite and build; sequential browser checks for new solo/co-op ending, B2/teaser recaps/voices, actual key panel interaction, opening, drawers/closets, release gate and private tester lifecycle. Capture/review representative frames.
+- [x] Run full Node suite and build; sequential browser checks for new solo/co-op ending, B2/teaser recaps/voices, actual key panel interaction, opening, drawers/closets, release gate and private tester lifecycle. Capture/review representative frames.
 - [x] Fresh final review; one evidence-backed fix pass. Audit assets, gameplay, presentation and deployment for remaining gaps and document priorities.
-- [ ] Commit, fast-forward original checkout, push main, verify deployment SHA/alias and live private/public flows. Report shipped changes and evidence-backed gaps.
+- [x] Commit, fast-forward original checkout, push main, verify deployment SHA/alias and live private/public flows. Report shipped changes and evidence-backed gaps.
