@@ -38,14 +38,14 @@ export function createHalloweenEndingScene({asset,cast=[{id:'solo',slot:0}],runn
  box(set.house,1.05,.08,1,0,-.55,-1.4,black);
  const floorHinge=new THREE.Group();floorHinge.position.set(0,-.01,-1.8);set.house.add(floorHinge);box(floorHinge,.9,.12,.8,0,-.07,.4,floorMaterial);
  for(const side of [-1,1])box(set.house,.035,.07,.86,side*.48,-.1,-1.4,rust);
- const boards=new THREE.Group();boards.visible=false;set.street.add(boards);
- for(const side of [-1,1])for(let i=0;i<4;i++){const b=box(boards,2.15,.18,.1,side*3.35,1.2+i*.43,.32,i%2?rust:steel);b.rotation.z=side*(i%2?.12:-.06);}
+ const agedWood=mat(0x4b4635,{map:floorMaterial.map});const boards=new THREE.Group();boards.visible=false;set.street.add(boards);
+ for(const side of [-1,1])for(let i=0;i<4;i++){const b=box(boards,2.15,.18,.1,side*3.35,1.2+i*.43,.32,i%2?rust:agedWood);b.rotation.z=side*(i%2?.12:-.06);}
  // Dead stems and leaves make the final house recognisably older, using shared geometry.
  for(let i=0;i<26;i++){const x=Math.sin(i*12.7)*5.4,z=1+(i%7)*.8,weed=box(boards,.035,.3+(i%4)*.09,.025,x,.13,z,rust);weed.rotation.z=Math.sin(i)*.35;}
  const pumpkin=decorations.pumpkin({scale:.65});pumpkin.position.set(0,4.15,.24);pumpkin.name='upstairs-pumpkin';set.street.add(pumpkin);
  const pumpkinLight=new THREE.PointLight(0xff8c24,0,2.5,2);pumpkinLight.position.set(0,4.53,.52);scene.add(pumpkinLight);
  const glowMaterials=[];pumpkin.traverse(o=>{if(o.material?.emissive)glowMaterials.push([o.material,o.material.emissiveIntensity]);});
- const originalColors=new Map();set.street.traverse(o=>{if(o.material?.color&&!originalColors.has(o.material))originalColors.set(o.material,o.material.color.clone());});
+ const originalColors=new Map(),originalEmissive=new Map();set.street.traverse(o=>{if(o.material?.color&&!originalColors.has(o.material)){originalColors.set(o.material,o.material.color.clone());if(o.material.emissive)originalEmissive.set(o.material,o.material.emissiveIntensity);}});
  const actors=new Map(cast.map(member=>[member.id,createFinaleSurvivor(asset,member)]));for(const actor of actors.values())scene.add(actor.root);
  let runnerHand=null;actors.get(runnerId)?.root.traverse(o=>{if(o.isBone&&/right.*hand$/i.test(o.name))runnerHand=o;});
  const ordered=[...cast].sort((a,b)=>(a.id===runnerId?1:b.id===runnerId?-1:a.slot-b.slot)),runner=actors.get(runnerId),helper=ordered.find(p=>p.id!==runnerId);
@@ -58,7 +58,7 @@ export function createHalloweenEndingScene({asset,cast=[{id:'solo',slot:0}],runn
   set.doorPivot.rotation.y=1.48*(1-ease(20,21,t)) +1.48*ease(33.5,35,t)*(1-ease(39.2,40,t));
   set.chair.position.set(2.95-ease(21,26,t)*1.1,.08,-4+ease(21,26,t)*.7);set.chair.rotation.z=.3+ease(21,26,t)*.5;
   set.houseLights.visible=t<43;set.pendant.intensity=55*(1-ease(20,27,t));if(!reducedMotion&&t>20&&t<20.12)set.pendant.intensity=65;
-  boards.visible=f.aged>.05;for(const [m,c]of originalColors)m.color.copy(c).lerp(new THREE.Color(0x4b5149),f.aged*.6);
+  boards.visible=f.aged>.05;for(const [m,value]of originalEmissive)m.emissiveIntensity=value*(1-f.aged);for(const [m,c]of originalColors)m.color.copy(c).lerp(new THREE.Color(0x4b5149),f.aged*.6);
   set.streetLights.traverse(o=>{if(o.isPointLight)o.intensity=23*(1-f.aged);});
   pumpkin.visible=t>=43;for(const [m,base]of glowMaterials)m.emissiveIntensity=base*f.pumpkinLight;pumpkinLight.intensity=9*f.pumpkinLight;
   const struggling=t>=27&&t<35,runnerAction=t<30&&t>=27?'snared':t>=30&&t<33?'snared':t>=33&&t<35?'free-leg':'none';

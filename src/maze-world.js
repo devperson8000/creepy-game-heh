@@ -51,7 +51,7 @@ export function createMazeWorld(run){
  targets.set('boards',{id:'boards',type:'boards',mesh:boardHitbox});collider(-2.6,-25,2.4,.25,()=>!run.boardsOpen);
  const elevatorDoors=[box(1,3.2,.13,-3.1,5.2,-32.91,metal),box(1,3.2,.13,-2.1,5.2,-32.91,metal)];
  for(const d of elevatorDoors)d.userData.interactId='elevator';targets.set('elevator',{id:'elevator',type:'elevator',mesh:elevatorDoors[0]});
- sign('EXIT',1.2,.35,-2.6,7.05,-32.84);
+ sign('B2 SERVICE LIFT',1.9,.28,-2.6,7.05,-32.84,{size:48});
  // Quiet industrial details reinforce the elevator as the return landmark.
  const paint=new THREE.MeshStandardMaterial({color:0x9b9a82,roughness:.96});
  for(const x of [-8.47,3.27])box(.035,.18,7.7,x,3.73,-29,metal);

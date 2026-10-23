@@ -2,10 +2,10 @@ import {gamePreferences,savePreferences,reducedMotion} from './preferences.js';
 import {huntClockView,CLOCK_START_HOUR,HUNT_START_SECONDS,HUNT_WARNING_SECONDS} from './hunt-clock.js';
 export function objectiveFor(run){
  if(!run.boardsOpen)return 'Open the boarded doorway';
- if(run.exitOpen)return 'Step into the open elevator';
+ if(run.exitOpen&&!run.halloween)return 'Step into the open elevator';
  if(run.banked.size===4&&run.codeAccepted)return run.halloween?'House service exit unlocked · return upstairs':'Open the elevator and step inside';
- if(run.banked.size===4)return run.clueRead?'Enter the recorded code at the elevator':'Find the four-digit clue downstairs';
- if((run.teamKeyCount??run.carried.size+run.banked.size)>=4)return 'Return to the elevator · bank all four keys';
+ if(run.banked.size===4)return run.clueRead?(run.halloween?'Enter the recorded code at the service panel':'Enter the recorded code at the elevator'):'Find the four-digit clue downstairs';
+ if((run.teamKeyCount??run.carried.size+run.banked.size)>=4)return run.halloween?'Return upstairs · bank all four keys':'Return to the elevator · bank all four keys';
  return run.layout?.halloweenMaze?'Search the small rooms · four keys + one number':'Search furniture · four keys + one number';
 }
 export function createGameUI(){
@@ -67,7 +67,7 @@ export function createGameUI(){
    const flash=age<.18||age>=.36&&age<.54?1:age<.36?.12:1;
    warning.style.opacity=String((reducedMotion()?1:flash)*Math.min(1,(HUNT_WARNING_SECONDS-age)/1.4));
   }
-  el('floor-name').textContent=run.layout?.halloweenMaze?(run.hidden?'INSIDE A CLOSET':player.z<=-25?'ELEVATOR LOBBY':player.z<run.layout.stairs.bottomZ?'RETURN STAIRS':'BASEMENT B1'):run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
+  el('floor-name').textContent=run.layout?.halloweenMaze?(run.hidden?'INSIDE A CLOSET':player.z<=-25?'B1 SERVICE HUB':player.z<run.layout.stairs.bottomZ?'RETURN STAIRS':'BASEMENT B1'):run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
   const objective=objectiveFor(run);if(objective!==lastObjective){text('current-objective',objective);if(lastObjective&&!overlay)highlight(el('current-objective'));lastObjective=objective;}
   el('keypad-title').previousElementSibling.textContent=run.halloween?'HOUSE SERVICE / SECURITY':'ELEVATOR / SECURITY';
   const keys=run.banked.size+run.carried.size;if(keys>previousKeys&&!overlay)highlight(el('key-lights'));previousKeys=keys;

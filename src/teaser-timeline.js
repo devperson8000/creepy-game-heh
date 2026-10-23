@@ -1,13 +1,14 @@
+import {B2_INTRO_DURATION} from './b2-dialogue.js';
 import {RECAP_DURATION} from './teaser-recap.js';
 /** Shared edit. Co-op uses the host's encounter clock. Creature names stay off-screen. */
 import {NEEDLELIMBS_READY} from './teaser-edition.js';
 import {sampleNeedlelimbsTeaser,NEEDLELIMBS_VOICES,NEEDLELIMBS_MONSTER_CUE,NEEDLELIMBS_SOUND_CUES} from './needlelimbs-timeline.js';
-export const TEASER_START=10;
+export const TEASER_START=B2_INTRO_DURATION;
 export const TEASER_DURATION=25;
 export const TEASER_PRESENTATION_DURATION=RECAP_DURATION+TEASER_DURATION;
 export const TEASER_END=TEASER_START+TEASER_PRESENTATION_DURATION;
-export const B2_CONVERSATION_DURATION=TEASER_END+8;
-export const TEASER_VOICES=NEEDLELIMBS_READY?NEEDLELIMBS_VOICES:[{at:1.1,end:3.8,file:'radio-out',subtitle:'RADIO: “You made it out?”'}];
+export const B2_CONVERSATION_DURATION=TEASER_END+10.5;
+export const TEASER_VOICES=NEEDLELIMBS_READY?NEEDLELIMBS_VOICES:[{at:1.1,end:2.4,file:'radio-out-v2',subtitle:'RADIO: “You made it out?”'}];
 export const TEASER_MONSTER_CUE=NEEDLELIMBS_READY?NEEDLELIMBS_MONSTER_CUE:{at:20.05,end:20.65,file:'monster'};
 export const TEASER_GLIMPSES=[
  {id:'sonask',start:6.1,end:7.7},

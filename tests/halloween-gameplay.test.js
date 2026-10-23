@@ -33,12 +33,12 @@ test('B2 requires its key, everyone upstairs and no downed teammates, then resto
  assert.equal(interactHalloween(r,'halloween:b2-panel',{players,now:10}).ok,false);
  players[1].status='alive';const poses=players.map(p=>({...p}));
  assert.equal(interactHalloween(r,'halloween:b2-panel',{players,now:10}).ok,true);assert.equal(r.phase,'halloween');
- advanceHalloween(r,players,16);assert.equal(r.halloween.visit.stage,'archive');
+ advanceHalloween(r,players,13);assert.equal(r.halloween.visit.stage,'descent');advanceHalloween(r,players,19);assert.equal(r.halloween.visit.stage,'archive');
  assert.ok(players.every(p=>p.z<4&&p.height===0));
- Object.assign(players[0],{x:0,z:-1.2});advanceHalloween(r,players,17);
+ Object.assign(players[0],{x:0,z:-1.2});advanceHalloween(r,players,20);
  assert.equal(r.halloween.visit.stage,'conversation');
- advanceHalloween(r,players,17+B2_DURATION.conversation);assert.equal(r.halloween.seen,true);assert.equal(r.halloween.visit.stage,'archive');
- assert.equal(interactHalloween(r,'halloween:return',{players,now:18+B2_DURATION.conversation}).ok,true);advanceHalloween(r,players,23+B2_DURATION.conversation);
+ advanceHalloween(r,players,20+B2_DURATION.conversation);assert.equal(r.halloween.seen,true);assert.equal(r.halloween.visit.stage,'archive');
+ assert.equal(interactHalloween(r,'halloween:return',{players,now:21+B2_DURATION.conversation}).ok,true);advanceHalloween(r,players,26+B2_DURATION.conversation);
  assert.equal(r.phase,'playing');assert.equal(r.halloween.visit,null);
  for(let i=0;i<players.length;i++)for(const key of ['x','z','height','yaw','pitch'])assert.equal(players[i][key],poses[i][key]);
 });
@@ -53,7 +53,7 @@ test('shared B2 freezes the hunt, accepts archive movement and rejects remote qu
  s.run.halloween.key=true;s.run.halloween.stage=5;
  for(const p of s.players.values())Object.assign(p,{x:-3.5,z:-31,height:3.6});
  assert.equal(sim.interact('a',{targetId:'halloween:b2-panel'}).ok,true);const hunt=s.run.huntElapsed;
- now+=6;sim.advance(.1);assert.equal(s.run.halloween.visit.stage,'archive');assert.equal(s.run.huntElapsed,hunt);
+ now+=3;sim.advance(.1);assert.equal(s.run.halloween.visit.stage,'descent');now+=6;sim.advance(.1);assert.equal(s.run.halloween.visit.stage,'archive');assert.equal(s.run.huntElapsed,hunt);
  const p=s.players.get('a'),z=p.z;sim.setInput('a',{forward:1,right:0,yaw:0,pitch:0,paused:false});sim.advance(.1);assert.ok(p.z<z);assert.equal(p.height,0);
  assert.equal(sim.interact('a',{targetId:'halloween:return'}).ok,true);now+=5;sim.advance(.1);assert.equal(s.run.phase,'playing');assert.equal(p.height,3.6);assert.equal(s.run.huntElapsed,hunt);
 });

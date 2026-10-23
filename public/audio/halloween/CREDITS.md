@@ -1,4 +1,4 @@
-Original game dialogue synthesized locally with FFmpeg's Flite voices:
+Historical dialogue files were synthesized locally with FFmpeg's Flite voices (the active B2 encounter now uses the v3 neural clips below):
 - Stranger: `rms`, filtered and reverberated.
 - Radio: `slt`.
 
@@ -6,10 +6,14 @@ No actor recording was scraped or cloned. The revised Monochrome II teaser has n
 
 Earlier Needlelimbs prototype: `survivor-reply.mp3` is original game dialogue synthesized locally with FFmpeg Flite's `awb` voice, filtered to sound like a subdued hazmat response. Text: “Yes, but I don't think it was just Monochrome...” No person's voice was cloned. This older reply is superseded by the v2 neural recording in the updated private teaser.
 
-The teaser's Monochrome cry now passes through `src/teaser-metallic-voice.js`: the same original recording with the same clear direct layer, much stronger filtered steel resonance and a source-driven metallic rasp. Playback speed and pitch are unchanged. The metallic effect does not process dialogue or gameplay audio, and `public/audio/monster.mp3` is unchanged. `monster-metallic-preview.mp3` is an 8.15-second listening preview rendered through that exact Web Audio effect and encoded as MP3; the game processes the original recording at runtime rather than loading the preview.
+The teaser's Monochrome cry now passes through `src/teaser-metallic-voice.js`: the same original recording with the same clear direct layer, much stronger filtered steel resonance and a source-driven metallic rasp. Playback speed and pitch are unchanged. The earlier teaser-only metallic effect did not process dialogue or gameplay audio, and `public/audio/monster.mp3` remains unchanged. `monster-metallic-preview.mp3` is an 8.15-second listening preview rendered through that exact Web Audio effect and encoded as MP3; the game processes the original recording at runtime rather than loading the preview.
 
 Updated teaser dialogue (v2): generated offline with Piper neural speech, using the same original script and two distinct voices. These files replace the older Flite clips only in the revised teaser; no speech model or online TTS dependency is shipped to players.
 
 - `radio-out-v2.mp3`: “You made it out?” — `en_US-ljspeech-high`, length scale 0.9. [Model card](https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/ljspeech/high/MODEL_CARD). The card identifies the [public-domain LJ Speech dataset](https://keithito.com/LJ-Speech-Dataset/).
 - `survivor-reply-v2.mp3`: “Yes, but I don't think it was just Monochrome.” — `en_US-joe-medium`, length scale 1.45. [Model card](https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/joe/medium/MODEL_CARD). The card identifies its voice dataset as CC0 and notes its Lessac base model.
 - Both are lightly filtered, compressed and normalized to -18 LUFS / -2 dBTP, with a short fade-in, then encoded as MP3. The original Monochrome recording and the teaser's separate metallic effect are unchanged.
+
+B2 archive dialogue (v3): generated offline with Kokoro-82M v1.0 (Apache-2.0), via kokoro-onnx, using synthetic voices `am_michael` (player, speed 1.02) and `bm_george` (stranger, speed 0.99–1.01). Original game script; no person's voice was cloned. [Model and acknowledgements](https://huggingface.co/hexgrad/Kokoro-82M). High-pass 65 Hz / low-pass 11 kHz, -17 LUFS / -2 dBTP normalization, 12 ms fade-in, mono 24 kHz / 96 kbps MP3. Runtime uses an audio-clock schedule with offsets for late unlock/loading, rather than browser TTS or frame-triggered HTML audio. Speech models and inference tools are not shipped.
+
+The Halloween metal form now uses the same original monster and jumpscare recordings through a shared steel-resonance bus, with source-driven resonators, short decaying plate reflections and bounded output compression. Original files are unchanged. The listening preview was regenerated from that production effect; normal pre-Halloween gameplay retains its direct original voice.

@@ -1,5 +1,5 @@
 import {B2_CONVERSATION_DURATION} from './teaser-timeline.js';
-export const B2_DURATION={descent:5,conversation:B2_CONVERSATION_DURATION,return:4};
+export const B2_DURATION={unlock:2.8,descent:5,conversation:B2_CONVERSATION_DURATION,return:4};
 export const B2_NPC={x:0,z:-3};
 export const B2_RETURN={x:0,z:3.4,height:0};
 export function createHalloweenQuest(seed,roomCount){
@@ -25,7 +25,7 @@ export function halloweenTargetInfo(run,target){
   'halloween:seal-1':['Recover the second wax seal',.45],
   'halloween:seal-2':['Recover the final wax seal',.45],
   'halloween:chest':[q.key?'The Halloween Key is yours':q.stage===4?'Unseal the Halloween Key':'Inspect the chained pumpkin chest',.7],
-  'halloween:b2-panel':[q.key?'Turn the Halloween Key · descend to B2':'Inspect the pumpkin-marked service panel',.6]
+  'halloween:b2-panel':[q.key?'Insert Halloween Key · open B2':'Inspect the pumpkin-marked service panel',.6]
  };
  const sealIndex=['halloween:seal-0','halloween:seal-1','halloween:seal-2'].indexOf(id);if(sealIndex>=0&&q.stage>sealIndex+1)defs[id]=['Seal already recovered',.2];
  const def=defs[id];return def?{...target,type:'halloween',label:def[0],duration:def[1]}:null;
@@ -41,7 +41,7 @@ export function interactHalloween(run,id,{now=Date.now()/1000,players=[]}={}){
   if(!q.key)return {ok:false,reason:'quest',message:'A pumpkin-shaped keyhole. Its key is hidden upstairs.'};
   const team=players.filter(p=>p.status===undefined||p.status==='alive'||p.status==='downed');
   if(!team.length||team.some(p=>p.status==='downed'||p.hidden||Math.hypot(p.x+2.6,p.z+31,(p.height??0)-3.6)>4.6))return {ok:false,reason:'team',message:'Gather every survivor at the upstairs service panel. Revive anyone downed first.'};
-  q.visit={id:`${run.seed}:${now}`,stage:'descent',startedAt:now,elapsed:0,cast:team.map(p=>({id:p.id??'solo',x:p.x,z:p.z,height:p.height,yaw:p.yaw??0,pitch:p.pitch??0,slot:p.slot??0}))};
+  q.visit={id:`${run.seed}:${now}`,stage:'unlock',startedAt:now,elapsed:0,cast:team.map(p=>({id:p.id??'solo',x:p.x,z:p.z,height:p.height,yaw:p.yaw??0,pitch:p.pitch??0,slot:p.slot??0}))};
   run.phase='halloween';return {ok:true,message:'B2 service access granted.'};
  }
  const order=['halloween:invitation','halloween:seal-0','halloween:seal-1','halloween:seal-2','halloween:chest'],index=order.indexOf(id);
@@ -55,6 +55,7 @@ export function interactHalloween(run,id,{now=Date.now()/1000,players=[]}={}){
 export function advanceHalloween(run,players,now=Date.now()/1000){
  const q=run.halloween,v=q?.visit;if(!v||run.phase!=='halloween')return false;
  v.elapsed=Math.max(v.elapsed,Math.max(0,now-v.startedAt));
+ if(v.stage==='unlock'&&v.elapsed>=B2_DURATION.unlock){v.stage='descent';v.elapsed=0;v.startedAt=now;return true;}
  if(v.stage==='descent'&&v.elapsed>=B2_DURATION.descent){
   for(const p of players){const pose=v.cast.find(c=>c.id===(p.id??'solo'));if(pose){p.x=(pose.slot%2-.5)*1.1;p.z=2.4+Math.floor(pose.slot/2)*.55;p.height=0;p.yaw=0;p.pitch=0;}}
   v.stage='archive';v.elapsed=0;v.startedAt=now;return true;

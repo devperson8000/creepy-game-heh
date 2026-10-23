@@ -9,7 +9,7 @@ test('key animation test grants only the Halloween Key without searching or comp
  assert.equal(typeof module.setupHalloweenTest,'function','scenario shortcuts must be implemented');const g=game();module.setupHalloweenTest(g,'key');assert.equal(g.run.halloween.key,true);assert.equal(g.run.halloween.stage,5);assert.equal(g.run.banked.size,0);assert.equal(g.run.codeAccepted,false);
 });
 test('B2 and return tests run the actual visit transitions with pre-granted quest access',()=>{
- assert.equal(typeof module.setupHalloweenTest,'function');const g=game(),test=module.setupHalloweenTest(g,'b2');assert.equal(g.run.phase,'halloween');assert.equal(g.run.halloween.visit.stage,'descent');advanceHalloween(g.run,[g.player],Date.now()/1000+6);test.tick();advanceHalloween(g.run,[g.player],Date.now()/1000+6);assert.equal(g.run.halloween.visit.stage,'conversation');
+ assert.equal(typeof module.setupHalloweenTest,'function');const g=game(),test=module.setupHalloweenTest(g,'b2');assert.equal(g.run.phase,'halloween');assert.equal(g.run.halloween.visit.stage,'unlock');advanceHalloween(g.run,[g.player],Date.now()/1000+3);advanceHalloween(g.run,[g.player],Date.now()/1000+9);test.tick();advanceHalloween(g.run,[g.player],Date.now()/1000+9);assert.equal(g.run.halloween.visit.stage,'conversation');
  const returned=game();module.setupHalloweenTest(returned,'return');assert.equal(returned.run.halloween.visit.stage,'return');advanceHalloween(returned.run,[returned.player],Date.now()/1000+5);assert.equal(returned.run.phase,'playing');assert.equal(returned.player.height,3.6);
 });
 test('quest item shortcuts preserve normal keys and reject unsupported commands',()=>{

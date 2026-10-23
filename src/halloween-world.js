@@ -1,3 +1,4 @@
+import {createB2KeyPanel} from './b2-key-panel.js';
 import {createHouseServiceExit,HOUSE_EXIT_POSITION} from './house-service-exit.js';
 import * as THREE from 'three';
 import {worldPoint,groundHeight,randomSource} from './level.js';
@@ -45,7 +46,7 @@ export function createHalloweenWorld(scene,run,targets,rayMeshes){
   const curve=new THREE.CatmullRomCurve3(Array.from({length:13},(_,i)=>{const y=.425-i/12*.325,z=.27*Math.sqrt(Math.max(.04,1-(.135/.29)**2-((y-.255)/.235)**2))+.035;return new THREE.Vector3(0,y-.425,z-.205);}));
   for(let i=0;i<11;i++){const link=new THREE.Mesh(linkGeometry,iron);link.userData.halloweenDetail=true;link.position.copy(curve.getPointAt(i/10));link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),curve.getTangentAt(i/10).normalize());link.rotateY(i%2?Math.PI/2:0);chain.add(link);}chains.push({root:chain,side});
  }
- const panel=new THREE.Group();panel.position.set(-4.95,4.85,-31.65);root.add(panel);const plate=box(panel,.58,.72,.08,0,0,0),icon=props.pumpkin({scale:.32,black:true,carved:true});icon.position.set(0,-.1,.055);panel.add(icon);box(panel,.025,.09,.02,0,.15,.055,keyGlow);tag('halloween:b2-panel',panel,plate);
+ const keyPanel=createB2KeyPanel(props);root.add(keyPanel.root);tag('halloween:b2-panel',keyPanel.root,keyPanel.plate);
  for(const x of [-6.6,.9]){const garland=props.stringLights({width:2.6,count:12,sag:.08});garland.position.set(x,7.3,-32.78);root.add(garland);}
  const leafShape=new THREE.Shape();leafShape.moveTo(0,.09);for(const [x,y]of [[.025,.035],[.055,.045],[.038,.015],[.07,0],[.035,-.012],[.025,-.06],[0,-.025],[-.025,-.06],[-.035,-.012],[-.07,0],[-.038,.015],[-.055,.045],[-.025,.035]])leafShape.lineTo(x,y);leafShape.closePath();
  const leafGeo=own(new THREE.ShapeGeometry(leafShape)),leafMaterial=material(0x8f5429,{side:THREE.DoubleSide}),leaves=new THREE.InstancedMesh(leafGeo,leafMaterial,run.layout.rooms.length*12),dummy=new THREE.Object3D(),color=new THREE.Color();let leaf=0;
@@ -57,7 +58,7 @@ export function createHalloweenWorld(scene,run,targets,rayMeshes){
  let revealAge=10,lastTime=null,wasKey=q.key,disposed=false;
  const ease=x=>{const t=THREE.MathUtils.clamp(x,0,1);return t*t*(3-2*t);};
  function update(time,{player,visibility=1,reducedMotion=false}={}){
-  if(disposed)return;exit.update(run);const dt=Math.max(0,Math.min(.2,lastTime===null?1/60:time-lastTime));lastTime=time;props.update(time,{reducedMotion});const progress=run.halloween;
+  if(disposed)return;exit.update(run);keyPanel.update(run.halloween);const dt=Math.max(0,Math.min(.2,lastTime===null?1/60:time-lastTime));lastTime=time;props.update(time,{reducedMotion});const progress=run.halloween;
   if(progress.key&&!wasKey)revealAge=0;wasKey=progress.key;revealAge+=dt;
   const opening=progress.key?ease((revealAge-.12)/.85):0;chest.lid.rotation.x=-1.16*opening;
   for(const chain of chains){chain.root.rotation.z=chain.side*opening*1.3;chain.root.rotation.x=opening*1.25;chain.root.position.y=.425-opening*.33;}
@@ -66,5 +67,5 @@ export function createHalloweenWorld(scene,run,targets,rayMeshes){
   const eye=player?new THREE.Vector3(player.x,(player.height??groundHeight(player,run.layout))+1.4,player.z):null,near=eye?markers.map(m=>({...m,d:m.at.distanceTo(eye)})).filter(m=>m.d<7).sort((a,b)=>a.d-b.d).slice(0,3):[];
   lights.forEach((light,i)=>{const m=near[i],target=m?m.strength*(1-ease((m.d-3.8)/3.2))*Math.max(.05,visibility):0;light.intensity+=(target-light.intensity)*(1-Math.exp(-dt*10));if(m)light.position.copy(m.at);});
  }
- return {root,placements,update,dispose(){if(disposed)return;disposed=true;exit.dispose();props.dispose();owned.forEach(o=>o.dispose());root.removeFromParent();}};
+ return {root,placements,keyPanel,update,dispose(){if(disposed)return;disposed=true;keyPanel.dispose();exit.dispose();props.dispose();owned.forEach(o=>o.dispose());root.removeFromParent();}};
 }

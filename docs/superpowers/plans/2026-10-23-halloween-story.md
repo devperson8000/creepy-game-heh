@@ -42,8 +42,8 @@ Interface: HALLOWEEN_ENDING_DURATION; halloweenEndingFrame(time,{count}) pure po
 ### Task 4: Mounted key panel, B2 direction and neural dialogue
 Files: halloween-world/state/experience; new b2-dialogue.js, b2-director.js, b2-voice.js; public/audio/halloween/b2-* and credits; tests/B2 interaction/director/audio.
 Interface: shared B2 timeline derives recap/teaser start/end; b2Frame(elapsed,entryPose) returns continuous camera and gesture values; audio update(time,{muted,volume}) schedules matching cues.
-- [ ] Failing panel-to-wall bounds/proximity and camera/gesture/subtitle tests; mount backing plate, animate key and indicator, improve authored hood/robe/hands/desk/switch/light.
-- [ ] Generate local neural speech with existing licensed tooling, verify full-file duration/peak and timing; implement audio-clock scheduling and smooth scene entry/exit; commit.
+- [x] Failing panel-to-wall bounds/proximity and camera/gesture/subtitle tests; mount backing plate, animate key and indicator, improve authored hood/robe/hands/desk/switch/light.
+- [x] Generate local neural speech with existing licensed tooling, verify full-file duration/peak and timing; implement audio-clock scheduling and smooth scene entry/exit; commit.
 
 ### Task 5: Integrated verification, audit and publication
 - [ ] Run full Node suite and build; sequential browser checks for new solo/co-op ending, B2/teaser recaps/voices, actual key panel interaction, opening, drawers/closets, release gate and private tester lifecycle. Capture/review representative frames.

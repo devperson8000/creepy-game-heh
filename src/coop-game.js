@@ -109,7 +109,7 @@ export function startCoopGame(container,{client,session}){
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void audio.resume();void ambience.resume();});
  input.setView(local().yaw);
  const questUI=createHalloweenQuestUI(ui.root,run);
- const experience=createHalloweenExperience({renderer,camera,run,input,ui,players:()=>[...state.players.values()],localId,onReturn:()=>sendAction('halloween:return'),onMute:()=>toggleSound(),isMuted:()=>audio.muted,poseFor:p=>poseBuffers.get(p.id)?.sample(performance.now()/1000)??p});
+ const experience=createHalloweenExperience({renderer,camera,run,input,ui,world,torch,players:()=>[...state.players.values()],localId,onReturn:()=>sendAction('halloween:return'),onMute:()=>toggleSound(),isMuted:()=>audio.muted,poseFor:p=>poseBuffers.get(p.id)?.sample(performance.now()/1000)??p});
  let inB2=false,lastOwnHidden=false;
 
  function cycleSpectator(){const available=[...state.players.values()].filter(p=>p.id!==localId&&p.status==='alive');if(!available.length){spectateId=null;return;}const at=available.findIndex(p=>p.id===spectateId);spectateId=available[(at+1)%available.length].id;}

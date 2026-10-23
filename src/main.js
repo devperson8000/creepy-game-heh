@@ -84,7 +84,7 @@ try {
       configureTestInput(window.monochrome);
       scenario=setupHalloweenTest(window.monochrome,selected);timer=setInterval(()=>scenario.tick(),50);
      }
-     post('halloween-test-running');
+     if(stopped){replay?.dispose();return;}post('halloween-test-running');
     }catch(error){console.error('Halloween test could not start',error);post('halloween-test-error');}
     finally{busy=false;}
    });

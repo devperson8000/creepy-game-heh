@@ -52,7 +52,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void monsterAudio.resume();void ambience.resume();});
  const questUI=createHalloweenQuestUI(ui.root,run);
- const experience=createHalloweenExperience({renderer,camera,run,input,ui,players:()=>[player],onReturn:()=>{if(Math.hypot(player.x,player.z-3.4)<2)interactHalloween(run,'halloween:return');},onMute:()=>toggleSound(),isMuted:()=>monsterAudio.muted});
+ const experience=createHalloweenExperience({renderer,camera,run,input,ui,world,torch,players:()=>[player],onReturn:()=>{if(Math.hypot(player.x,player.z-3.4)<2)interactHalloween(run,'halloween:return');},onMute:()=>toggleSound(),isMuted:()=>monsterAudio.muted});
  let inB2=false;
  let pendingNoise=[],noiseUntil=0;const footsteps={distance:0};
  function emitNoise(noise){if(!noise)return;monsterAudio.playNoise(noise.type);player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noiseUntil=performance.now()+1000;if(huntActive(run))pendingNoise.push(noise);}

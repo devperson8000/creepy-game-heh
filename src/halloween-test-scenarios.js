@@ -1,5 +1,5 @@
 import {HUNT_START_SECONDS} from './hunt-clock.js';
-import {interactHalloween,advanceHalloween} from './halloween-state.js';
+import {interactHalloween,advanceHalloween,B2_DURATION} from './halloween-state.js';
 import {worldPoint} from './level.js';
 export const HALLOWEEN_TESTS=new Set(['ending','opening','new-gameplay','full','coop','map','quest','key','b2','teaser','return']);
 /** Shortcuts live only in the password-authorized test frame; normal runs never call this. */
@@ -16,6 +16,7 @@ export function setupHalloweenTest(game,scenario){
  function command(value){
   if(scenario==='new-gameplay'&&value.startsWith('new:')){
    const action=value.slice(4);
+   if(action==='b2'){q.key=true;q.stage=5;Object.assign(player,{x:-5.35,z:-31.4,height:3.6});input.clear();input.setView(0,0);ui.hideScreen();return true;}
    if(action==='exit'){run.banked=new Set(run.drawers.filter(d=>d.key).map(d=>d.id));run.codeAccepted=true;Object.assign(player,{x:1.4,z:-31.5,height:3.6});input.clear();input.setView(0,0);ui.hideScreen();return true;}
    if(action==='hunt'){newHunt=true;run.huntElapsed=HUNT_START_SECONDS;ui.hideScreen();input.clear();ui.toast('6:00 · Monochrome is hunting.');return true;}
    if(action==='stamina'){player.stamina=1;player.exhausted=false;player.staminaRest=0;return true;}
@@ -46,8 +47,8 @@ export function setupHalloweenTest(game,scenario){
   }
   if(scenario==='b2'||scenario==='return'){
    q.stage=5;q.key=true;q.seen=scenario==='return';Object.assign(player,{x:-2.6,z:-31,height:3.6});
-   const now=Date.now()/1000;interactHalloween(run,'halloween:b2-panel',{players:[player],now:scenario==='return'?now-6:now});
-   if(scenario==='return'){advanceHalloween(run,[player],now);command('return');}
+   const now=Date.now()/1000;interactHalloween(run,'halloween:b2-panel',{players:[player],now:scenario==='return'?now-B2_DURATION.unlock-B2_DURATION.descent-1:now});
+   if(scenario==='return'){advanceHalloween(run,[player],now-B2_DURATION.descent-.1);advanceHalloween(run,[player],now);command('return');}
   }
  }
  return {command,tick(){
