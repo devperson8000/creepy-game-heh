@@ -1,3 +1,4 @@
+import {attachMechanicalHead} from './mechanical-head.js';
 import {halloweenTargetInfo,canMoveB2} from './halloween-state.js';
 import {createHalloweenExperience,createHalloweenQuestUI} from './halloween-experience.js';
 import {createDrawerRequests,drawerTargetFromHit,retainDrawerTarget} from './drawer-interaction.js';
@@ -34,12 +35,12 @@ export function startCoopGame(container,{client,session}){
  const world=createWorld(run),groundHeight=world.groundHeight??legacyGroundHeight,ui=createGameUI(),revivePrompts=createRevivePrompts(ui.root);
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;container.append(renderer.domElement);
  const quality=createRenderQuality(renderer,{pixelRatio:Math.min(devicePixelRatio,1.4)});
- const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
+ const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);if(run.halloween)attachMechanicalHead(creature);world.scene.add(creature.root);
  creature.root.traverse(mesh=>{if(mesh.isMesh){mesh.userData.actor=true;world.rayMeshes.push(mesh);}});
  const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
  const audio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL);
- const jumpscare=createJumpscare({mouthTexture});
+ const jumpscare=createJumpscare({mouthTexture,metallic:!!run.halloween});
  const raycaster=new THREE.Raycaster(),point=new THREE.Vector3(),direction=new THREE.Vector3();
  world.scene.updateMatrixWorld(true);
  for(const target of world.targets.values()){
@@ -217,7 +218,7 @@ export function startCoopGame(container,{client,session}){
  }
  let renderDirty=true,lastOverlay=null,wasHidden=document.hidden,avatarResume=false;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();jumpscare.resize(camera.aspect);finale?.resize();}resize();window.addEventListener('resize',resize);
- window.addEventListener('pagehide',()=>{experience.dispose();questUI.dispose();world.halloween?.dispose();drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
+ window.addEventListener('pagehide',()=>{experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();drawerRequests.clear();revivePrompts.dispose();client.send('leave');client.close();finale?.dispose();audio.dispose();ambience.dispose();unsubscribe();offGameplay?.();renderer.setAnimationLoop(null);for(const avatar of avatars.values())avatar.dispose();},{once:true});
  screen('menu');ui.hideScreen();ui.overlay='arrival';let previous=performance.now(),time=0;
  function broadcast(wallDelta){
   if(isHost&&!disconnected){
@@ -324,7 +325,7 @@ export function startCoopGame(container,{client,session}){
   revivePrompts.update({players:state.players.values(),own,camera,elapsed:run.elapsed,targetId:target?.id,progress:latched&&holdId===target?.id?1:hold,active:!ui.overlay&&!document.hidden&&!disconnected&&run.phase==='playing',canSee:world.canSeeInteraction});
   const renderedRun=viewRun(watched),hunting=huntActive(renderedRun);
   if(!document.hidden){ui.update(renderedRun,watched,target,hold);updateTeam();updateAvatars(delta);}
-  creature.root.visible=hunting;
+  creature.root.visible=hunting;creature.mechanical?.sample(time,{jaw:enemyView.mode==='chase'?.35+.15*Math.sin(time*4):.05});
   applyIdle(creature,idlePose(time));const gait=creatureMotion.update(enemyView.position,enemyView.mode,delta,huntActive(run),enemyView.moving);if(gait.weight>.001)applyRunning(creature,gait.time,gait.weight*(enemyView.mode==='chase'?1:.65));
   const enemyPose=!isHost?enemyBuffer.sample(performance.now()/1000):null;
   const monsterPosition=enemyPose??enemyView.position;

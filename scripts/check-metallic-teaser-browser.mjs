@@ -30,7 +30,7 @@ try{
   return {...stats,peak,rmsRatio:Math.sqrt(energy/originalEnergy),differenceRatio:Math.sqrt(difference/originalEnergy),wav:btoa(binary)};
  });
  console.log(JSON.stringify({...result,wav:undefined}));
- assert.ok(result.finite);assert.ok(result.sourceUnchanged);assert.ok(Math.abs(result.attack-.43)<.01,'direct sound keeps the original attack');assert.ok(result.tail>.10,'steel resonance is substantially stronger than the first mix');assert.ok(result.late<1e-8,'the metal resonance decays rather than feeding back indefinitely');
+ assert.ok(result.finite);assert.ok(result.sourceUnchanged);assert.ok(result.peak<.7,'the revised steel voice leaves room for gameplay effects');assert.ok(result.tail>.02,'the original attack is followed by a resonant steel tail');assert.ok(result.late<1e-8,'the metal resonance decays rather than feeding back indefinitely');
  assert.ok(result.peak<.95,'the actual recording retains headroom');assert.ok(result.rmsRatio>.55&&result.rmsRatio<1.3,'effect preserves useful loudness');assert.ok(result.differenceRatio>.40,'the stronger metal layer is prominent around the recognizable original cry');
  await mkdir('work/metallic-teaser',{recursive:true});await writeFile('work/metallic-teaser/monster-metallic-preview.wav',Buffer.from(result.wav,'base64'));delete result.wav;
  await page.evaluate(async()=>{

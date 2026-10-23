@@ -24,8 +24,8 @@
 ### Task 1: Metal form and audibility
 Files: src/mechanical-head.js, src/monster-audio.js, src/teaser-metallic-voice.js, src/game.js, src/coop-game.js, src/jumpscare.js, menu scene; tests for head geometry and audio profile.
 Interface: attachMechanicalHead(body) returns {root,sample,dispose}; createMonsterAudio accepts metallic; 28 m maze range.
-- [ ] Write failing range/head ownership tests, observe RED, implement shared head mount and richer metal processing; wire Halloween game/menu/jumpscare only.
-- [ ] Verify audio peaks and original checksums, focused suite, commit.
+- [x] Write failing range/head ownership tests, observe RED, implement shared head mount and richer metal processing; wire Halloween game/menu/jumpscare only.
+- [x] Verify audio peaks and original checksums, focused suite, commit.
 
 ### Task 2: Historical recap before the teaser
 Files: new src/teaser-recap.js; modify teaser-playback, teaser-timeline and B2 time consumers; tests/teaser-recap.test.js.

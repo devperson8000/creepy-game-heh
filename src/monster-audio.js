@@ -1,3 +1,4 @@
+import {createMetallicTeaserVoice} from './teaser-metallic-voice.js';
 import {playInteractionSound} from './interaction-sounds.js';
 // Full audio extracted from the user-provided monster sound video.
 export const MONSTER_SOUND_URL = '/audio/monster.mp3';
@@ -6,17 +7,17 @@ export const AUDIBLE_DISTANCE = 32;
 export const FULL_VOLUME_DISTANCE = 1.5;
 
 export function monsterGain(distance,active=true,{maze=false,elapsed=0}={}){
- const range=maze?13:AUDIBLE_DISTANCE;
+ const range=maze?28:AUDIBLE_DISTANCE;
  if(!active||!Number.isFinite(distance)||distance>=range)return 0;
  const proximity=Math.max(0,Math.min(1,(range-Math.max(0,distance))/(range-FULL_VOLUME_DISTANCE)));
  const phase=elapsed%22,call=phase<.35?phase/.35:phase<4.7?1:phase<5.2?(5.2-phase)/.5:0;
  const nearby=Math.max(0,Math.min(1,(4.8-distance)/1.5));
- return .85*Math.pow(proximity,2.4)*(maze?Math.max(call,nearby):1);
+ return .85*Math.pow(proximity,maze?1.45:2.4)*(maze?Math.max(call,nearby):1);
 }
 
-export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{},maze=false}={}){
+export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{},maze=false,metallic=maze}={}){
  let context,gain,effectsGain,source,loading,noiseBuffer,wanted=false,muted=false,disposed=false,failed=false,volume=0;
- let masterVolume=1,elapsed=0;
+ let masterVolume=1,elapsed=0,metalBus,scareMetal;
  let scareGain,scareBuffer,scareLoading,scareSource,scaring=false,scareStartedAt=0;
  const abort=new AbortController(),effects=new Set();
  function silence(){volume=0;if(gain&&context?.state!=='closed'){gain.gain.cancelScheduledValues(context.currentTime);gain.gain.setValueAtTime(0,context.currentTime);}}
@@ -48,8 +49,8 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{},maze=
    if(!context){
     const AudioContext=globalThis.AudioContext||globalThis.webkitAudioContext;
     if(!AudioContext)throw new Error('This browser does not support Web Audio.');
-    context=new AudioContext();gain=context.createGain();gain.gain.value=0;gain.connect(context.destination);effectsGain=context.createGain();effectsGain.gain.value=muted?0:.8*masterVolume;effectsGain.connect(context.destination);
-    scareGain=context.createGain();scareGain.gain.value=0;scareGain.connect(context.destination);
+    context=new AudioContext();gain=context.createGain();gain.gain.value=0;metalBus=metallic?createMetallicTeaserVoice(context,context.destination):null;gain.connect(metalBus?.input??context.destination);effectsGain=context.createGain();effectsGain.gain.value=muted?0:.8*masterVolume;effectsGain.connect(context.destination);
+    scareGain=context.createGain();scareGain.gain.value=0;scareMetal=metallic?createMetallicTeaserVoice(context,context.destination):null;scareGain.connect(scareMetal?.input??context.destination);
    }
    // Called directly from the Enter/Continue gesture, including on mobile.
    effectsGain.gain.value=muted?0:.8*masterVolume;
@@ -93,6 +94,6 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{},maze=
   if(effectsGain)effectsGain.gain.value=muted?0:.8*masterVolume;
   if(scareGain&&scaring)scareGain.gain.value=muted?0:.95*masterVolume;
  }
- function dispose(){disposed=true;wanted=false;abort.abort();silence();stopScare();source?.stop();for(const sound of effects)sound.stop();effects.clear();context?.close().catch(()=>{});}
+ function dispose(){disposed=true;wanted=false;abort.abort();silence();stopScare();source?.stop();for(const sound of effects)sound.stop();effects.clear();metalBus?.dispose();scareMetal?.dispose();context?.close().catch(()=>{});}
  return {resume,pause,update,playNoise,playJumpscare,setMuted,setVolume,dispose,get volume(){return volume;},get muted(){return muted;},get configured(){return !!url;}};
 }

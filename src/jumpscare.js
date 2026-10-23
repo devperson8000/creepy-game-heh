@@ -1,3 +1,4 @@
+import {attachMechanicalHead} from './mechanical-head.js';
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {createCreature} from './creature.js';
@@ -18,7 +19,7 @@ export function createJumpscareMouth(mouthTexture){
  return mouth;
 }
 
-export function createJumpscare({mouthTexture} = {}) {
+export function createJumpscare({mouthTexture,metallic=false} = {}) {
  const scene = new THREE.Scene();
  scene.background = new THREE.Color(0x080305);
  const camera = new THREE.PerspectiveCamera(52, 1, .025, 40);
@@ -54,13 +55,14 @@ export function createJumpscare({mouthTexture} = {}) {
  backdrop.renderOrder = -10;
  scene.add(backdrop);
 
- const face = createCreature().head;
+ const body=createCreature(),machine=metallic?attachMechanicalHead(body):null,face=body.head;
+ if(metallic){scene.add(new THREE.HemisphereLight(0xc4dbdc,0x161315,1.4));const key=new THREE.PointLight(0xe8ece5,14,8);key.position.set(-1,1,3);scene.add(key);}
  face.removeFromParent();
  face.position.set(0, 0, 0);
  scene.add(face);
  const eyes = [], darkSurfaces = [];
  face.traverse(mesh => {
-  if(!mesh.isMesh) return;
+  if(!mesh.isMesh||mesh.userData.mechanicalHead) return;
   const isEye = mesh.material?.color?.r > .5;
   mesh.material = new THREE.MeshBasicMaterial({
    color: isEye ? 0xffffff : 0x040204,
@@ -85,7 +87,7 @@ export function createJumpscare({mouthTexture} = {}) {
   const shock = motion*Math.exp(-Math.max(0, elapsed-.20)*7.5) * rush;
   const withdraw = ease(elapsed, 1.15, JUMPSCARE_DURATION);
   const darkness = 1-withdraw;
-  const open = ease(elapsed, .035, .17);
+  const open = ease(elapsed, .035, .17);machine?.sample(elapsed,{jaw:open});
 
   eyes.forEach(eye => eye.material.color.setScalar(darkness));
   darkSurfaces.forEach(mesh => mesh.material.color.setRGB(
@@ -150,6 +152,7 @@ export function createJumpscare({mouthTexture} = {}) {
  }
  return {
   scene,camera,face,eyes,mouth,start,update,resize,render,
+  dispose(){machine?.dispose();const geometry=new Set(),material=new Set();scene.traverse(o=>{if(o.geometry)geometry.add(o.geometry);if(o.material)material.add(o.material);});geometry.forEach(g=>g.dispose());material.forEach(m=>m.dispose());scene.clear();},
   get active(){return active;},
   get elapsed(){return elapsed;},
   get borderOpacity(){return borderOpacity;},

@@ -12,7 +12,7 @@ export function createMechanicalHead(){
  const grain=new Uint8Array(96*96*4);let seed=3107;
  for(let i=0;i<96*96;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const v=165+(seed%70)-((i%96)%19===0?25:0);grain.set([v,v,v,255],i*4);}
  const wear=new THREE.DataTexture(grain,96,96);wear.colorSpace=THREE.SRGBColorSpace;wear.wrapS=wear.wrapT=THREE.RepeatWrapping;wear.repeat.set(12,12);wear.minFilter=wear.magFilter=THREE.LinearFilter;wear.needsUpdate=true;textures.add(wear);steel.map=wear;edge.map=wear;
- function mesh(geometry,material,name,parent=root){geometries.add(geometry);const o=new THREE.Mesh(geometry,material);o.name=name;o.castShadow=true;parent.add(o);return o;}
+ function mesh(geometry,material,name,parent=root){geometries.add(geometry);const o=new THREE.Mesh(geometry,material);o.name=name;o.castShadow=true;o.userData.mechanicalHead=true;parent.add(o);return o;}
  function box(w,h,d,x,y,z,m,name,parent=root){const o=mesh(new THREE.BoxGeometry(w,h,d),m,name,parent);o.position.set(x,y,z);return o;}
  function tube(points,r,m,name,parent=root){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return mesh(new THREE.TubeGeometry(curve,20,r,8,false),m,name,parent);}
  const collar=mesh(new THREE.CylinderGeometry(.155,.125,.16,16),dark,'severed-neck-collar');collar.position.y=-.035;
@@ -49,14 +49,34 @@ export function createMechanicalHead(){
  }
  for(const [x,y] of [[-.17,.69],[.17,.69],[-.17,.47],[.17,.47],[-.09,.33],[.09,.33]]){const bolt=mesh(new THREE.CylinderGeometry(.016,.016,.018,6),edge,'faceplate-bolt');bolt.rotation.x=Math.PI/2;bolt.position.set(x,y,.174);}
  for(let i=0;i<6;i++){const scratch=box(.002,.028+i*.006,.003,-.15+i*.055,.66-(i%3)*.082,.179,i%2?rust:edge,'steel-scratch');scratch.rotation.z=.6;}
- function sample(time,{jaw:opening=0}={}){jaw.rotation.x=Math.max(0,Math.min(1,opening))*.65;lens.emissiveIntensity=.45+Math.sin(time*2.1)*.05;}
+ // Layered cheek armor and vent slots expose a dark, deep mechanism instead of a flat mask.
+ for(const side of [-1,1]){
+  const cheek=box(.078,.19,.052,side*.196,.41,.153,steel,'split-cheek-armor');cheek.rotation.z=side*.22;
+  for(let i=0;i<4;i++)box(.047,.008,.005,side*.196,.386+i*.026,.184,black,'cheek-vent');
+  const seam=box(.009,.29,.008,side*.222,.603,.16,rust,'oxidized-plate-seam');seam.rotation.z=-side*.13;
+  const motor=mesh(new THREE.CylinderGeometry(.049,.049,.09,20),dark,'jaw-servo');motor.rotation.z=Math.PI/2;motor.position.set(side*.225,.31,.03);
+  for(let i=0;i<3;i++){const lug=box(.028,.016,.025,side*.215,.72+i*.022,.17,edge,'repair-staple');lug.rotation.z=side*.22;}
+ }
+ const actuators=[-1,1].map(side=>{
+  const rod=mesh(new THREE.CylinderGeometry(.012,.012,1,12),edge,side<0?'jaw-actuator-left':'jaw-actuator-right');
+  const barrel=mesh(new THREE.CylinderGeometry(.023,.023,.14,14),dark,'jaw-actuator-barrel');
+  return {rod,barrel,upper:new THREE.Vector3(side*.19,.49,.08),lower:new THREE.Vector3(side*.14,-.08,.13)};
+ });
+ function sample(time,{jaw:opening=0}={}){
+  jaw.rotation.x=Math.max(0,Math.min(1,opening))*.65;
+  lens.emissiveIntensity=.43+Math.sin(time*2.1)*.025;
+  for(const {rod,barrel,upper,lower}of actuators){
+   const end=lower.clone().applyEuler(jaw.rotation).add(jaw.position),axis=end.clone().sub(upper);
+   rod.position.copy(upper).add(end).multiplyScalar(.5);rod.scale.y=axis.length();rod.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),axis.normalize());
+   barrel.position.copy(upper).addScaledVector(axis,.065);barrel.quaternion.copy(rod.quaternion);
+  }
+ }
+ sample(0);
  function dispose(){if(disposed)return;disposed=true;root.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}
  return {root,jaw,sample,dispose};
 }
 export function createRebuiltMonochrome(){
- const body=createCreature(),mechanical=createMechanicalHead(),root=body.root;let disposed=false;
- for(const child of body.head.children)child.visible=false;
- body.head.add(mechanical.root);
+ const body=createCreature(),mechanical=attachMechanicalHead(body),root=body.root;let disposed=false;
  const skin=new THREE.MeshStandardMaterial({color:0x060809,roughness:.92}),old=new Set();
  root.traverse(o=>{if(o.isMesh&&o.material.userData.creatureBody){old.add(o.material);o.material=skin;}});old.forEach(m=>m.dispose());
  function sample({time=0,travel=0,walk=0,position=[0,0,0],yaw=0,jaw=0}={}){
@@ -67,4 +87,13 @@ export function createRebuiltMonochrome(){
  }
  function dispose(){if(disposed)return;disposed=true;mechanical.dispose();const gs=new Set(),ms=new Set();root.traverse(o=>{if(o.geometry)gs.add(o.geometry);if(o.material)ms.add(o.material);});gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());root.removeFromParent();}
  return {root,body,mechanical,sample,dispose};
+}
+
+/** Add the same owned replacement to a posed gameplay body without changing its gait. */
+export function attachMechanicalHead(body){
+ if(body.mechanical)return body.mechanical;
+ const original=body.head.children.map(node=>({node,visible:node.visible})),machine=createMechanicalHead(),release=machine.dispose;
+ original.forEach(({node})=>node.visible=false);body.head.add(machine.root);body.mechanical=machine;
+ let disposed=false;machine.dispose=()=>{if(disposed)return;disposed=true;release();original.forEach(({node,visible})=>node.visible=visible);delete body.mechanical;};
+ return machine;
 }

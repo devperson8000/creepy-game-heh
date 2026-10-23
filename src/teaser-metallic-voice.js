@@ -1,6 +1,7 @@
 /** A prominent steel-shell layer around an intact direct cry. Original samples/rate are untouched. */
 export function createMetallicTeaserVoice(context,destination){
- const input=context.createGain(),dry=context.createGain(),wet=context.createGain();
+ const input=context.createGain(),dry=context.createGain(),wet=context.createGain(),sum=context.createGain(),output=context.createGain(),limiter=context.createDynamicsCompressor();
+ limiter.threshold.value=-12;limiter.knee.value=12;limiter.ratio.value=5;limiter.attack.value=.003;limiter.release.value=.12;output.gain.value=.68;sum.connect(limiter);limiter.connect(output);output.connect(destination);
  const highpass=context.createBiquadFilter(),presence=context.createBiquadFilter(),plate=context.createConvolver();
  const ring=context.createGain(),carrier=context.createOscillator(),depth=context.createGain();
  dry.gain.value=.86;wet.gain.value=1.65;
@@ -16,8 +17,12 @@ export function createMetallicTeaserVoice(context,destination){
   }
  }
  plate.normalize=false;plate.buffer=response;
- input.connect(dry);dry.connect(destination);
- input.connect(highpass);highpass.connect(presence);presence.connect(plate);plate.connect(ring);ring.connect(wet);wet.connect(destination);
+ input.connect(dry);dry.connect(sum);
+ input.connect(highpass);highpass.connect(presence);presence.connect(plate);plate.connect(ring);ring.connect(wet);wet.connect(sum);
+ const resonators=[480,1260,2840].map((frequency,i)=>{
+  const filter=context.createBiquadFilter(),level=context.createGain();filter.type='bandpass';filter.frequency.value=frequency;filter.Q.value=9+i*3;level.gain.value=[.18,.13,.08][i];
+  input.connect(filter);filter.connect(level);level.connect(sum);return [filter,level];
+ });
  let disposed=false;
- return {input,dispose(){if(disposed)return;disposed=true;carrier.stop();for(const node of [input,dry,highpass,presence,plate,ring,wet,carrier,depth])node.disconnect();plate.buffer=null;}};
+ return {input,dispose(){if(disposed)return;disposed=true;carrier.stop();for(const node of [input,dry,highpass,presence,plate,ring,wet,carrier,depth,sum,output,limiter,...resonators.flat()])node.disconnect();plate.buffer=null;}};
 }

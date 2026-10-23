@@ -1,3 +1,4 @@
+import {attachMechanicalHead} from './mechanical-head.js';
 import {movePlayer} from './player-movement.js';
 import {halloweenTargetInfo,interactHalloween,advanceHalloween,canMoveB2} from './halloween-state.js';
 import {createHalloweenExperience,createHalloweenQuestUI} from './halloween-experience.js';
@@ -29,12 +30,12 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
  container.appendChild(renderer.domElement);
  const quality=createRenderQuality(renderer);
- const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
+ const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);if(run.halloween)attachMechanicalHead(creature);world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
- const jumpscare=createJumpscare({mouthTexture});
+ const jumpscare=createJumpscare({mouthTexture,metallic:!!run.halloween});
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);let surfaceDistance=Infinity;
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
@@ -63,7 +64,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  torchButton.addEventListener('click',toggleTorch);
  document.addEventListener('keydown',event=>{if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}});
  document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'||ui.overlay==='halloween'))toggleSound();});
- window.addEventListener('pagehide',()=>{experience.dispose();questUI.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
+ window.addEventListener('pagehide',()=>{experience.dispose();questUI.dispose();creature.mechanical?.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
  function closeKeypad(){void monsterAudio.resume();void ambience.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
  function submitCode(){if(enterCode(run,buffer)){ui.feedback('Code accepted. Complete the four key locks to open the elevator.','success');monsterAudio.playNoise('keypad');ui.toast('Code accepted.');closeKeypad();}else{ui.feedback('Access denied. Read the four digits from this run.');buffer='';ui.el('code-display').textContent='— — — —';}}
@@ -147,7 +148,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
    ui.update(run,player,target,hold);
    if(run.phase==='playing'&&run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
   }else{camera.position.set(player.x,player.height+1.65,player.z);input.updateView();ui.update(run,player,null,0);}
-  creature.root.visible=huntActive(run);
+  creature.root.visible=huntActive(run);creature.mechanical?.sample(time,{jaw:enemy.mode==='chase'?.35+.15*Math.sin(time*4):.05});
   applyIdle(creature,idlePose(time));const gait=creatureMotion.update(enemy.position,enemy.mode,ui.overlay?0:frameDelta,huntActive(run));if(gait.weight>.001)applyRunning(creature,gait.time,gait.weight*(enemy.mode==='chase'?1:.6));
   creature.root.position.y+=groundHeight(enemy.position);creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
   const soundDistance=huntActive(run)?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height-groundHeight(enemy.position)):Infinity;
