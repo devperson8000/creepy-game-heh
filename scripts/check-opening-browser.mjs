@@ -1,8 +1,11 @@
+import {HALLOWEEN_DEADLINE,releaseStatus} from '../src/halloween-release-time.js';
 import {chromium} from 'playwright';import assert from 'node:assert/strict';import {mkdir} from 'node:fs/promises';
 const base=process.env.GAME_TEST_URL||'http://localhost:5173';
 const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']}),page=await browser.newPage({viewport:{width:1100,height:720}}),errors=[],voiceResponses=[];page.on('response',response=>{if(response.url().includes('/audio/opening/'))voiceResponses.push(response.status());});page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',volume:.65,reducedMotion:false})));
 await page.addInitScript(()=>{window.openingCaptions=[];new MutationObserver(()=>{const text=document.querySelector('.opening-caption')?.textContent;if(text&&openingCaptions.at(-1)!==text)openingCaptions.push(text);}).observe(document,{subtree:true,childList:true,characterData:true});});
+// Simulate the confirmed Halloween release only inside this browser test.
+await page.route('**/api/halloween-release',route=>route.fulfill({json:releaseStatus(HALLOWEEN_DEADLINE)}));
 async function menu(){await page.locator('#lobby-singleplayer').waitFor({timeout:15000});assert.equal(await page.locator('.opening-sequence').count(),0);assert.equal(await page.locator('canvas').count(),1);}
 try{
  await mkdir('work/opening-shots',{recursive:true});

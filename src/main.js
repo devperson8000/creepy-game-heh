@@ -89,7 +89,10 @@ try {
   }
   else if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
   else if(import.meta.env.DEV&&new URLSearchParams(location.search).get('mode')==='finale'){void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{history.replaceState({},'',location.pathname);makeMenu();}}).then(value=>{window.monochromeFinale=value;});}
-  else playOpeningBeforeMenu({container:document.querySelector('#scene'),onComplete:()=>makeMenu(),createFilm:createOpeningFilm,reducedMotion:reducedMotion()});
+  else void releaseReady.then(()=>{
+   if(halloweenRelease.released)playOpeningBeforeMenu({container:document.querySelector('#scene'),onComplete:()=>makeMenu(),createFilm:createOpeningFilm,reducedMotion:reducedMotion()});
+   else makeMenu();
+  }).catch(failed);
  }
 }
 catch(error) {
