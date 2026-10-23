@@ -32,10 +32,10 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
- const torch=createTorch(world.scene,camera),creatureMotion=createCreatureMotion();
+ const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
  const jumpscare=createJumpscare({mouthTexture});
- const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);
+ const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);let surfaceDistance=Infinity;
  let enemy=createEnemy(run.layout),player={x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
  function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
@@ -84,10 +84,10 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   return {...t,label,duration};
  }
  function currentTarget(){
-  if(run.hidden)return {id:'leave',type:'leave',label:'Leave the closet',duration:.2};
+  if(run.hidden){surfaceDistance=.55;return {id:'leave',type:'leave',label:'Leave the closet',duration:.2};}
   camera.updateMatrixWorld();raycaster.setFromCamera(center,camera);raycaster.far=2.5;
   const visible=world.rayMeshes.filter(mesh=>{if(mesh.userData.drawerPart)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;});
-  const hit=raycaster.intersectObjects(visible,false)[0];return targetInfo(drawerTargetFromHit(world.targets,hit));
+  const hit=raycaster.intersectObjects(visible,false)[0];surfaceDistance=hit?.distance??Infinity;return targetInfo(drawerTargetFromHit(world.targets,hit));
  }
  function perform(t){
   if(t.type==='halloween'){player.yaw=input.yaw;player.pitch=input.pitch;const result=interactHalloween(run,t.id,{players:[player]});if(result.message)ui.toast(result.message);if(result.ok&&!result.repeated)monsterAudio.playNoise(result.reveal?'key':'clue');return;}
@@ -155,7 +155,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   const breathingFov=66+(reducedMotion()?0:Math.sin(time*1.4)*threat*.45);
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:huntActive(run)});
-  torch.update({ceilingPower:world.lighting.visibility,time,delta:frameDelta,sprinting:player.sprint,hold,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
+  torch.update({ceilingPower:world.lighting.visibility,time,delta:frameDelta,surfaceDistance,sprinting:player.sprint,hold,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
   const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update({huntElapsed:run.huntElapsed,threat:ambushResult.silent?0:threat,hidden:run.hidden,sprinting:!run.hidden&&player.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta:frameDelta});
   renderer.toneMappingExposure=torch.exposure*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));

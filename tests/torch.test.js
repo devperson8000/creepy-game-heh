@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createTorch} from '../src/torch.js';
+import {createHalloweenProps} from '../src/halloween-props.js';
 
 test('the torch beam follows camera position and aim',()=>{
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(66,1,.06,85),torch=createTorch(scene,camera);
@@ -42,4 +43,15 @@ test('starting and stopping movement settles the held torch instead of snapping 
  torch.update({time:.1,moving:true,delta:1/60});assert.ok(Math.abs(torch.model.position.y-resting)<.004);
  for(let i=0;i<30;i++)torch.update({time:.1,moving:true,delta:1/60});const moving=torch.model.position.y;
  torch.update({time:.1,moving:false,delta:1/60});assert.ok(Math.abs(torch.model.position.y-moving)<.004);
+});
+test('Halloween torch softens at close surfaces and restores reach smoothly; legacy brightness stays unchanged',()=>{
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(),torch=createTorch(scene,camera,{halloween:true});
+ for(let i=0;i<60;i++)torch.update({surfaceDistance:.8,delta:1/60});const close=torch.beam.intensity;assert.ok(close>8&&close<30);
+ torch.update({surfaceDistance:8,delta:1/60});assert.ok(torch.beam.intensity>close&&torch.beam.intensity<close+20);
+ for(let i=0;i<60;i++)torch.update({surfaceDistance:8,delta:1/60});assert.ok(torch.beam.intensity>65);torch.toggle();torch.update({surfaceDistance:.8});assert.equal(torch.beam.intensity,0);
+ const legacy=createTorch(new THREE.Scene(),new THREE.PerspectiveCamera());legacy.update({surfaceDistance:.8});assert.equal(legacy.beam.intensity,140);
+});
+test('decorative flames keep their self-lit material and small props avoid blanket shadow casting',()=>{
+ const scene=new THREE.Scene(),props=createHalloweenProps(),candles=props.candleCluster(),pumpkin=props.pumpkin();scene.add(candles,pumpkin);let flame,body;candles.traverse(m=>{if(m.userData.flame&&!m.material.transparent)flame=m;else if(m.isMesh&&!m.userData.flame)body=m;});const original=flame.material;
+ createTorch(scene,new THREE.PerspectiveCamera(),{halloween:true});assert.equal(flame.material.uuid,original.uuid);assert.equal(body.castShadow,false);assert.equal(pumpkin.body.castShadow,true);props.dispose();
 });

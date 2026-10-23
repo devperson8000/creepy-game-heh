@@ -11,7 +11,7 @@ export function createHalloweenProps({aged=false}={}){
  const hole=material('carving',0x180c06),glow=material('amber',0xf3a44d,{emissive:0xff791b,emissiveIntensity:aged?.72:1.15}),card=material('card',0xa45826,{side:THREE.DoubleSide}),blackCard=material('black-card',0x1b211b,{side:THREE.DoubleSide});
  const cube=geometry('cube',()=>new THREE.BoxGeometry(1,1,1)),sphere=geometry('sphere',()=>new THREE.SphereGeometry(1,16,12)),cylinder=geometry('cylinder',()=>new THREE.CylinderGeometry(1,1,1,10));
  function group(kind,scale=1){const g=new THREE.Group();g.name=`Halloween / ${kind}`;g.scale.setScalar(scale);g.userData={halloweenProp:kind,halloweenStyle:aged?'weathered':'house'};return g;}
- function mesh(parent,geo,surface,position=[0,0,0],scale=[1,1,1]){const m=new THREE.Mesh(geo,surface);m.position.fromArray(position);m.scale.fromArray(scale);m.receiveShadow=true;parent.add(m);return m;}
+ function mesh(parent,geo,surface,position=[0,0,0],scale=[1,1,1]){const m=new THREE.Mesh(geo,surface);m.position.fromArray(position);m.scale.fromArray(scale);m.receiveShadow=true;m.userData.halloweenDetail=true;parent.add(m);return m;}
  const box=(g,w,h,d,x,y,z,m=iron)=>mesh(g,cube,m,[x,y,z],[w,h,d]);
  const ball=(g,x,y,z,sx,sy,sz,m)=>mesh(g,sphere,m,[x,y,z],[sx,sy,sz]);
  function rod(g,from,to,r,surface=bone){const a=new THREE.Vector3(...from),b=new THREE.Vector3(...to),m=mesh(g,cylinder,surface,a.clone().add(b).multiplyScalar(.5).toArray(),[r,a.distanceTo(b),r]);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),b.sub(a).normalize());return m;}
@@ -67,7 +67,7 @@ export function createHalloweenProps({aged=false}={}){
   const glass=material('glass',0xc59d61,{transparent:true,opacity:.16,roughness:.25,side:THREE.DoubleSide,depthWrite:false});
   for(const z of [-.083,.083])mesh(g,geometry('lantern-glass',()=>new THREE.PlaneGeometry(.19,.28)),glass,[0,.2,z]);
   for(const x of [-.109,.109]){const pane=mesh(g,geometry('lantern-side',()=>new THREE.PlaneGeometry(.14,.28)),glass,[x,.2,0]);pane.rotation.y=Math.PI/2;}
-  mesh(g,geometry('lantern-cap',()=>new THREE.ConeGeometry(.17,.095,4)),iron,[0,.414,0],[1,1,.82]).rotation.y=Math.PI/4;
+  mesh(g,geometry('lantern-cap',()=>new THREE.ConeGeometry(.17,.095,4).rotateY(Math.PI/4)),iron,[0,.414,0],[1,1,.82]);
   const ring=mesh(g,geometry('lantern-ring',()=>new THREE.TorusGeometry(.054,.009,6,20)),iron,[0,.503,0]);ring.rotation.y=.1;
   candle(g,0,0,.2);g.lightPoint=new THREE.Vector3(0,.255,0);g.seal=ball(g,0,.12,.111,.035,.035,.01,material('wax-seal',0x863c24));return g;
  }

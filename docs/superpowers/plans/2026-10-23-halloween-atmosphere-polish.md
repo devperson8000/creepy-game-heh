@@ -30,9 +30,9 @@ Interface: `createHalloweenProps({aged=false}={})` returns model constructors `p
 ### Task 2: Seeded maze dressing and quest polish
 Files: create `src/halloween-decoration-plan.js`, test `tests/halloween-decoration-plan.test.js`; modify `src/halloween-world.js`, `src/maze-world.js`, `src/world.js`, `tests/maze-world.test.js`.
 Interfaces: `createHalloweenDecorationPlan(layout,seed)` returns room/wall anchors with world x/z, floor-relative y, yaw, kind, scale and room index where relevant. The world returns its `placements` for verification and `update(time,{player,visibility,reducedMotion}={})`.
-- [ ] Test room decoration density, deterministic wall anchors, exclusion of stairs/closets, bounded wall intrusion, fixed light count and readable code; observe RED.
-- [ ] Place matching props in room-local coordinates, add clear corridor wall dressing and instanced leaves, preserve all quest target IDs, and animate lid/chains/key with bounded warm lighting.
-- [ ] Mount room labels on frames and raise the code above the cabinet. Verify seeded navigation, real drawer/closet/quest/code interactions and visual captures; commit.
+- [x] Test room decoration density, deterministic wall anchors, exclusion of stairs/closets, bounded wall intrusion, fixed light count and readable code; observe RED.
+- [x] Place matching props in room-local coordinates, add clear corridor wall dressing and instanced leaves, preserve all quest target IDs, and animate lid/chains/key with bounded warm lighting.
+- [x] Mount room labels on frames and raise the code above the cabinet. Verify seeded navigation, real drawer/closet/quest/code interactions and visual captures; commit.
 
 ### Task 3: Anticipation, private preview and integrated verification
 Files: modify `src/halloween-countdown.js`, its CSS, `src/halloween-test-page.js`, `src/halloween-test-scenarios.js`, `src/main.js`; add `scripts/check-halloween-polish-browser.mjs`.

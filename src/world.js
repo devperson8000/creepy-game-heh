@@ -172,7 +172,7 @@ export function createWorld(run){
  const enemyCanMove=(x,z)=>canMove(x,z,.6,1.1);
  const navigator=createNavigator(enemyCanMove,{minX:firstCell.x-CELL/2,maxX:lastCell.x+CELL/2,minZ:firstCell.z-CELL/2,maxZ:lastCell.z+CELL/2});
  function update(delta,time,player,threat,hold=0,monster){
-  halloween?.update(time);
+  halloween?.update(time,{player,visibility:lighting.visibility,reducedMotion:reducedMotion()});
   for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.47:0,1-Math.exp(-Math.max(0,delta)*18));view.key.visible=d.key&&!d.taken&&d.opened;if(view.key.visible){view.key.rotation.y=Math.sin(time*.7+view.id)*.08;}}
   boardHitbox.visible=!run.boardsOpen;
   boards.forEach((b,i)=>{b.visible=!run.boardsOpen;b.position.z=-25-(hold>0?.1*Math.sin(hold*20+i):0);});

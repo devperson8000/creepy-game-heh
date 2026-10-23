@@ -1,107 +1,68 @@
 import * as THREE from 'three';
 import {worldPoint,groundHeight,randomSource} from './level.js';
+import {createHalloweenProps} from './halloween-props.js';
+import {createHalloweenDecorationPlan} from './halloween-decoration-plan.js';
 
 export function createHalloweenWorld(scene,run,targets,rayMeshes){
  if(!run.halloween)return null;
  const root=new THREE.Group();root.name='Halloween dressing';scene.add(root);
- const rng=randomSource(run.seed^0xCA6D1E),q=run.halloween;
- const mat=(color,extra={})=>new THREE.MeshStandardMaterial({color,roughness:.94,...extra});
- const orange=mat(0x9c4215),dark=mat(0x100e0c),wax=mat(0xd3b18a),bone=mat(0xafa28a),iron=mat(0x3e3430,{metalness:.45}),paper=mat(0xc6b389);
- const glow=mat(0xd76915,{emissive:0xff780d,emissiveIntensity:1.5}),flames=[];
- const sphere=new THREE.SphereGeometry(1,20,14),cube=new THREE.BoxGeometry(1,1,1),cylinder=new THREE.CylinderGeometry(1,1,1,10);
- function mesh(geo,material,scale,position,parent=root){const m=new THREE.Mesh(geo,material);m.scale.set(...scale);m.position.set(...position);parent.add(m);return m;}
- function box(w,h,d,x,y,z,material=dark,parent=root){return mesh(cube,material,[w,h,d],[x,y,z],parent);}
- function ball(x,y,z,sx,sy,sz,material,parent=root){return mesh(sphere,material,[sx,sy,sz],[x,y,z],parent);}
- function tag(id,group,hit,{room}={}){
-  const position=new THREE.Vector3();hit.getWorldPosition(position);
-  group.traverse(m=>{if(m.isMesh){m.userData.interactId=id;rayMeshes.push(m);}});
-  targets.set(id,{id,type:'halloween',mesh:hit,position:{x:position.x,z:position.z,height:groundHeight(position,run.layout)},room});
+ const props=createHalloweenProps({aged:true}),plan=createHalloweenDecorationPlan(run.layout,run.seed),placements=[],markers=[],owned=[],q=run.halloween,maze=!!run.layout.halloweenMaze,floor=run.layout.floorHeight??0,rng=randomSource(run.seed^0xCA6D1E);
+ const own=resource=>(owned.push(resource),resource),cube=own(new THREE.BoxGeometry(1,1,1)),sphere=own(new THREE.SphereGeometry(1,16,12));
+ const material=(color,extra={})=>own(new THREE.MeshStandardMaterial({color,roughness:.94,...extra}));
+ const iron=material(0x3d4035,{metalness:.6,roughness:.68}),paper=material(0xb7a27d),wax=material(0x944b2c),darkWax=material(0x382b22),keyGlow=material(0xd5a95a,{metalness:.6,roughness:.4,emissive:0xc8862b,emissiveIntensity:.16});
+ function box(parent,w,h,d,x,y,z,surface=iron){const m=new THREE.Mesh(cube,surface);m.scale.set(w,h,d);m.position.set(x,y,z);m.userData.halloweenDetail=true;parent.add(m);return m;}
+ function ball(parent,x,y,z,sx,sy,sz,surface){const m=new THREE.Mesh(sphere,surface);m.scale.set(sx,sy,sz);m.position.set(x,y,z);m.userData.halloweenDetail=true;parent.add(m);return m;}
+ const constructors={pumpkin:props.pumpkin,candles:props.candleCluster,web:props.web,bunting:props.bunting,bats:props.bats,'string-lights':props.stringLights,lantern:props.lantern};
+ function place(model,anchor){
+  model.position.set(anchor.x,floor+anchor.y,anchor.z);model.rotation.y=anchor.yaw??0;if(anchor.scale!==undefined)model.scale.multiplyScalar(anchor.scale);root.add(model);placements.push({...anchor,root:model});
+  if(model.lightPoint)markers.push({root:model,at:model.lightPoint.clone(),strength:anchor.kind==='string-lights'?1.25:1.8});return model;
  }
- function pumpkin(x,y,z,size=.42,{face=true,black=false}={}){
-  const g=new THREE.Group();g.position.set(x,y,z);root.add(g);
-  ball(0,size*.72,0,size,size*.72,size*.88,black?dark:orange,g);
-  for(let i=0;i<5;i++){const a=i*Math.PI*2/5;ball(Math.cos(a)*size*.18,size*.7,Math.sin(a)*size*.18,size*.84,size*.68,size*.75,black?dark:orange,g);}
-  const stem=mesh(cylinder,mat(0x3e4424),[size*.085,size*.35,size*.085],[0,size*1.5,0],g);stem.rotation.z=.25;
-  if(face){
-   for(const x of [-.28,.28]){const eye=new THREE.Shape();eye.moveTo(-.12,0);eye.lineTo(.12,0);eye.lineTo(0,.22);eye.closePath();const m=new THREE.Mesh(new THREE.ShapeGeometry(eye),glow);m.scale.setScalar(size);m.position.set(x*size,size*.78,size*.867);g.add(m);}
-   const mouth=box(size*.62,size*.08,.012,0,size*.48,size*.868,glow,g);mouth.rotation.z=.06;
-  }
-  return g;
+ for(const a of [...plan.rooms,...plan.walls]){
+  if(a.kind==='pumpkin'&&q.rooms.includes(a.roomIndex))continue;
+  place(constructors[a.kind](a.options),a);
  }
- function candle(x,y,z,h=.3,parent=root){
-  mesh(cylinder,wax,[.065,h,.065],[x,y+h/2,z],parent);
-  const flame=ball(x,y+h+.06,z,.028,.065,.028,glow,parent);flames.push(flame);
-  for(let i=0;i<3;i++)mesh(cylinder,wax,[.012,h*.24,.012],[x+Math.cos(i*2)*.06,y+h*.85,z+Math.sin(i*2)*.06],parent);
+ function roomAnchor(index,x,y,z,kind){const room=run.layout.rooms[index],p=worldPoint(room),n=room.normal??{x:0,z:1},yaw=Math.atan2(n.x,n.z);return {kind,roomIndex:index,surface:'room',x:p.x+Math.cos(yaw)*x+Math.sin(yaw)*z,y,z:p.z-Math.sin(yaw)*x+Math.cos(yaw)*z,yaw};}
+ function tag(id,model,hit,room){model.traverse(m=>{if(m.isMesh){m.userData.interactId=id;rayMeshes.push(m);}});targets.set(id,{id,type:'halloween',mesh:hit,room});}
+ // Party remnants stay beside the cabinets, outside their approach and drawer travel.
+ const first=roomAnchor(q.rooms[0],maze?-.84:-2.7,maze?.57:.85,maze?-.83:.25,'pumpkin'),pumpkin=place(props.pumpkin({scale:maze?.67:1.2,carved:false}),first);
+ const pedestal=new THREE.Group();root.add(pedestal);pedestal.position.set(first.x,floor,first.z);pedestal.rotation.y=first.yaw;box(pedestal,.42,first.y,.34,0,first.y/2,0,iron);box(pedestal,.46,.035,.38,0,first.y,0,iron);
+ const firstSeal=ball(pumpkin,0,.27,.273,.055,.055,.012,wax);tag('halloween:seal-0',pumpkin,firstSeal,q.rooms[0]);
+ const second=roomAnchor(q.rooms[1],maze?-.84:-2.6,0,maze?-.83:.25,'skeleton'),skeleton=place(props.skeleton({scale:maze?1:1.5}),second);skeleton.seal.material=wax;tag('halloween:seal-1',skeleton,skeleton.seal,q.rooms[1]);
+ const entry=worldPoint(run.layout.entrance),note=new THREE.Group();note.name='Folded party invitation';note.position.set(maze?entry.x-.87:-3.35,floor+(maze?1.2:.6),maze?entry.z+2.6:-17.85);note.rotation.y=maze?Math.PI/2:0;root.add(note);
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=320;const ctx=canvas.getContext('2d');ctx.fillStyle='#b7a27d';ctx.fillRect(0,0,512,320);ctx.strokeStyle='#716447';ctx.strokeRect(15,15,482,290);ctx.fillStyle='#362b21';ctx.textAlign='center';ctx.font='32px Georgia';ctx.fillText("YOU'RE INVITED",256,110);ctx.font='23px monospace';ctx.fillText('OCTOBER 31',256,170);ctx.fillText('THE PARTY MOVED BELOW',256,215);
+ const map=own(new THREE.CanvasTexture(canvas));map.colorSpace=THREE.SRGBColorSpace;const sheet=box(note,.32,.2,.009,0,0,0,material(0xffffff,{map}));sheet.rotation.z=.07;ball(note,.09,-.06,.009,.022,.022,.007,wax);tag('halloween:invitation',note,sheet);
+ place(props.pumpkin({scale:.62}),{kind:'pumpkin',surface:'landing',x:maze?entry.x-.75:-3.35,y:0,z:maze?entry.z+3.2:-17.9,yaw:maze?Math.PI/2:0});
+ const lantern=place(props.lantern({scale:.8}),{kind:'lantern',surface:'landing',x:maze?entry.x-.83:-3.4,y:maze?.62:.2,z:maze?entry.z+5.1:-18.4,yaw:maze?Math.PI/2:0});lantern.seal.material=wax;tag('halloween:seal-2',lantern,lantern.seal);
+ // A matching black pumpkin chest has a real hinge, falling chains and a lifted key.
+ const chest=place(props.pumpkin({scale:2.1,black:true,carved:false,openable:true}),{kind:'chest',surface:'lobby',x:1.75,y:3.57-floor,z:-28.4,yaw:0});tag('halloween:chest',chest,chest.body);
+ const key=new THREE.Group();key.name='Halloween key';key.position.set(0,.36,.05);chest.add(key);
+ const ring=new THREE.Mesh(own(new THREE.TorusGeometry(.047,.011,8,22)),keyGlow);key.add(ring);box(key,.019,.12,.019,0,-.1,0,keyGlow);box(key,.056,.019,.019,.018,-.145,0,keyGlow);
+ const chains=[],linkGeometry=own(new THREE.TorusGeometry(.026,.007,6,14));
+ for(const side of [-1,1]){
+  const chain=new THREE.Group();chain.name='Pumpkin chest chain';chain.position.set(side*.135,.425,.205);chest.add(chain);
+  const curve=new THREE.CatmullRomCurve3(Array.from({length:13},(_,i)=>{const y=.425-i/12*.325,z=.27*Math.sqrt(Math.max(.04,1-(.135/.29)**2-((y-.255)/.235)**2))+.035;return new THREE.Vector3(0,y-.425,z-.205);}));
+  for(let i=0;i<11;i++){const link=new THREE.Mesh(linkGeometry,iron);link.userData.halloweenDetail=true;link.position.copy(curve.getPointAt(i/10));link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),curve.getTangentAt(i/10).normalize());link.rotateY(i%2?Math.PI/2:0);chain.add(link);}chains.push({root:chain,side});
  }
- function web(x,y,z,flip=1){
-  const lines=[];
-  for(let i=0;i<=6;i++){const angle=i/6*Math.PI/2;lines.push(0,0,0,Math.cos(angle)*1.25*flip,-Math.sin(angle)*1.25,0);}
-  for(let r=.25;r<=1.25;r+=.25)for(let i=0;i<6;i++){const a=i/6*Math.PI/2,b=(i+1)/6*Math.PI/2;lines.push(Math.cos(a)*r*flip,-Math.sin(a)*r,0,Math.cos(b)*r*flip,-Math.sin(b)*r,0);}
-  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(lines,3));
-  const m=new THREE.LineSegments(geometry,new THREE.LineBasicMaterial({color:0xc8bfa8,transparent:true,opacity:.26}));m.position.set(x,y,z);root.add(m);
+ const panel=new THREE.Group();panel.position.set(-4.95,4.85,-31.65);root.add(panel);const plate=box(panel,.58,.72,.08,0,0,0),icon=props.pumpkin({scale:.32,black:true,carved:true});icon.position.set(0,-.1,.055);panel.add(icon);box(panel,.025,.09,.02,0,.15,.055,keyGlow);tag('halloween:b2-panel',panel,plate);
+ for(const x of [-6.6,.9]){const garland=props.stringLights({width:2.6,count:12,sag:.08});garland.position.set(x,7.3,-32.78);root.add(garland);}
+ const leafShape=new THREE.Shape();leafShape.moveTo(0,.09);for(const [x,y]of [[.025,.035],[.055,.045],[.038,.015],[.07,0],[.035,-.012],[.025,-.06],[0,-.025],[-.025,-.06],[-.035,-.012],[-.07,0],[-.038,.015],[-.055,.045],[-.025,.035]])leafShape.lineTo(x,y);leafShape.closePath();
+ const leafGeo=own(new THREE.ShapeGeometry(leafShape)),leafMaterial=material(0x8f5429,{side:THREE.DoubleSide}),leaves=new THREE.InstancedMesh(leafGeo,leafMaterial,run.layout.rooms.length*12),dummy=new THREE.Object3D(),color=new THREE.Color();let leaf=0;
+ for(let i=0;i<run.layout.rooms.length;i++)for(let n=0;n<12;n++){const a=roomAnchor(i,(maze?-.9:-2.6)+(rng()-.5)*(maze?.32:1),.012,(maze?-.5:2.1)+(rng()-.5)*(maze?.48:1),'leaves');dummy.position.set(a.x,floor+a.y,a.z);dummy.rotation.set(-Math.PI/2,0,rng()*6.28);dummy.scale.setScalar(.65+rng()*.5);dummy.updateMatrix();leaves.setMatrixAt(leaf,dummy.matrix);color.setHSL(.055+rng()*.035,.35,.18+rng()*.09);leaves.setColorAt(leaf++,color);}leaves.userData.halloweenDetail=true;root.add(leaves);
+ const lights=Array.from({length:3},()=>{const light=new THREE.PointLight(0xffa25c,0,3.8,2);light.userData.halloweenLight=true;root.add(light);return light;});root.updateMatrixWorld(true);
+ for(const marker of markers)marker.at=marker.root.localToWorld(marker.at);
+ for(const target of targets.values())if(target.type==='halloween'){const p=target.mesh.getWorldPosition(new THREE.Vector3());target.position={x:p.x,z:p.z,height:groundHeight(p,run.layout)};}
+ const seals=[['halloween:seal-0',1],['halloween:seal-1',2],['halloween:seal-2',3]];for(const [id]of seals)targets.get(id).mesh.material=own(wax.clone());
+ let revealAge=10,lastTime=null,wasKey=q.key,disposed=false;
+ const ease=x=>{const t=THREE.MathUtils.clamp(x,0,1);return t*t*(3-2*t);};
+ function update(time,{player,visibility=1,reducedMotion=false}={}){
+  if(disposed)return;const dt=Math.max(0,Math.min(.2,lastTime===null?1/60:time-lastTime));lastTime=time;props.update(time,{reducedMotion});const progress=run.halloween;
+  if(progress.key&&!wasKey)revealAge=0;wasKey=progress.key;revealAge+=dt;
+  const opening=progress.key?ease((revealAge-.12)/.85):0;chest.lid.rotation.x=-1.16*opening;
+  for(const chain of chains){chain.root.rotation.z=chain.side*opening*1.3;chain.root.rotation.x=opening*1.25;chain.root.position.y=.425-opening*.33;}
+  key.visible=progress.key&&revealAge<4.2;key.position.y=.36+.38*ease((revealAge-.25)/1.2);key.rotation.y=reducedMotion?0:Math.min(revealAge,4.2)*.5;
+  for(const [id,required]of seals){const seal=targets.get(id).mesh,found=progress.stage>required;seal.material.color.copy((found?darkWax:wax).color);seal.material.emissive.setHex(!found&&progress.stage===required?0x71300d:0);seal.material.emissiveIntensity=reducedMotion?.2:.18+Math.sin(time*1.8)*.035;}
+  const eye=player?new THREE.Vector3(player.x,(player.height??groundHeight(player,run.layout))+1.4,player.z):null,near=eye?markers.map(m=>({...m,d:m.at.distanceTo(eye)})).filter(m=>m.d<7).sort((a,b)=>a.d-b.d).slice(0,3):[];
+  lights.forEach((light,i)=>{const m=near[i],target=m?m.strength*(1-ease((m.d-3.8)/3.2))*Math.max(.05,visibility):0;light.intensity+=(target-light.intensity)*(1-Math.exp(-dt*10));if(m)light.position.copy(m.at);});
  }
- function skeleton(x,z){
-  const g=new THREE.Group();g.position.set(x,0,z);root.add(g);
-  box(.045,2.5,.045,0,1.25,-.12,iron,g);box(.8,.06,.35,0,.03,0,iron,g);
-  ball(0,1.9,0,.17,.21,.16,bone,g);
-  for(const x of [-.065,.065])ball(x,1.95,.137,.045,.055,.025,dark,g);
-  box(.1,.035,.03,0,1.79,.15,dark,g);
-  box(.075,.78,.07,0,1.3,0,bone,g);
-  for(let i=0;i<5;i++)box(.42-i*.035,.035,.11,0,1.6-i*.1,.015,bone,g);
-  for(const side of [-1,1]){
-   const arm=box(.055,.65,.055,side*.29,1.35,0,bone,g);arm.rotation.z=side*.2;
-   const leg=box(.07,.8,.07,side*.12,.5,0,bone,g);leg.rotation.z=side*.06;
-  }
-  const envelope=box(.25,.17,.025,.32,1.05,.08,paper,g);envelope.rotation.z=-.22;return {group:g,envelope};
- }
- const leafGeo=new THREE.PlaneGeometry(.13,.07),leaves=new THREE.InstancedMesh(leafGeo,mat(0x6f3719,{side:THREE.DoubleSide}),run.layout.rooms.length*14),matrix=new THREE.Matrix4(),dummy=new THREE.Object3D();let leafIndex=0;
- run.layout.rooms.forEach((room,index)=>{
-  const p=worldPoint(room),before=run.layout.halloweenMaze?new Set(root.children):null;
-  pumpkin(p.x-2.9,.02,p.z+2.55,.4);pumpkin(p.x-2.35,.02,p.z+2.8,.26);
-  candle(p.x-2.85,.02,p.z+1.7,.24);candle(p.x-3.03,.02,p.z+1.52,.34);
-  web(p.x-3.7,4.05,p.z+3.7);web(p.x+3.7,4.05,p.z-3.7,-1);
-  for(let i=0;i<14;i++){
-   dummy.position.set(p.x+(run.layout.halloweenMaze?.2:1)*(-2.8+rng()*1.4),(run.layout.floorHeight??0)+.012,p.z+(run.layout.halloweenMaze?.35:1)*(1.7+rng()*1.4));dummy.rotation.set(-Math.PI/2,0,rng()*Math.PI*2);dummy.updateMatrix();matrix.copy(dummy.matrix);leaves.setMatrixAt(leafIndex++,matrix);
-  }
-  if(index===q.rooms[0]){
-   const g=pumpkin(p.x-2.7,.85,p.z+.25,.35,{face:false});box(.8,.08,.65,p.x-2.7,.82,p.z+.25,iron);
-   box(.07,.82,.07,p.x-3,.41,p.z+.25,iron);box(.07,.82,.07,p.x-2.4,.41,p.z+.25,iron);
-   const seal=ball(0,.35,.3,.07,.07,.02,glow,g);tag('halloween:seal-0',g,seal,{room:index});
-  }
-  if(index===q.rooms[1]){const display=skeleton(p.x-2.6,p.z+.25);tag('halloween:seal-1',display.group,display.envelope,{room:index});}
-  if(before)for(const child of root.children)if(!before.has(child)){child.position.x=p.x+(child.position.x-p.x)*.2;child.position.z=p.z+(child.position.z-p.z)*.35;child.position.y=run.layout.floorHeight+child.position.y*.6;child.scale.multiplyScalar(.65);}
- });
- root.add(leaves);
- // These props sit beside existing routes, never inside drawer/closet clearance.
- const entry=worldPoint(run.layout.entrance),bottom=run.layout.floorHeight??0;
- const note=new THREE.Group();note.position.set(run.layout.halloweenMaze?entry.x-.87:-3.35,bottom+(run.layout.halloweenMaze?1.2:.6),run.layout.halloweenMaze?entry.z+2.6:-17.85);if(run.layout.halloweenMaze)note.rotation.y=Math.PI/2;root.add(note);
- const sheet=box(.32,.2,.025,0,0,0,paper,note);sheet.rotation.z=.1;
- const seal=ball(0,-.04,.025,.04,.04,.012,glow,note);tag('halloween:invitation',note,sheet);
- pumpkin(run.layout.halloweenMaze?entry.x-.75:-3.35,bottom+.02,run.layout.halloweenMaze?entry.z+3.2:-17.9,.24);
- const lantern=new THREE.Group();lantern.position.set(run.layout.halloweenMaze?entry.x-.73:-3.4,bottom+.2,run.layout.halloweenMaze?entry.z+5.1:-18.4);root.add(lantern);
- box(.2,.27,.17,0,.17,0,iron,lantern);box(.12,.17,.18,0,.18,.012,dark,lantern);mesh(cylinder,iron,[.14,.05,.14],[0,.34,0],lantern);
- tag('halloween:seal-2',lantern,lantern.children[0]);
- const chest=pumpkin(1.75,3.66,-28.4,.62,{black:true});
- const lid=new THREE.Group();lid.position.set(0,.85,-.35);chest.add(lid);ball(0,.1,.35,.54,.12,.48,orange,lid);
- const key=new THREE.Group();key.position.set(0,.87,.28);chest.add(key);
- const ring=new THREE.Mesh(new THREE.TorusGeometry(.095,.025,10,20),glow);key.add(ring);box(.04,.24,.04,0,-.19,0,glow,key);box(.12,.04,.04,.045,-.27,0,glow,key);
- const chains=[];for(const x of [-.32,.32])chains.push(box(.055,.85,.055,x,.53,.54,iron,chest));
- tag('halloween:chest',chest,chest.children[0]);
- const panel=new THREE.Group();panel.position.set(-4.95,4.85,-31.65);root.add(panel);
- const plate=box(.58,.72,.08,0,0,0,iron,panel);const icon=pumpkin(0,0,0,.12,{black:true});root.remove(icon);panel.add(icon);icon.position.set(0,-.08,.07);
- box(.025,.09,.02,0,.15,.06,glow,panel);tag('halloween:b2-panel',panel,plate);
- const pulse=new THREE.PointLight(0xf07826,.7,2.5,2);pulse.position.set(1.75,4.6,-28.4);root.add(pulse);
- root.updateMatrixWorld(true);
- for(const t of targets.values())if(t.type==='halloween'){const p=t.mesh.getWorldPosition(new THREE.Vector3());t.position={x:p.x,z:p.z,height:groundHeight(p,run.layout)};}
- let revealAge=10,lastTime=0,wasKey=run.halloween.key;
- function update(time){
-  const progress=run.halloween;if(progress.key&&!wasKey)revealAge=0;wasKey=progress.key;revealAge+=Math.max(0,time-lastTime);lastTime=time;key.visible=progress.key&&revealAge<3.5;lid.rotation.x=progress.key?-1.05*Math.min(1,revealAge*1.5):0;for(const chain of chains)chain.visible=!progress.key;
-  key.rotation.y=time*.35;key.position.y=.87+Math.min(.45,revealAge*.3)+Math.sin(time*2)*.025;
-  for(let i=0;i<flames.length;i++)flames[i].scale.y=.055+Math.sin(time*6+i)*.006;
-  pulse.intensity=progress.key?.35:.7;
-  for(const [id,required] of [['halloween:seal-0',1],['halloween:seal-1',2],['halloween:seal-2',3]]){
-   const target=targets.get(id);target.mesh.material=progress.stage>required?dark:paper;
-  }
- }
- return {root,update};
+ return {root,placements,update,dispose(){if(disposed)return;disposed=true;props.dispose();owned.forEach(o=>o.dispose());root.removeFromParent();}};
 }

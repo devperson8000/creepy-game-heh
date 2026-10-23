@@ -36,7 +36,7 @@ export function startCoopGame(container,{client,session}){
  const quality=createRenderQuality(renderer,{pixelRatio:Math.min(devicePixelRatio,1.4)});
  const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(mesh=>{if(mesh.isMesh){mesh.userData.actor=true;world.rayMeshes.push(mesh);}});
- const torch=createTorch(world.scene,camera),creatureMotion=createCreatureMotion();
+ const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
  const audio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL);
  const jumpscare=createJumpscare({mouthTexture});
@@ -61,7 +61,7 @@ export function startCoopGame(container,{client,session}){
  const drawerRequests=createDrawerRequests({send:action=>client.send('action',{action})});
  let enemyView={position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
  let latestSequence=-1,lastNotice=0,scareStatus=null,lastStatus='alive',outcome=null,spectateId=null,lastSnapshotAt=performance.now(),leaving=false;
- let hold=0,holdId=null,latched=false,buffer='',inputClock=0,snapshotClock=0,disconnected=false;
+ let hold=0,holdId=null,latched=false,buffer='',inputClock=0,snapshotClock=0,disconnected=false,surfaceDistance=Infinity;
  let huntClockStamp=null;
  const avatars=new Map(),noiseSequences=new Map(),poseBuffers=new Map(),enemyBuffer=createPoseBuffer({adaptive:true});let avatarAsset;
  const prediction=createMovementPrediction(state.players.get(localId),world.canMove);
@@ -141,7 +141,7 @@ export function startCoopGame(container,{client,session}){
  }
  function currentTarget(){
   const own=local();if(own?.status!=='alive')return null;
-  if(own.hidden)return{id:'leave',type:'leave',label:'Leave the closet',duration:.2};
+  if(own.hidden){surfaceDistance=.55;return{id:'leave',type:'leave',label:'Leave the closet',duration:.2};}
   camera.updateMatrixWorld();camera.getWorldDirection(direction);
   for(const player of state.players.values())if(player.status==='downed'&&Math.hypot(player.x-own.x,player.z-own.z,player.height-own.height)<2){
    point.set(player.x-own.x,0,player.z-own.z).normalize();
@@ -150,7 +150,7 @@ export function startCoopGame(container,{client,session}){
    if(point.dot(looking)>.65&&world.canSeeInteraction(own,target))return {...target,label:`Revive ${player.name}`,duration:2.5};
   }
   raycaster.setFromCamera(new THREE.Vector2(),camera);raycaster.far=2.5;const hit=raycaster.intersectObjects(world.rayMeshes.filter(mesh=>{if(mesh.userData.actor||mesh.userData.drawerPart)return false;for(let p=mesh;p;p=p.parent)if(!p.visible)return false;return true;}),false)[0];
-  return targetInfo(drawerTargetFromHit(world.targets,hit));
+  surfaceDistance=hit?.distance??Infinity;return targetInfo(drawerTargetFromHit(world.targets,hit));
  }
  function startScare(){
   if(jumpscare.active)return;ui.overlay='jumpscare';ui.el('game-screen').hidden=true;ui.el('keypad-dialog').hidden=true;ui.el('jumpscare-border').hidden=false;document.body.classList.add('jumpscare-active');input.clear();document.exitPointerLock?.();jumpscare.start();audio.playJumpscare();scareStatus=true;
@@ -334,14 +334,14 @@ export function startCoopGame(container,{client,session}){
   const silent=enemyView.silent&&enemyView.silentTargetId===watched.id;
   audio.update(silent?Infinity:distance,!ui.overlay&&!disconnected&&run.phase==='playing',delta);
   world.update(disconnected?0:delta,time,watched,threat,hold,{position:{...enemyView.position,height:groundHeight(enemyView.position)},hunting:enemyView.mode==='chase',active:hunting});
-  torch.update({ceilingPower:world.lighting.visibility,time,delta,sprinting:own.sprint,hold,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
-  torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?140:0;
+  torch.update({ceilingPower:world.lighting.visibility,time,delta,surfaceDistance,sprinting:own.sprint,hold,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
+  torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?torch.power:0;
   const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update({huntElapsed:renderedRun.huntElapsed,threat:silent?0:threat,hidden:watched.hidden,sprinting:own.status==='alive'&&own.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta});
   renderer.toneMappingExposure=(own.status==='alive'?torch.exposure:.95*(watched.torch?1:world.lighting.visibility))*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(arrival.active){
    torch.model.position.y-=.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
-   torch.beam.intensity=arrival.elapsed>6.7&&torch.on?140:0;
+   torch.beam.intensity=arrival.elapsed>6.7&&torch.on?torch.power:0;
    if((avatarAsset||arrival.elapsed<6.4)&&arrival.update(document.hidden?wallDelta:delta,camera,own)){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
   }
   if(!document.hidden&&jumpscare.active){renderer.toneMappingExposure=1;jumpscare.render(renderer);const border=ui.el('jumpscare-border');border.style.opacity=String(jumpscare.borderOpacity);border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);}
