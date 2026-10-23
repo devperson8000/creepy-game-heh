@@ -25,3 +25,6 @@ test('a guest pins its seasonal layout only from the matching authenticated sess
  for(const fn of listeners)fn({type:'snapshot',snapshot:{state:{seed:42,run:{halloween:{stage:0}}}}});assert.equal((await pending).halloween,true);assert.equal(listeners.size,0);
  const normal=waitForHalloweenSession(client,{seed:42},{timeout:500});for(const fn of listeners)fn({type:'snapshot',snapshot:{state:{seed:42,run:{}}}});assert.equal((await normal).halloween,false);
 });
+test('the host snapshot pins both the seasonal flag and maze edition for late-joining guests',async()=>{
+ const {waitForHalloweenSession}=await import('../src/halloween-session.js');for(const maze of [false,true]){let receive;const pending=waitForHalloweenSession({subscribe(fn){receive=fn;return()=>{};}},{seed:42},{timeout:500});receive({type:'snapshot',snapshot:{state:{seed:42,run:{halloween:maze?{maze:true}:{stage:0}}}}});assert.equal((await pending).maze,maze);}
+});

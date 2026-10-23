@@ -8,10 +8,10 @@ export function createHalloweenQuest(seed,roomCount){
 }
 export function halloweenClue(q){
  return [
-  'A folded invitation waits by the pumpkins at the stairs.',
-  'Find the storage room they scratched from the records.',
-  `Beneath the pipes in storage ${String((q?.rooms?.[1]??0)+1).padStart(2,'0')}, the dead keep watch.`,
-  'Your last light waits where the descent began.',
+  q?.maze?'A folded invitation waits just beyond the stairs.':'A folded invitation waits by the pumpkins at the stairs.',
+  q?.maze?'Find the small room with its number scratched away.':'Find the storage room they scratched from the records.',
+  q?.maze?`Behind door ${String((q?.rooms?.[1]??0)+1).padStart(2,'0')}, the dead keep watch.`:`Beneath the pipes in storage ${String((q?.rooms?.[1]??0)+1).padStart(2,'0')}, the dead keep watch.`,
+  q?.maze?'Your last light waits in the passage beyond the stairs.':'Your last light waits where the descent began.',
   'Three seals. One key. Return to the chained pumpkin chest upstairs.',
   q?.seen?'Recovered footage · return to the elevator whenever you are ready.':'The Halloween Key fits the pumpkin-marked service panel upstairs.'
  ][q?.stage??0];

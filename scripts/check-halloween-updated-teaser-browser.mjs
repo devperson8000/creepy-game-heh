@@ -5,7 +5,7 @@ const page=await browser.newPage({viewport:{width:1200,height:800}}),errors=[];p
 await page.addInitScript(()=>{localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',reducedMotion:true}));window.teaserRequests=[];const fetch=window.fetch;window.fetch=(url,...args)=>{teaserRequests.push(String(url));return fetch(url,...args);};});
 const frame=()=>page.frames().find(f=>f!==page.mainFrame());
 try{
- await page.goto(process.env.GAME_TEST_URL||'http://localhost:5173');await page.getByRole('button',{name:'Test Halloween Gameplay',exact:true}).click();
+ await page.goto((process.env.GAME_TEST_URL||'http://localhost:5173')+'/testhalloween');
  const dialog=page.getByRole('dialog',{name:'Halloween test access'});await dialog.getByLabel('Password',{exact:true}).fill(password);await dialog.getByRole('button',{name:'Unlock tests'}).click();
  await page.locator('#halloween-test-hub').waitFor();await page.getByRole('button',{name:'Monochrome II teaser',exact:true}).click();await page.locator('#halloween-test-frame').waitFor();
  await frame().locator('.replay-preview-note').waitFor({timeout:30000});assert.match(await frame().locator('.replay-preview-note').textContent(),/Needlelimbs.*missing/i);

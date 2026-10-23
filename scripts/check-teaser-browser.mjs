@@ -11,7 +11,7 @@ await page.addInitScript(()=>{
  window.testGains=[];const C=window.AudioContext,gain=C.prototype.createGain;C.prototype.createGain=function(){const g=gain.call(this),set=g.gain.setTargetAtTime.bind(g.gain);g.gain.setTargetAtTime=(v,...rest)=>{g.lastTarget=v;return set(v,...rest);};testGains.push(g);return g;};const create=C.prototype.createBufferSource;window.testBufferPlays=[];const ids=new WeakMap();let next=0;
  C.prototype.createBufferSource=function(){const source=create.call(this),start=source.start.bind(source);source.start=(when=0,offset=0)=>{if(source.buffer){if(!ids.has(source.buffer))ids.set(source.buffer,++next);testBufferPlays.push({id:ids.get(source.buffer),duration:source.buffer.duration,when,offset});}return start(when,offset);};return source;};
 });
-async function unlock(){await page.goto(process.env.GAME_TEST_URL||'http://localhost:5173');await page.getByRole('button',{name:'Test Halloween Gameplay',exact:true}).click();const d=page.getByRole('dialog',{name:'Halloween test access'});await d.getByLabel('Password',{exact:true}).fill(password);await d.getByRole('button',{name:'Unlock tests'}).click();await page.locator('#halloween-test-hub').waitFor();}
+async function unlock(){await page.goto((process.env.GAME_TEST_URL||'http://localhost:5173')+'/testhalloween');const d=page.getByRole('dialog',{name:'Halloween test access'});await d.getByLabel('Password',{exact:true}).fill(password);await d.getByRole('button',{name:'Unlock tests'}).click();await page.locator('#halloween-test-hub').waitFor();}
 const frame=()=>page.frames().find(f=>f!==page.mainFrame());
 try{
  await unlock();await page.getByRole('button',{name:'B2 encounter',exact:true}).click();

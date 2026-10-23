@@ -4,22 +4,23 @@ export async function authorizeHalloweenTest(password,signal){
  if(!response.ok)throw new Error('The test service could not be reached. Try again.');
  return (await response.json()).authorized===true;
 }
-export function requestHalloweenTestAccess({onAuthorized}){
+export function requestHalloweenTestAccess({onAuthorized,onCancel=()=>{}}){
  const dialog=document.createElement('dialog');dialog.className='halloween-test-access';dialog.setAttribute('aria-labelledby','halloween-access-title');
  dialog.innerHTML='<form><small>RESTRICTED / HALLOWEEN 2026</small><h2 id="halloween-access-title">Halloween test access</h2><p>Enter the password to open the gameplay and animation tests.</p><label>Password<input type="password" name="password" maxlength="128" required autocomplete="off"></label><p class="test-access-error" role="alert"></p><div><button type="button" class="test-access-cancel">Cancel</button><button type="submit">Unlock tests</button></div></form>';
- document.body.append(dialog);const form=dialog.querySelector('form'),field=form.elements.password,error=form.querySelector('[role="alert"]'),submit=form.querySelector('[type="submit"]');let request;
+ document.body.append(dialog);const form=dialog.querySelector('form'),field=form.elements.password,error=form.querySelector('[role="alert"]'),submit=form.querySelector('[type="submit"]');let request,authorized=false;
  dialog.querySelector('.test-access-cancel').onclick=()=>dialog.close();
- dialog.addEventListener('close',()=>{request?.abort();field.value='';dialog.remove();},{once:true});
+ dialog.addEventListener('close',()=>{request?.abort();field.value='';dialog.remove();if(!authorized)onCancel();},{once:true});
  form.onsubmit=async event=>{
   event.preventDefault();if(submit.disabled)return;const password=field.value;error.textContent='';submit.disabled=true;submit.textContent='Checking…';request=new AbortController();
   const timer=setTimeout(()=>request.abort(),8000);
-  try{if(await authorizeHalloweenTest(password,request.signal)){dialog.close();onAuthorized(password);}else{error.textContent='Incorrect password. Try again.';field.select();}}
+  try{if(await authorizeHalloweenTest(password,request.signal)){authorized=true;dialog.close();onAuthorized(password);}else{error.textContent='Incorrect password. Try again.';field.select();}}
   catch{if(dialog.open)error.textContent='The test service could not be reached. Try again.';}
   finally{clearTimeout(timer);submit.disabled=false;submit.textContent='Unlock tests';}
  };
  dialog.showModal();field.focus();return {dispose:()=>dialog.close()};
 }
 const cases=[
+ ['new-gameplay','Test new gameplay','Explore the deep narrow maze, single-drawer rooms and recessed closets. Test stamina and switch on the hunt.'],
  ['full','Full Halloween gameplay','Play the complete B1 quest from the beginning.'],
  ['coop','Play with friends','Host the Halloween update before release; friends join your normal lobby.'],
  ['map','Decorated map','Explore pumpkins, webs and skeletons. Jump between rooms with the hunt paused.'],
@@ -57,6 +58,7 @@ export function startHalloweenTestPage({password,onExit}){
  async function start(id){
   if(starting||disposed)return;starting=true;await stopFrame();if(disposed){starting=false;return;}current=id;picker.hidden=true;player.hidden=false;commands.replaceChildren();
   player.querySelector('nav strong').textContent=cases.find(c=>c[0]===id)[1];status.textContent='Preparing test…';
+  if(id==='new-gameplay')for(const [label,action]of [['Next drawer room','drawer'],['Corridor closet','closet'],['Return to stairs','stairs'],['Start hunting','hunt'],['Refill stamina','stamina']])commandButton(label,'new:'+action);
   if(id==='map')commandButton('Next decorated room','room-next');
   if(id==='quest')for(const [label,item] of [['Invitation','invitation'],['Seal 1','seal-0'],['Seal 2','seal-1'],['Seal 3','seal-2'],['Key chest','chest']])commandButton(label,'quest:'+item);
   if(id==='b2')commandButton('Return to B1','return');
@@ -65,7 +67,7 @@ export function startHalloweenTestPage({password,onExit}){
  function receive(event){
   if(disposed||event.origin!==location.origin||event.source!==frame?.contentWindow)return;
   if(event.data?.type==='halloween-test-ready')frame.contentWindow.postMessage({type:'halloween-test-start',password:accessPassword,scenario:current},location.origin);
-  if(event.data?.type==='halloween-test-running')status.textContent=['map','quest','key'].includes(current)?'Inspection mode · hunt paused · click the game to look around.':current==='coop'?'Create a lobby for your friends. The host selects the Halloween map for the whole team.':'Click the game to control it · Esc releases the mouse · replay whenever you want.';
+  if(event.data?.type==='halloween-test-running')status.textContent=current==='new-gameplay'?'Drag to look · WASD move · Shift to sprint · Start hunting releases Monochrome.':['map','quest','key','new-gameplay'].includes(current)?'Inspection mode · hunt paused · click the game to look around.':current==='coop'?'Create a lobby for your friends. The host selects the Halloween map for the whole team.':'Drag in the game to look · WASD move · Esc pauses · replay whenever you want.';
   if(event.data?.type==='halloween-test-finished')status.textContent='Test finished. Replay it or choose another test.';
   if(event.data?.type==='halloween-test-error')status.textContent='The test could not start. Replay to try again.';
  }

@@ -17,3 +17,8 @@ test('missing sound asset remains silent without fetching or creating an audio c
  const audio=createMonsterAudio(null);
  assert.equal(await audio.resume(),false);audio.update(1,true);audio.pause();assert.equal(audio.volume,0);audio.dispose();
 });
+test('Halloween monster calls are near-only and separated by quiet gaps',()=>{
+ assert.equal(monsterGain(13,true,{maze:true,elapsed:1}),0);assert.equal(monsterGain(20,true,{maze:true,elapsed:1}),0);
+ assert.ok(monsterGain(8,true,{maze:true,elapsed:2})>0);assert.equal(monsterGain(8,true,{maze:true,elapsed:12}),0);
+ assert.ok(monsterGain(2,true,{maze:true,elapsed:12})>0,'immediate danger stays audible');
+});

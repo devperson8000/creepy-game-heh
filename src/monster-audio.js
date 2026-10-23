@@ -5,15 +5,18 @@ export const JUMPSCARE_SOUND_URL='/audio/jumpscare.mp3';
 export const AUDIBLE_DISTANCE = 32;
 export const FULL_VOLUME_DISTANCE = 1.5;
 
-export function monsterGain(distance,active=true){
- if(!active||!Number.isFinite(distance)||distance>=AUDIBLE_DISTANCE)return 0;
- const proximity=Math.max(0,Math.min(1,(AUDIBLE_DISTANCE-Math.max(0,distance))/(AUDIBLE_DISTANCE-FULL_VOLUME_DISTANCE)));
- return .85*Math.pow(proximity,2.4);
+export function monsterGain(distance,active=true,{maze=false,elapsed=0}={}){
+ const range=maze?13:AUDIBLE_DISTANCE;
+ if(!active||!Number.isFinite(distance)||distance>=range)return 0;
+ const proximity=Math.max(0,Math.min(1,(range-Math.max(0,distance))/(range-FULL_VOLUME_DISTANCE)));
+ const phase=elapsed%22,call=phase<.35?phase/.35:phase<4.7?1:phase<5.2?(5.2-phase)/.5:0;
+ const nearby=Math.max(0,Math.min(1,(4.8-distance)/1.5));
+ return .85*Math.pow(proximity,2.4)*(maze?Math.max(call,nearby):1);
 }
 
-export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
+export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{},maze=false}={}){
  let context,gain,effectsGain,source,loading,noiseBuffer,wanted=false,muted=false,disposed=false,failed=false,volume=0;
- let masterVolume=1;
+ let masterVolume=1,elapsed=0;
  let scareGain,scareBuffer,scareLoading,scareSource,scaring=false,scareStartedAt=0;
  const abort=new AbortController(),effects=new Set();
  function silence(){volume=0;if(gain&&context?.state!=='closed'){gain.gain.cancelScheduledValues(context.currentTime);gain.gain.setValueAtTime(0,context.currentTime);}}
@@ -73,7 +76,8 @@ export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{}}={}){
  }
  function update(distance,active=true,delta=1/60){
   if(!url||!gain||failed||disposed)return;
-  const target=monsterGain(distance,active&&wanted&&!muted)*masterVolume;
+  if(active&&wanted)elapsed+=Math.max(0,Math.min(delta,.25));
+  const target=monsterGain(distance,active&&wanted&&!muted,{maze,elapsed})*masterVolume;
   if(target===0){silence();return;}
   volume+=(target-volume)*(1-Math.exp(-Math.max(0,Math.min(delta,.25))/.25));
   gain.gain.setTargetAtTime(volume,context.currentTime,.025);

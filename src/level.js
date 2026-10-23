@@ -1,7 +1,9 @@
+import {createMazeLayout} from './maze-layout.js';
 export const CELL=2.6,SIZE=17;
 export function randomSource(seed){let value=seed>>>0;return()=>{value+=0x6D2B79F5;let t=value;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296;};}
 export function shuffled(values,rng){const a=[...values];for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-export function createLayout(seed,{playerCount=1,halloween=false}={}){
+export function createLayout(seed,{playerCount=1,halloween=false,maze=true}={}){
+ if(halloween&&maze)return createMazeLayout(seed,{playerCount});
  const size=playerCount>=4?25:playerCount>=3?21:SIZE;
  const rng=randomSource(halloween?(seed^0xA1102026):seed),grid=Array.from({length:size},()=>Array(size).fill(0));
  const entrance={x:7,z:1},stack=[entrance];grid[1][7]=1;
@@ -32,7 +34,7 @@ export function pathBetween(layout,from,to){
  }return[];
 }
 export function lineOfSight(layout,a,b){const length=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.max(1,Math.ceil(length/.18));for(let i=0;i<=steps;i++){const f=i/steps;if(!walkable(layout,gridPoint({x:a.x+(b.x-a.x)*f,z:a.z+(b.z-a.z)*f})))return false;}return true;}
-export function groundHeight(point){if(point.z<=-25)return 3.6;if(point.z<-18.2&&Math.abs(point.x+2.6)<1.3)return 3.6*(-18.2-point.z)/6.8;return 0;}
+export function groundHeight(point,layout){if(layout?.halloweenMaze){const s=layout.stairs;if(point.z<=s.topZ)return s.topHeight;if(point.z<s.bottomZ&&Math.abs(point.x-s.x)<s.width/2+.2)return s.topHeight+(s.bottomHeight-s.topHeight)*(point.z-s.topZ)/(s.bottomZ-s.topZ);return layout.floorHeight;}if(point.z<=-25)return 3.6;if(point.z<-18.2&&Math.abs(point.x+2.6)<1.3)return 3.6*(-18.2-point.z)/6.8;return 0;}
 export function moveInWorld(position,input,yaw,delta,canMove,speed=2.5){
  const n=Math.max(1,Math.hypot(input.forward,input.right)),distance=Math.min(Math.max(0,delta),.05)*speed;
  const dx=(-Math.sin(yaw)*input.forward+Math.cos(yaw)*input.right)*distance/n,dz=(-Math.cos(yaw)*input.forward-Math.sin(yaw)*input.right)*distance/n;

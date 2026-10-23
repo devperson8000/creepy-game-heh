@@ -1,9 +1,10 @@
+import {movePlayer} from './player-movement.js';
 import {interactHalloween,advanceHalloween} from './halloween-state.js';
 import {drawerOperation} from './drawer-interaction.js';
 import {beginFinale,advanceFinale} from './finale-state.js';
 import {createEnemy,tickEnemy,createAmbush,tickAmbush,SIGHT_RANGE,releaseMonster} from './enemy.js';
 import {advanceHuntClock,huntActive} from './hunt-clock.js';
-import {groundHeight,moveInWorld,lineOfSight} from './level.js';
+import {groundHeight as legacyGroundHeight,moveInWorld,lineOfSight} from './level.js';
 import {coopInteract,downPlayer,expireDowned,markEscaped,removeCoopPlayer,serializeCoopState} from './coop-state.js';
 import {createRemoteMovement} from './coop-motion.js';
 import {footstepNoise,interactionNoise} from './player-noise.js';
@@ -31,6 +32,7 @@ const reasons={'wrong-code':'Access denied. Check the four-digit clue.','locked'
 
 /** The lobby owner runs one simulation; peers submit inputs, never positions or monster state. */
 export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.now()/1000}={}){
+ const groundHeight=world.groundHeight??legacyGroundHeight;
  const enemy=createEnemy(state.run.layout),ambush=createAmbush(state.seed,{chance:ambushChance});
  const remoteMovement=new Map(),remoteAt=new Map();
  const drawerRequests=new Map();
@@ -121,18 +123,14 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
     if(remoteMovement.has(player.id)){
      remoteMovement.get(player.id).advance(step,(distance,input)=>{
       if(!footsteps.has(player.id))footsteps.set(player.id,{distance:0});
-      emit(player,footstepNoise(footsteps.get(player.id),distance,input.sprint,player));
+      emit(player,footstepNoise(footsteps.get(player.id),distance,player.sprint,player));
      });
      if(state.run.elapsed>(noisyUntil.get(player.id)??0))player.noise='Quiet';
      continue;
     }
-    if(player.status==='alive'&&!player.hidden&&fresh&&!command.paused){
-     const next=moveInWorld(player,{forward:command.forward,right:command.right},player.yaw,step,world.canMove,command.sprint?3.7:2.5);
-     moved=Math.hypot(next.x-player.x,next.z-player.z);player.x=next.x;player.z=next.z;
-     if(!footsteps.has(player.id))footsteps.set(player.id,{distance:0});
-     emit(player,footstepNoise(footsteps.get(player.id),moved,command.sprint,{...player,height:groundHeight(player)}));
-    }
-    player.height=groundHeight(player);player.moving=moved>.0001;player.speed=moved/step;player.sprint=!!(fresh&&command.sprint&&player.moving);
+    moved=movePlayer(player,fresh?command:{forward:0,right:0,yaw:player.yaw,pitch:player.pitch,paused:false},step,world.canMove);
+    if(!footsteps.has(player.id))footsteps.set(player.id,{distance:0});
+    emit(player,footstepNoise(footsteps.get(player.id),moved,player.sprint,player));
     if(state.run.elapsed>(noisyUntil.get(player.id)??0))player.noise='Quiet';
    }
    const target=chooseMonsterTarget(enemy,state,navigation);
@@ -143,7 +141,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
     tickEnemy(enemy,state.run.layout,observedPosition(target),step,hunting,pendingNoise,navigation);
     if(hunting)for(const player of state.players.values()){
      const observed=observedPosition(player),d=Math.hypot(observed.x-enemy.position.x,observed.z-enemy.position.z);
-     if(d<(player.hidden?1.8:1.35)&&visible(enemy,state,player,navigation))downPlayer(state,player.id,state.run.elapsed);
+     if(d<(player.hidden?1.8:state.run.layout.halloweenMaze?1:1.35)&&visible(enemy,state,player,navigation))downPlayer(state,player.id,state.run.elapsed);
     }
    }
    pendingNoise=[];expireDowned(state,state.run.elapsed);

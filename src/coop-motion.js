@@ -1,19 +1,9 @@
-import {groundHeight,moveInWorld} from './level.js';
+import {movePlayer} from './player-movement.js';
 
 const MAX_PENDING=180;
 const valid=c=>c&&Number.isSafeInteger(c.sequence)&&c.sequence>0&&Number.isFinite(c.duration)&&c.duration>0&&c.duration<=.05&&['forward','right','yaw','pitch'].every(k=>Number.isFinite(c[k]))&&Math.abs(c.forward)<=1&&Math.abs(c.right)<=1&&Math.abs(c.yaw)<=1000000&&Math.abs(c.pitch)<=1.571;
 function move(player,command,canMove){
- player.yaw=command.yaw;player.pitch=command.pitch;player.torch=!!command.torch;
- const before={x:player.x,z:player.z};
- if(!command.paused&&!player.hidden&&player.status==='alive'){
-  for(let left=command.duration;left>1e-8;left-=.025){
-   const next=moveInWorld(player,command,command.yaw,Math.min(.025,left),canMove,command.sprint?3.7:2.5);
-   player.x=next.x;player.z=next.z;
-  }
- }
- player.height=(canMove.groundHeight??groundHeight)(player);
- const distance=Math.hypot(player.x-before.x,player.z-before.z);
- player.moving=distance>.00001;player.speed=distance/command.duration;player.sprint=!!command.sprint&&player.moving;
+ let distance=0;for(let left=command.duration;left>1e-8;left-=.025)distance+=movePlayer(player,command,Math.min(.025,left),canMove);
  return distance;
 }
 

@@ -14,7 +14,7 @@ import {createCoopSimulation} from './coop-simulation.js';
 import {createWorld} from './world.js';
 import {createCreature,applyIdle,applyRunning,createCreatureMotion} from './creature.js';
 import {idlePose} from './idle.js';
-import {groundHeight} from './level.js';
+import {groundHeight as legacyGroundHeight} from './level.js';
 import {createGameUI} from './game-ui.js';
 import {gameInput} from './game-input.js';
 import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
@@ -27,17 +27,17 @@ import {createArrival} from './arrival.js';
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience();
  const arrival=createArrival();
- const state=createCoopState(session.seed,session.players,{halloween:session.halloween===true}),run=state.run;
+ const state=createCoopState(session.seed,session.players,{halloween:session.halloween===true,maze:session.maze!==false}),run=state.run;
  state.ownerId=session.ownerId;
  const localId=client.id,isHost=localId===session.ownerId;
  if(!state.players.has(localId))throw new Error('You are not a member of this round.');
- const world=createWorld(run),ui=createGameUI(),revivePrompts=createRevivePrompts(ui.root);
+ const world=createWorld(run),groundHeight=world.groundHeight??legacyGroundHeight,ui=createGameUI(),revivePrompts=createRevivePrompts(ui.root);
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;container.append(renderer.domElement);
  const quality=createRenderQuality(renderer,{pixelRatio:Math.min(devicePixelRatio,1.4)});
- const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();world.scene.add(creature.root);
+ const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(mesh=>{if(mesh.isMesh){mesh.userData.actor=true;world.rayMeshes.push(mesh);}});
  const torch=createTorch(world.scene,camera),creatureMotion=createCreatureMotion();
- const audio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
+ const audio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL);
  const jumpscare=createJumpscare({mouthTexture});
  const raycaster=new THREE.Raycaster(),point=new THREE.Vector3(),direction=new THREE.Vector3();
@@ -56,7 +56,7 @@ export function startCoopGame(container,{client,session}){
   const first=raycaster.intersectObjects(solids(),false)[0];
   return !first||first.object.userData.interactId===target.id||first.distance>length-.08;
  };
- const b1CanMove=world.canMove;world.canMove=(x,z)=>run.phase==='halloween'?canMoveB2(x,z):b1CanMove(x,z);world.canMove.groundHeight=p=>run.phase==='halloween'?0:groundHeight(p);
+ const b1CanMove=world.canMove;world.canMove=(x,z)=>run.phase==='halloween'?canMoveB2(x,z):b1CanMove(x,z);world.canMove.gameplay=()=>run.layout.halloweenMaze&&run.phase!=='halloween'?'maze':'legacy';world.canMove.groundHeight=p=>run.phase==='halloween'?0:groundHeight(p);
  const simulation=isHost?createCoopSimulation(state,world):null;
  const drawerRequests=createDrawerRequests({send:action=>client.send('action',{action})});
  let enemyView={position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
@@ -108,7 +108,7 @@ export function startCoopGame(container,{client,session}){
  input.setView(local().yaw);
  const questUI=createHalloweenQuestUI(ui.root,run);
  const experience=createHalloweenExperience({renderer,camera,run,input,ui,players:()=>[...state.players.values()],localId,onReturn:()=>sendAction('halloween:return'),onMute:()=>toggleSound(),isMuted:()=>audio.muted,poseFor:p=>poseBuffers.get(p.id)?.sample(performance.now()/1000)??p});
- let inB2=false;
+ let inB2=false,lastOwnHidden=false;
 
  function cycleSpectator(){const available=[...state.players.values()].filter(p=>p.id!==localId&&p.status==='alive');if(!available.length){spectateId=null;return;}const at=available.findIndex(p=>p.id===spectateId);spectateId=available[(at+1)%available.length].id;}
  nextButton.addEventListener('click',cycleSpectator);team.querySelector('#coop-leave').addEventListener('click',leave);
@@ -258,6 +258,7 @@ export function startCoopGame(container,{client,session}){
   const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),wallDelta=Math.min(1,clockDelta),delta=Math.min(.2,wallDelta);previous=now;time+=delta;
   avatarResume=wasHidden&&!document.hidden;wasHidden=document.hidden;
   let own=local();if(!own)return;
+  if(own.hidden!==lastOwnHidden){if(own.hidden)input.setView(world.targets.get(own.closetId)?.hideYaw??Math.PI,0);lastOwnHidden=own.hidden;}
   const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||!(run.phase==='playing'||run.phase==='halloween'&&run.halloween.visit.stage==='archive')||own.status!=='alive'};
   if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:10000)){disconnected=true;screen('lost');}
   if(isHost){
@@ -312,7 +313,7 @@ export function startCoopGame(container,{client,session}){
    const close=Math.hypot(player.x-watched.x,player.z-watched.z,player.height-watched.height)<6;
    if(!ui.overlay&&run.elapsed-player.noiseAt<.45&&close)audio.playNoise(player.noiseType);
   }
-  if(watched.hidden&&watched.closetId){world.targets.get(watched.closetId).mesh.visible=false;}
+  if(watched.hidden&&watched.closetId){world.targets.get(watched.closetId).mesh.visible=!!world.targets.get(watched.closetId).physicalGrille;}
   for(const closet of world.closets)if(!(watched.hidden&&watched.closetId===closet.id))closet.mesh.visible=true;
   let target=!ui.overlay&&!document.hidden?currentTarget():null;
   const held=retainDrawerTarget(target,holdId,world.targets,input.interact);if(held!==target)target=targetInfo(held);
@@ -333,9 +334,9 @@ export function startCoopGame(container,{client,session}){
   const silent=enemyView.silent&&enemyView.silentTargetId===watched.id;
   audio.update(silent?Infinity:distance,!ui.overlay&&!disconnected&&run.phase==='playing',delta);
   world.update(disconnected?0:delta,time,watched,threat,hold,{position:{...enemyView.position,height:groundHeight(enemyView.position)},hunting:enemyView.mode==='chase',active:hunting});
-  torch.update({ceilingPower:world.lighting.visibility,time,delta,sprinting:input.sprint,hold,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
+  torch.update({ceilingPower:world.lighting.visibility,time,delta,sprinting:own.sprint,hold,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
   torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?140:0;
-  const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update({huntElapsed:renderedRun.huntElapsed,threat:silent?0:threat,hidden:watched.hidden,sprinting:own.status==='alive'&&input.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta});
+  const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update({huntElapsed:renderedRun.huntElapsed,threat:silent?0:threat,hidden:watched.hidden,sprinting:own.status==='alive'&&own.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta});
   renderer.toneMappingExposure=(own.status==='alive'?torch.exposure:.95*(watched.torch?1:world.lighting.visibility))*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(arrival.active){

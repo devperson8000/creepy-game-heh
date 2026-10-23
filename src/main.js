@@ -35,8 +35,8 @@ function failed(error){
 }
 const testFrame=window.parent!==window&&new URLSearchParams(location.search).get('mode')==='halloween-test-frame';
 let previewAuthorized=false,testClient=null;
-// Preview arrivals leave the pointer free; a deliberate canvas click still locks it.
-function configureTestInput(game){if(testFrame)game.input.capture=()=>{game.renderer.domElement.focus();game.input.clear();};}
+// Private previews keep the pointer free and make the canvas keyboard-focusable.
+function configureTestInput(game){if(testFrame){game.renderer.domElement.tabIndex=0;game.input.pointerLockAllowed=false;}}
 const releaseReady=halloweenRelease.start();
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)void halloweenRelease.refresh();});
 window.addEventListener('pagehide',()=>halloweenRelease.dispose(),{once:true});
@@ -52,7 +52,7 @@ try {
   function makeMenu(options={}){
    const menu=createLobbyMenu({
     ...options,
-    showHalloweenTest:!testFrame,
+    showHalloweenTest:false,
     onHalloweenTest:()=>requestHalloweenTestAccess({onAuthorized:password=>{menu.dispose();startHalloweenTestPage({password,onExit:()=>makeMenu()});}}),
     createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});if(testFrame)testClient=client;return client;},
     onSingleplayer:async()=>{const ready=preparing();try{await releaseReady;await halloweenRelease.refresh();window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,halloween:previewAuthorized||halloweenEnabled()});}catch(error){failed(error);}finally{ready();}},
@@ -87,6 +87,7 @@ try {
    });
    post('halloween-test-ready');
   }
+  else if(location.pathname.replace(/\/+$/,'')==='/testhalloween')requestHalloweenTestAccess({onAuthorized:password=>startHalloweenTestPage({password,onExit:()=>location.assign('/')}),onCancel:()=>location.assign('/')});
   else if(testSession)window.monochromeTest=createTwoTabTest({session:testSession,makeMenu});
   else if(import.meta.env.DEV&&new URLSearchParams(location.search).get('mode')==='finale'){void startFinalePreview(document.querySelector('#scene'),{onExit:()=>{history.replaceState({},'',location.pathname);makeMenu();}}).then(value=>{window.monochromeFinale=value;});}
   else void releaseReady.then(()=>{

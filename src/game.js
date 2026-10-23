@@ -1,3 +1,4 @@
+import {movePlayer} from './player-movement.js';
 import {halloweenTargetInfo,interactHalloween,advanceHalloween,canMoveB2} from './halloween-state.js';
 import {createHalloweenExperience,createHalloweenQuestUI} from './halloween-experience.js';
 import {drawerTargetFromHit,retainDrawerTarget} from './drawer-interaction.js';
@@ -10,7 +11,7 @@ import {createWorld} from './world.js';
 import {createCreature,applyIdle,applyRunning,createCreatureMotion} from './creature.js';
 import {idlePose} from './idle.js';
 import {createEnemy,tickEnemy,createAmbush,tickAmbush,releaseMonster} from './enemy.js';
-import {groundHeight,moveInWorld,worldPoint} from './level.js';
+import {groundHeight as legacyGroundHeight,moveInWorld,worldPoint} from './level.js';
 import {createGameUI} from './game-ui.js';
 import {gameInput} from './game-input.js';
 import {footstepNoise,interactionNoise} from './player-noise.js';
@@ -23,12 +24,12 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  const ambience=createRoomAmbience();
  const arrival=autostart?createArrival():null;
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
- const run=createRun(seed,{halloween}),world=createWorld(run),ui=createGameUI();
- const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
+ const run=createRun(seed,{halloween}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
+ const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
  container.appendChild(renderer.domElement);
  const quality=createRenderQuality(renderer);
- const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();world.scene.add(creature.root);
+ const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  const torch=createTorch(world.scene,camera),creatureMotion=createCreatureMotion();
@@ -99,7 +100,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   if(t.type==='keypad'){if(!run.codeAccepted)openKeypad();else ui.toast('The number lock is already complete.');}
   if(t.type==='elevator'){if(openExit(run))ui.toast('Both locks released. Step inside.');else ui.toast('The elevator needs all four keys and the correct code.');}
   if(t.type==='closet'){
-   run.hidden=true;hiddenCloset=t;hideWitnessed=lastResult.visible&&lastResult.distance<7;player.x=t.hide.x;player.z=t.hide.z;t.mesh.visible=false;input.setView(Math.PI);if(hideWitnessed)ui.toast('It saw you enter.');else ui.toast('Stay quiet. E to leave when it passes.');
+   run.hidden=true;hiddenCloset=t;hideWitnessed=lastResult.visible&&lastResult.distance<7;player.x=t.hide.x;player.z=t.hide.z;t.mesh.visible=!!t.physicalGrille;input.setView(t.hideYaw??Math.PI);if(hideWitnessed)ui.toast('It saw you enter.');else ui.toast('Stay quiet. E to leave when it passes.');
   }
   if(t.type==='leave'&&hiddenCloset){hiddenCloset.mesh.visible=true;player.x=hiddenCloset.exit.x;player.z=hiddenCloset.exit.z;hiddenCloset=null;run.hidden=false;hideWitnessed=false;}
  }
@@ -129,10 +130,10 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
    // Small physics steps preserve wall collision and fair pursuit at lower frame rates.
    for(let remaining=frameDelta;remaining>0;remaining-=.025){
     const step=Math.min(.025,remaining);
-    if(!run.hidden){const next=moveInWorld(player,input.movement,input.yaw,step,world.canMove,input.sprint?3.7:2.5);const moved=Math.hypot(next.x-player.x,next.z-player.z);player.x=next.x;player.z=next.z;emitNoise(footstepNoise(footsteps,moved,input.sprint,{x:player.x,z:player.z,height:groundHeight(player)}));}
+    player.hidden=run.hidden;const moved=movePlayer(player,{...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint},step,world.canMove);emitNoise(footstepNoise(footsteps,moved,player.sprint,{x:player.x,z:player.z,height:groundHeight(player)}));
     player.height=groundHeight(player);
     ambushResult=tickAmbush(ambush,{enemy,layout:run.layout,player:{...player,hidden:run.hidden},delta:step,active:huntActive(run),navigation:world.enemyNavigation});
-    lastResult=tickEnemy(enemy,run.layout,{...player,hidden:run.hidden&&!hideWitnessed},step,huntActive(run),pendingNoise,world.enemyNavigation);pendingNoise=[];
+    lastResult=tickEnemy(enemy,run.layout,{...player,...(run.hidden&&hideWitnessed?hiddenCloset?.exit:{}),hidden:run.hidden&&!hideWitnessed},step,huntActive(run),pendingNoise,world.enemyNavigation);pendingNoise=[];
     if(lastResult.caught||(run.hidden&&hideWitnessed&&lastResult.distance<1.8)){capturePlayer();break;}
    }
    input.updateView();camera.position.set(player.x,player.height+1.65,player.z);
@@ -154,8 +155,8 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   const breathingFov=66+(reducedMotion()?0:Math.sin(time*1.4)*threat*.45);
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:huntActive(run)});
-  torch.update({ceilingPower:world.lighting.visibility,time,delta:frameDelta,sprinting:input.sprint,hold,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
-  const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update({huntElapsed:run.huntElapsed,threat:ambushResult.silent?0:threat,hidden:run.hidden,sprinting:!run.hidden&&input.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta:frameDelta});
+  torch.update({ceilingPower:world.lighting.visibility,time,delta:frameDelta,sprinting:player.sprint,hold,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
+  const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update({huntElapsed:run.huntElapsed,threat:ambushResult.silent?0:threat,hidden:run.hidden,sprinting:!run.hidden&&player.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta:frameDelta});
   renderer.toneMappingExposure=torch.exposure*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));

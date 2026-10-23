@@ -1,3 +1,4 @@
+import {createMazeWorld} from './maze-world.js';
 import {createHalloweenWorld} from './halloween-world.js';
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
@@ -17,6 +18,7 @@ function texture(){
  const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
 export function createWorld(run){
+ if(run.layout.halloweenMaze)return createMazeWorld(run);
  const size=run.layout.size??SIZE,span=size*CELL;
  const firstCell=worldPoint({x:0,z:0}),lastCell=worldPoint({x:size-1,z:size-1});
  const center={x:(firstCell.x+lastCell.x)/2,z:(firstCell.z+lastCell.z)/2};
@@ -58,10 +60,6 @@ export function createWorld(run){
  box(2.4,.2,6.8,-2.6,7.7,-21.6);
  for(let i=0;i<24;i++){const z=-25+(i+.5)*6.8/24,y=3.6*(1-i/24);box(2.2,y+.1,6.8/24,-2.6,y/2-.05,z,floorMat);}
  box(.2,7.4,6.8,-3.8,3.7,-21.6);box(.2,7.4,6.8,-1.4,3.7,-21.6);
- sign('IT HEARS YOU',1.4,.3,-3.68,3.4,-20.8,{rotation:Math.PI/2});
- sign('RETURN / ELEVATOR',1.8,.45,-2.6,2.4,-18.08,{rotation:Math.PI});
- sign('DO NOT ENTER',1.9,.5,-2.6,6.85,-25.16,{rotation:Math.PI});
- sign('BASEMENT',1.7,.4,-2.6,7,-25.14);
  fixture(-2.6,7.6,-29,32);fixture(-2.6,6.9,-22.5,15);fixture(-2.6,4.2,-18.2,20);
  const boards=[];
  for(let i=0;i<4;i++){const b=box(2.15,.18,.12,-2.6,4.1+i*.57,-25,wood);b.rotation.z=(i%2?1:-1)*.07;b.userData.interactId='boards';boards.push(b);}

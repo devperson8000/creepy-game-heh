@@ -4,7 +4,7 @@ const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless
 const page=await browser.newPage({viewport:{width:1200,height:800}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',reducedMotion:true})));
 try{
- await page.goto(process.env.GAME_TEST_URL||'http://localhost:5173');await page.getByRole('button',{name:'Test Halloween Gameplay',exact:true}).click();
+ await page.goto((process.env.GAME_TEST_URL||'http://localhost:5173')+'/testhalloween');
  const dialog=page.getByRole('dialog',{name:'Halloween test access'});await dialog.getByLabel('Password',{exact:true}).fill(password);await dialog.getByRole('button',{name:'Unlock tests'}).click();await page.locator('#halloween-test-hub').waitFor();
  await page.getByRole('button',{name:'Monochrome II teaser',exact:true}).click();await page.locator('#halloween-test-frame').waitFor();
  await page.getByRole('button',{name:'Fullscreen',exact:true}).click({timeout:5000});

@@ -203,7 +203,8 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
    const distance=root.position.distanceTo(goal);
    // Timestamp interpolation handles regular updates; this catches a late
    // correction without turning a network gap into a one-frame body jump.
-   const follow=pose.interpolated&&distance>0?Math.min(blend,(pose.sprint?5.2:3.8)*dt/distance):blend;
+   const catchupSpeed=Math.max(pose.sprint?5.2:3.8,finite(pose.speed)*1.2);
+   const follow=pose.interpolated&&distance>0?Math.min(blend,catchupSpeed*dt/distance):blend;
    root.position.lerp(goal,follow);
    root.rotation.y+=Math.atan2(Math.sin(yaw-root.rotation.y),Math.cos(yaw-root.rotation.y))*blend;
   }
@@ -217,7 +218,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   if(fallen)recovering=0;
   if(recovering<=0)animate(fallen?'death':moving?(pose.sprint?'run':'walk'):'idle',fallen);
   else recovering=Math.max(0,recovering-dt);
-  if(!fallen&&activeAction&&activeAction!==actions.get('death')&&moving){const rate=Number.isFinite(pose.speed)&&pose.speed>.1?THREE.MathUtils.clamp(pose.speed/(pose.sprint?3.7:2.5),.65,1.35):1;activeAction.setEffectiveTimeScale(rate);}
+  if(!fallen&&activeAction&&activeAction!==actions.get('death')&&moving){const rate=Number.isFinite(pose.speed)&&pose.speed>.1?THREE.MathUtils.clamp(pose.speed/(pose.sprint?3.7:2.5),.65,pose.speed>4?1.85:1.35):1;activeAction.setEffectiveTimeScale(rate);}
   // Restore the mixer pose before each evaluation so an additive holding pose
   // never accumulates on bones omitted by a clip (or during a crossfade).
   for(const saved of animatedArm)saved.bone.quaternion.copy(saved.quaternion);
