@@ -24,6 +24,7 @@ import {createTorch,sampleTorchSurface} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createMovementPrediction,createPoseBuffer} from './coop-motion.js';
+import {createSoundOcclusion} from './sound-occlusion.js';
 import {createArrival} from './arrival.js';
 
 export function startCoopGame(container,{client,session}){
@@ -42,6 +43,7 @@ export function startCoopGame(container,{client,session}){
  const audio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL);
  const jumpscare=createJumpscare({mouthTexture,metallic:!!run.halloween});
+ const occlusion=createSoundOcclusion(world.rayMeshes),audioDirection=new THREE.Vector3();
  const raycaster=new THREE.Raycaster(),point=new THREE.Vector3(),direction=new THREE.Vector3();
  world.scene.updateMatrixWorld(true);
  for(const target of world.targets.values()){
@@ -336,7 +338,8 @@ export function startCoopGame(container,{client,session}){
   const distance=hunting?Math.hypot(enemyView.position.x-watched.x,enemyView.position.z-watched.z,watched.height-groundHeight(enemyView.position)):Infinity;
   const threat=watched.height<1.5?Math.max(0,1-distance/12):0;
   const silent=enemyView.silent&&enemyView.silentTargetId===watched.id;
-  audio.update(silent?Infinity:distance,!ui.overlay&&!disconnected&&run.phase==='playing',delta);
+  camera.getWorldDirection(audioDirection);const listener={x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw:Math.atan2(-audioDirection.x,-audioDirection.z),pitch:Math.asin(THREE.MathUtils.clamp(audioDirection.y,-1,1))},soundSource={x:monsterPosition.x,y:groundHeight(monsterPosition)+1.65,z:monsterPosition.z};
+  audio.update(silent?Infinity:distance,!document.hidden&&!ui.overlay&&!disconnected&&run.phase==='playing',delta,{listener,source:soundSource,occluded:()=>occlusion.sample(listener,soundSource,{time})});
   world.update(disconnected?0:delta,time,watched,threat,hold,{position:{...enemyView.position,height:groundHeight(enemyView.position)},hunting:enemyView.mode==='chase',active:hunting});
   torch.update({ceilingPower:world.lighting.visibility,time,delta,surfaceDistance,sprinting:own.sprint,hold,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
   torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?torch.power:0;

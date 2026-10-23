@@ -22,6 +22,7 @@ import {footstepNoise,interactionNoise} from './player-noise.js';
 import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
+import {createSoundOcclusion} from './sound-occlusion.js';
 import {createArrival} from './arrival.js';
 
 export function startGame(container,{seed,autostart=false,halloween=false}={}){
@@ -39,6 +40,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
  const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
  const jumpscare=createJumpscare({mouthTexture,metallic:!!run.halloween});
+ const occlusion=createSoundOcclusion(world.rayMeshes),audioDirection=new THREE.Vector3();
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);let surfaceDistance=Infinity;
  let enemy=createEnemy(run.layout),player={id:'solo',name:'You',slot:0,status:'alive',x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
@@ -171,7 +173,8 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   applyIdle(creature,idlePose(time));const gait=creatureMotion.update(enemy.position,enemy.mode,ui.overlay?0:frameDelta,huntActive(run));if(gait.weight>.001)applyRunning(creature,gait.time,gait.weight*(enemy.mode==='chase'?1:.6));
   creature.root.position.y+=groundHeight(enemy.position);creature.root.position.x=enemy.position.x;creature.root.position.z=enemy.position.z;creature.root.rotation.y=enemy.yaw;
   const soundDistance=huntActive(run)?Math.hypot(enemy.position.x-player.x,enemy.position.z-player.z,player.height-groundHeight(enemy.position)):Infinity;
-  monsterAudio.update(ambushResult.silent?Infinity:soundDistance,!ui.overlay&&run.phase==='playing',frameDelta);
+  camera.getWorldDirection(audioDirection);const listener={x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw:Math.atan2(-audioDirection.x,-audioDirection.z),pitch:Math.asin(THREE.MathUtils.clamp(audioDirection.y,-1,1))},soundSource={x:enemy.position.x,y:groundHeight(enemy.position)+1.65,z:enemy.position.z};
+  monsterAudio.update(ambushResult.silent?Infinity:soundDistance,!document.hidden&&!ui.overlay&&run.phase==='playing',frameDelta,{listener,source:soundSource,occluded:()=>occlusion.sample(listener,soundSource,{time})});
   const breathingFov=66+(reducedMotion()?0:Math.sin(time*1.4)*threat*.45);
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:huntActive(run)});

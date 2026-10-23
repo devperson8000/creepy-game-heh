@@ -41,8 +41,8 @@ Interface: existing experience facade; deferred playback created at archive appr
 ### Task 4: Spatial monster sound
 Files: src/monster-audio.js; new spatial helper; game/coop callers; audio/raycast tests.
 Interface: audio.update(distance,active,delta,{listener,source,occluded}) retains legacy three-argument compatibility; bounded world obstruction callback/sample.
-- [ ] Failing left/right/front/behind, muffling and centred scare/mute tests.
-- [ ] Wire listener orientation, panner/filter smoothing and bounded geometry queries; verify original recordings/headroom, commit.
+- [x] Failing left/right/front/behind, muffling and centred scare/mute tests.
+- [x] Wire listener orientation, panner/filter smoothing and bounded geometry queries; verify original recordings/headroom, commit.
 
 ### Task 5: Authenticated recovery
 Files: src/lobby-client.js, src/coop-game.js, snapshot restore helper/simulation, SQL migration only if account available; tests.
