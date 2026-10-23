@@ -23,7 +23,7 @@
 ### Task 1: Joined maze walls
 Files: new src/maze-wall-surfaces.js; src/maze-world.js; tests/maze-wall-surfaces.test.js; browser wall sweep script.
 Interface: mazeWallHalf(layout,x,z), buildMazeWallSurfaces(layout) returns bounded chunk BufferGeometries and face metadata; meshes tagged mazeWall.
-- [ ] Reproduce visible same-plane overlap on seed42; failing actual-scene overlap/ray/aperture tests.
+- [x] Reproduce visible same-plane overlap on seed42; failing actual-scene overlap/ray/aperture tests.
 - [ ] Implement union boundary geometry with closet casing and shared widths; verify seeded routes/rays, browser moving viewpoints, commit.
 
 ### Task 2: Imported black hooded keeper

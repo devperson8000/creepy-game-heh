@@ -1,4 +1,5 @@
 import {createHoodedStranger} from './hooded-stranger.js';
+import {loadKeeperAsset} from './imported-keeper.js';
 import {b2Frame} from './b2-director.js';
 import {createB2Voice} from './b2-voice.js';
 import {createTeaserPlayback} from './teaser-playback.js';
@@ -24,7 +25,8 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  for(const x of [-3.35,3.35]){for(const y of [.4,1.1,1.8,2.5]){box(1.05,.06,2.1,x,y,-2.3);for(let i=0;i<5;i++)box(.12,.28,.25,x-.38+i*.18,y+.16,-2.3, i%2?paper:orange);}for(const z of [-3.3,-1.3])box(.06,2.6,.06,x,.1+1.3,z);}
  for(let i=0;i<15;i++){const p=box(.22,.005,.29,Math.sin(i*2.4)*2.8,.01,Math.cos(i*1.7)*2.3,paper);p.rotation.y=i*2.1;}
  box(1.55,1.04,.24,-.65,1.57,-2.07);box(1.35,.79,.015,-.65,1.6,-1.94,screenMaterial);box(.32,.3,.25,-.65,1.04,-2.1);
- const keeper=createHoodedStranger(),stranger=keeper.root;root.add(stranger);
+ let keeper=createHoodedStranger(),stranger=keeper.root,keeperLoading=null;root.add(stranger);
+ function prepareKeeper(){keeperLoading??=loadKeeperAsset().then(asset=>{if(disposed)return;const replacement=createHoodedStranger({asset});keeper.dispose();keeper=replacement;stranger=keeper.root;root.add(stranger);}).catch(()=>{});return keeperLoading;}
  const switchBase=box(.19,.025,.16,.4,1.015,-2.13,metal),switchButton=box(.085,.065,.085,.4,1.065,-2.13,mat(0x66543b,{emissive:0x8b6431,emissiveIntensity:.3}));switchButton.name='archive-monitor-switch';
  box(.65,.025,.2,-.6,.99,-1.28,metal);for(let row=0;row<3;row++)for(let col=0;col<9;col++)box(.045,.012,.035,-.85+col*.061,1.01,-1.22-row*.05,paper);
  const rim=new THREE.PointLight(0x75938f,3.5,4);rim.position.set(1.3,2.7,-3.5);scene.add(rim);
@@ -57,7 +59,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  }
  function render(delta){
   const q=run.halloween,v=q?.visit;if(!v){finish();return false;}
-  if(!active){active=true;overlay.hidden=false;input.clear();resumeScore();document.body.classList.add('b2-active');}
+  if(!active){void prepareKeeper();active=true;overlay.hidden=false;input.clear();resumeScore();document.body.classList.add('b2-active');}
   const cinematic=v.stage!=='archive',key=`${v.id}:${v.stage}:${v.startedAt}`;
   if(key!==stageKey){stageKey=key;recordElapsed=-1;voice.pause();teaserAudio.pause();input.clear();
    if(v.stage==='unlock')unlockEntry=viewPose();if(v.stage==='conversation')entryPose=viewPose();
@@ -100,7 +102,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  }
  function dispose(){if(disposed)return;disposed=true;finish(false);reveal?.remove();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',unlockKey);score.dispose();voice.dispose();teaserAudio.dispose();teaserScene.dispose();renderer.domElement.removeEventListener('pointerdown',resumeScore);overlay.remove();avatars.forEach(a=>a.dispose());keeper.dispose();root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});resources.forEach(r=>r.dispose());}
 
- return {render,finish,dispose,scene,stranger,keeper,voice,switchButton,overlay,teaser:teaserScene};
+ return {render,finish,dispose,scene,get stranger(){return stranger;},get keeper(){return keeper;},get keeperReady(){return prepareKeeper();},voice,switchButton,overlay,teaser:teaserScene};
 }
 export function createHalloweenQuestUI(root,run){
  const card=document.createElement('aside');card.className='halloween-quest';card.hidden=true;root.append(card);let previous='';

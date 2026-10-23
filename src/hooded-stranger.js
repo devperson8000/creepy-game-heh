@@ -1,6 +1,8 @@
 import * as THREE from 'three';
-/** Authored black-cloth stand-in. The selected Hooded Wanderer source is not imported. */
-export function createHoodedStranger(){
+import {createImportedKeeper} from './imported-keeper.js';
+/** Authored fallback remains available if the source-backed keeper cannot load. */
+export function createHoodedStranger({asset}={}){
+ if(asset)return createImportedKeeper(asset);
  const root=new THREE.Group();root.name='hooded-archive-keeper';root.position.set(.55,.06,-3);const geometry=[],materials=[];
  const mat=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:1,...extra});materials.push(m);return m;},cloth=mat(0x101112),edge=mat(0x202224),glove=mat(0x090c0d),voidMat=new THREE.MeshBasicMaterial({color:0});materials.push(voidMat);
  function mesh(g,m,parent=root,name=''){geometry.push(g);const o=new THREE.Mesh(g,m);o.name=name;o.castShadow=true;parent.add(o);return o;}
