@@ -65,7 +65,7 @@ try {
   if(testFrame){
    let busy=false,started=false,stopped=false,scenario=null,timer=null,testMenu=null,replay=null;
    const post=type=>window.parent.postMessage({type},location.origin);
-   window.disposeHalloweenTest=async()=>{stopped=true;clearInterval(timer);testMenu?.dispose();replay?.dispose();window.monochrome?.renderer.setAnimationLoop(null);window.monochrome?.renderer.dispose();window.monochrome?.renderer.forceContextLoss();if(testClient)await Promise.race([testClient.close(),new Promise(resolve=>setTimeout(resolve,1000))]);};
+   window.disposeHalloweenTest=async()=>{stopped=true;clearInterval(timer);testMenu?.dispose();replay?.dispose();window.monochrome?.renderer.setAnimationLoop(null);window.monochrome?.world.halloween?.dispose();window.monochrome?.renderer.dispose();window.monochrome?.renderer.forceContextLoss();if(testClient)await Promise.race([testClient.close(),new Promise(resolve=>setTimeout(resolve,1000))]);};
    window.addEventListener('message',async event=>{
     if(stopped||event.origin!==location.origin||event.source!==window.parent)return;
     if(event.data?.type==='halloween-test-command'&&started&&typeof event.data.command==='string'){scenario?.command(event.data.command);return;}
@@ -75,6 +75,7 @@ try {
      if(!await authorizeHalloweenTest(event.data.password,AbortSignal.timeout(8000))){post('halloween-test-error');return;}
      if(stopped)return;previewAuthorized=true;started=true;const selected=event.data.scenario;
      if(selected==='coop'){testMenu=makeMenu();void testMenu.openMultiplayer();}
+     else if(selected==='opening')replay=playOpeningBeforeMenu({container:document.querySelector('#scene'),createFilm:createOpeningFilm,reducedMotion:reducedMotion(),onComplete:()=>post('halloween-test-finished')});
      else if(selected==='teaser')replay=startHalloweenReplay(document.querySelector('#scene'),{updatedTeaser:true,onExit:()=>post('halloween-test-finished')});
      else{
       window.monochrome=startGame(document.querySelector('#scene'),{halloween:true,autostart:selected==='full'});

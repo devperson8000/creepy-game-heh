@@ -1,7 +1,7 @@
 import {HUNT_START_SECONDS} from './hunt-clock.js';
 import {interactHalloween,advanceHalloween} from './halloween-state.js';
 import {worldPoint} from './level.js';
-export const HALLOWEEN_TESTS=new Set(['new-gameplay','full','coop','map','quest','key','b2','teaser','return']);
+export const HALLOWEEN_TESTS=new Set(['opening','new-gameplay','full','coop','map','quest','key','b2','teaser','return']);
 /** Shortcuts live only in the password-authorized test frame; normal runs never call this. */
 export function setupHalloweenTest(game,scenario){
  if(!HALLOWEEN_TESTS.has(scenario)||!game.run.halloween)throw new Error('Unknown Halloween test');

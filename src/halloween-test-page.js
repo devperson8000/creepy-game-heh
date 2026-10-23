@@ -20,6 +20,7 @@ export function requestHalloweenTestAccess({onAuthorized,onCancel=()=>{}}){
  dialog.showModal();field.focus();return {dispose:()=>dialog.close()};
 }
 const cases=[
+ ['opening','Opening house introduction','Watch the Halloween house, impossible wall and descent. Uses your motion settings; hold Skip for two seconds.'],
  ['new-gameplay','Test new gameplay','Explore the deep narrow maze, three-drawer cabinets and recessed closets. Test stamina and switch on the hunt.'],
  ['full','Full Halloween gameplay','Play the complete B1 quest from the beginning.'],
  ['coop','Play with friends','Host the Halloween update before release; friends join your normal lobby.'],
@@ -67,7 +68,7 @@ export function startHalloweenTestPage({password,onExit}){
  function receive(event){
   if(disposed||event.origin!==location.origin||event.source!==frame?.contentWindow)return;
   if(event.data?.type==='halloween-test-ready')frame.contentWindow.postMessage({type:'halloween-test-start',password:accessPassword,scenario:current},location.origin);
-  if(event.data?.type==='halloween-test-running')status.textContent=current==='new-gameplay'?'Drag to look · WASD move · Shift to sprint · Start hunting releases Monochrome.':['map','quest','key','new-gameplay'].includes(current)?'Inspection mode · hunt paused · click the game to look around.':current==='coop'?'Create a lobby for your friends. The host selects the Halloween map for the whole team.':'Drag in the game to look · WASD move · Esc pauses · replay whenever you want.';
+  if(event.data?.type==='halloween-test-running')status.textContent=current==='opening'?'Watch the introduction · hold Skip or Space for 2 seconds · replay whenever you want.':current==='new-gameplay'?'Drag to look · WASD move · Shift to sprint · Start hunting releases Monochrome.':['map','quest','key','new-gameplay'].includes(current)?'Inspection mode · hunt paused · click the game to look around.':current==='coop'?'Create a lobby for your friends. The host selects the Halloween map for the whole team.':'Drag in the game to look · WASD move · Esc pauses · replay whenever you want.';
   if(event.data?.type==='halloween-test-finished')status.textContent='Test finished. Replay it or choose another test.';
   if(event.data?.type==='halloween-test-error')status.textContent='The test could not start. Replay to try again.';
  }

@@ -36,6 +36,6 @@ Interfaces: `createHalloweenDecorationPlan(layout,seed)` returns room/wall ancho
 
 ### Task 3: Anticipation, private preview and integrated verification
 Files: modify `src/halloween-countdown.js`, its CSS, `src/halloween-test-page.js`, `src/halloween-test-scenarios.js`, `src/main.js`; add `scripts/check-halloween-polish-browser.mjs`.
-- [ ] Add failing browser expectations for opening preview, actual code reading, decorated rooms/corridors and mobile anticipation card.
-- [ ] Add faithful upcoming-feature copy and password-only opening preview using existing cinematic lifecycle; preserve skip and fullscreen controls.
+- [x] Add failing browser expectations for opening preview, actual code reading, decorated rooms/corridors and mobile anticipation card.
+- [x] Add faithful upcoming-feature copy and password-only opening preview using existing cinematic lifecycle; preserve skip and fullscreen controls.
 - [ ] Run `npm test`, build, opening/quest/gameplay/release/browser regressions; review branch, fix findings, push main and verify live.
