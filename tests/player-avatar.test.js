@@ -55,12 +55,6 @@ test('snapshot movement interpolates, takes shortest yaw path, and snaps telepor
  avatar.dispose();
 });
 
-test('remote avatars keep pace with the faster Halloween sprint without building a correction jump',()=>{
- const avatar=createPlayerAvatar(fixture(),{}),dt=1/60;avatar.update({x:0,z:0},dt);let largestStep=0;
- for(let i=1;i<=600;i++){const before=avatar.root.position.z;avatar.update({x:0,z:i*6.2*dt,speed:6.2,sprint:true,moving:true,interpolated:true},dt);largestStep=Math.max(largestStep,avatar.root.position.z-before);assert.ok(i*6.2*dt-avatar.root.position.z<.7);}
- assert.ok(largestStep<.2);avatar.dispose();
-});
-
 test('cloned rigs animate independently, hold their fallen pose, and revive',()=>{
  const asset=fixture(),a=createPlayerAvatar(asset,{}),b=createPlayerAvatar(asset,{});
  const source=asset.scene.getObjectByName('spine003'),first=a.root.getObjectByName('spine003'),second=b.root.getObjectByName('spine003');

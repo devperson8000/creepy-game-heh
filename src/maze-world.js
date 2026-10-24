@@ -1,11 +1,10 @@
+import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {buildMazeWallSurfaces,mazeWallHalf} from './maze-wall-surfaces.js';
 import {CELL,worldPoint,gridPoint,walkable,groundHeight as sampleGround,randomSource} from './level.js';
 import {createMazeNavigator} from './maze-navigation.js';
-import {createHalloweenWorld} from './halloween-world.js';
 import {createProximityLighting} from './proximity-lighting.js';
 import {createWallNotes} from './wall-notes.js';
-import {reducedMotion} from './preferences.js';
 
 export function createMazeWorld(run){
  const layout=run.layout,floor=layout.floorHeight,height=layout.ceilingHeight,size=layout.size;
@@ -45,7 +44,7 @@ export function createMazeWorld(run){
  targets.set('boards',{id:'boards',type:'boards',mesh:boardHitbox});collider(-2.6,-25,2.4,.25,()=>!run.boardsOpen);
  const elevatorDoors=[box(1,3.2,.13,-3.1,5.2,-32.91,metal),box(1,3.2,.13,-2.1,5.2,-32.91,metal)];
  for(const d of elevatorDoors)d.userData.interactId='elevator';targets.set('elevator',{id:'elevator',type:'elevator',mesh:elevatorDoors[0]});
- sign('B2 SERVICE LIFT',1.9,.28,-2.6,7.05,-32.84,{size:48});
+ sign('EXIT',1.9,.28,-2.6,7.05,-32.84,{size:48});
  // Quiet industrial details reinforce the elevator as the return landmark.
  const paint=new THREE.MeshStandardMaterial({color:0x9b9a82,roughness:.96});
  for(const x of [-8.47,3.27])box(.035,.18,7.7,x,3.73,-29,metal);
@@ -54,7 +53,7 @@ export function createMazeWorld(run){
  for(const z of [-31.5,-29,-26.5])box(11.6,.006,.01,-2.6,3.605,z,dark);
  for(let i=0;i<9;i++){const stripe=box(.15,.008,.44,-3.45+i*.22,3.61,-26,paint);stripe.rotation.y=-.45;}
  sign('B1 / RETURN POINT',1.7,.32,-6.4,5.75,-32.84,{size:54});
- sign('HOUSE SERVICE',1.65,.22,1.4,6.75,-32.84,{size:48});
+ sign('KEEP THE EXIT CLEAR',1.65,.22,1.4,6.75,-32.84,{size:48});
 
  const panel=box(.68,1.2,.14,-4.1,5,-32.79,dark);target('locks','locks',panel);
  const indicators=[];
@@ -66,7 +65,7 @@ export function createMazeWorld(run){
  sign('CODE',.6,.2,-1.03,5.75,-32.65,{size:72});
  // One cabinet per small room, with three independently searchable drawers.
  const hitMaterial=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false});
- const rows=run.halloween.drawerRows;
+ const rows=3;
  layout.rooms.forEach((room,index)=>{
   const p=worldPoint(room),n=room.normal,g=new THREE.Group();g.position.set(p.x-n.x*.83,floor,p.z-n.z*.83);g.rotation.y=Math.atan2(n.x,n.z);scene.add(g);
   const cabinetHeight=rows===3?1.42:.84;
@@ -83,7 +82,7 @@ export function createMazeWorld(run){
   }
   g.traverse(m=>{if(m.isMesh&&!m.userData.interactId){if(rows===1)m.userData.interactId=`drawer-${index}`;else{m.userData.cabinetIndex=index;m.userData.cabinetFloor=floor;}}});
   collider(g.position.x,g.position.z,Math.abs(n.x)? .6:.94,Math.abs(n.z)?.6:.94);
-  const at={x:p.x+n.x*1.335,z:p.z+n.z*1.335};sign(run.halloween?.rooms[0]===index?'— / —':String(index+1).padStart(2,'0'),.35,.065,at.x,floor+2.59,at.z,{rotation:Math.atan2(n.x,n.z),size:130});
+  const at={x:p.x+n.x*1.335,z:p.z+n.z*1.335};sign(String(index+1).padStart(2,'0'),.35,.065,at.x,floor+2.59,at.z,{rotation:Math.atan2(n.x,n.z),size:130});
   const frame=new THREE.Group();frame.position.set(p.x+n.x*1.28,floor,p.z+n.z*1.28);frame.rotation.y=Math.atan2(n.x,n.z);scene.add(frame);for(const x of [-.92,.92])box(.06,2.6,.09,x,1.3,0,metal,frame);box(1.9,.08,.09,0,2.59,0,metal,frame);
   if(index%3===0)fixture(p.x,floor+2.5,p.z,5);
  });
@@ -105,7 +104,7 @@ export function createMazeWorld(run){
  for(let z=8;z<size-1;z++)for(let x=1;x<size-1;x++)if(layout.grid[z][x]){const p=worldPoint({x,z});if(lamps.every(l=>Math.hypot(p.x-l.position.x,p.z-l.position.z)>16))fixture(p.x,floor+2.5,p.z,9);}
  const clueRoom=layout.rooms[run.clueRoom],cp=worldPoint(clueRoom),cn=clueRoom.normal;
  const note=sign(run.code,.5,.21,cp.x-cn.x*1.14,floor+1.88,cp.z-cn.z*1.14,{rotation:Math.atan2(cn.x,cn.z),background:'#999681',color:'#11170e',size:145});target('clue','clue',note);
- const halloween=createHalloweenWorld(scene,run,targets,rayMeshes);
+
  const wallNotes=createWallNotes(layout);scene.add(...wallNotes);
  const lighting=createProximityLighting(lamps.map(l=>l.position)),ambient=new THREE.AmbientLight(0xa8b49b,.09),fill=new THREE.PointLight(0xb5bea8,.8,3,1.7);scene.add(ambient,fill);
  const ceilingLights=Array.from({length:6},()=>{const light=new THREE.PointLight(0xd7d9be,0,7,1.7);scene.add(light);return light;});
@@ -127,7 +126,7 @@ export function createMazeWorld(run){
  function canSee(from,to){a.set(from.x,groundHeight(from)+1.95,from.z);b.set(to.x,(to.height??groundHeight(to))+1.65,to.z);const length=a.distanceTo(b);sightRay.set(a,b.sub(a).normalize());sightRay.far=length-.07;return !sightRay.intersectObjects(rayMeshes.filter(m=>!m.userData.actor&&!m.userData.interactionProxy&&m.visible),false).length;}
  for(const t of targets.values())if(!t.position){const p=t.mesh.getWorldPosition(new THREE.Vector3());t.position={x:p.x,z:p.z,height:groundHeight(p)};}
  function update(delta,time,player,threat,hold=0,monster){
-  halloween?.update(time,{player,visibility:lighting.visibility,reducedMotion:reducedMotion()});
+
   for(const view of drawerViews){const d=run.drawers[view.id];view.drawer.position.z=THREE.MathUtils.lerp(view.drawer.position.z,d.opened?.4:0,1-Math.exp(-delta*18));view.key.visible=d.key&&!d.taken&&d.opened;}
   boardHitbox.visible=!run.boardsOpen;boards.forEach(b=>{b.visible=!run.boardsOpen;});indicators.forEach((m,i)=>m.material.color.setHex(i<run.banked.size?0xe2e2d4:0x3b3c3c));screen.material.color.setHex(run.codeAccepted?0xc6cec3:0x525953);
   doorProgress=THREE.MathUtils.lerp(doorProgress,run.exitOpen?1:0,1-Math.exp(-delta*2));elevatorDoors[0].position.x=-3.1-doorProgress*.96;elevatorDoors[1].position.x=-2.1+doorProgress*.96;
@@ -137,5 +136,5 @@ export function createMazeWorld(run){
   if(Math.hypot(player.x-lastX,player.z-lastZ)>.7){selection=[...lamps].sort((a,b)=>Math.hypot(a.position.x-player.x,a.position.z-player.z,a.position.height-groundHeight(player))-Math.hypot(b.position.x-player.x,b.position.z-player.z,b.position.height-groundHeight(player)));lastX=player.x;lastZ=player.z;}
   ceilingLights.forEach((light,i)=>{const source=selection[i]?.light;light.intensity=source?.intensity??0;if(source)light.position.copy(source.position);});
  }
- return {scene,targets,rayMeshes,wallSurfaces,wallNotes,halloween,canMove,groundHeight,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:cp.x-cn.x*.65,z:cp.z-cn.z*.65},get doorProgress(){return doorProgress;}};
+ return {scene,targets,rayMeshes,wallSurfaces,wallNotes,canMove,groundHeight,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:cp.x-cn.x*.65,z:cp.z-cn.z*.65},get doorProgress(){return doorProgress;}};
 }

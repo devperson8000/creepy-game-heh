@@ -2,11 +2,11 @@ import {gamePreferences,savePreferences,reducedMotion} from './preferences.js';
 import {huntClockView,CLOCK_START_HOUR,HUNT_START_SECONDS,HUNT_WARNING_SECONDS} from './hunt-clock.js';
 export function objectiveFor(run){
  if(!run.boardsOpen)return 'Open the boarded doorway';
- if(run.exitOpen&&!run.halloween)return 'Step into the open elevator';
- if(run.banked.size===4&&run.codeAccepted)return run.halloween?'House service exit unlocked · return upstairs':'Open the elevator and step inside';
- if(run.banked.size===4)return run.clueRead?(run.halloween?'Enter the recorded code at the service panel':'Enter the recorded code at the elevator'):'Find the four-digit clue downstairs';
- if((run.teamKeyCount??run.carried.size+run.banked.size)>=4)return run.halloween?'Return upstairs · bank all four keys':'Return to the elevator · bank all four keys';
- return run.layout?.halloweenMaze?'Search the small rooms · four keys + one number':'Search furniture · four keys + one number';
+ if(run.exitOpen)return 'Step into the open elevator';
+ if(run.banked.size===4&&run.codeAccepted)return 'Open the elevator and step inside';
+ if(run.banked.size===4)return run.clueRead?'Enter the recorded code at the elevator':'Find the four-digit clue downstairs';
+ if((run.teamKeyCount??run.carried.size+run.banked.size)>=4)return 'Return to the elevator · bank all four keys';
+ return 'Search furniture · four keys + one number';
 }
 export function createGameUI(){
  const root=document.createElement('div');root.id='game-ui';root.innerHTML=`
@@ -16,8 +16,7 @@ export function createGameUI(){
  <div class="game-inventory"><small>EXIT LOCKS</small><div id="key-lights" aria-label="Banked keys"></div><p id="carried-keys"></p><p id="clue-note"></p><p id="player-noise"></p></div>
  <div id="interaction" hidden><div><kbd>E</kbd><span id="interaction-label"></span></div><div class="hold-track" role="progressbar" aria-label="Interaction progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="hold-fill"></i></div></div>
  <div class="game-controls-note">WASD move · Shift run<br>E interact · F torch · M mute · Esc pause</div>
- <div id="stamina" hidden><div><span id="stamina-label">STAMINA</span><span id="stamina-percent"></span></div><div class="stamina-track" role="progressbar" aria-label="Sprint stamina" aria-valuemin="0" aria-valuemax="100"><i id="stamina-fill"></i></div></div>
- <div id="toast" role="status" aria-live="polite"></div><div id="hide-mask" hidden></div>
+ <div id="stamina" hidden><small>STAMINA</small><div><i></i></div></div><div id="toast" role="status" aria-live="polite"></div><div id="hide-mask" hidden></div>
  <div id="jumpscare-border" aria-hidden="true" hidden></div>
  <div class="game-touch"><div class="direction-pad"><button data-walk="KeyW" aria-label="Forward">↑</button><div><button data-walk="KeyA" aria-label="Left">←</button><button data-walk="KeyS" aria-label="Backward">↓</button><button data-walk="KeyD" aria-label="Right">→</button></div></div><div class="touch-actions"><button id="touch-run" data-walk="ShiftLeft" aria-label="Hold to sprint" aria-pressed="false">Hold to run</button><button id="touch-interact">Hold to interact</button></div></div>
  <div id="game-screen" class="game-screen"><div class="screen-card" id="screen-content" role="dialog" aria-modal="true" aria-labelledby="screen-title"></div></div>
@@ -33,7 +32,7 @@ export function createGameUI(){
   overlay=kind;el('game-screen').hidden=false;
   const heading=kind==='menu'?'MONOCHROME':kind==='pause'?'STAY QUIET':kind==='dead'?'IT FOUND YOU':'YOU GOT OUT';
   const sub=kind==='menu'?'Four keys. One number. It sees you. It hears you.':kind==='pause'?'The room can wait.':kind==='dead'?'Your banked keys are safe. Unbanked keys are back where you found them.':`Escaped in ${Math.floor(run.elapsed/60)}:${String(Math.floor(run.elapsed%60)).padStart(2,'0')} · ${run.deaths} ${run.deaths===1?'retry':'retries'}`;
-  el('screen-content').innerHTML=`<small>${kind==='menu'?'AN ESCAPE THROUGH THE BASEMENT':kind==='won'?(run.halloween?'YOU ESCAPED THE HOUSE':'THE ELEVATOR IS YOUR WAY OUT'):'MONOCHROME'}</small><h1 id="screen-title">${heading}</h1><p>${sub}</p>${kind==='menu'?'<div class="intro-route"><span>Search drawers</span><b>·</b><span>Hide in closets</span><b>·</b><span>Return to the elevator</span></div>':''}<button id="screen-primary" class="primary-button">${kind==='menu'?'Enter the lobby':kind==='pause'?'Continue':kind==='dead'?'Try again':'Another run'}<span class="button-arrow" aria-hidden="true"></span></button>${kind==='menu'?'':'<button id="new-run" class="text-button">Return to main menu</button>'}<div class="menu-controls">WASD + mouse · Hold E to interact · Shift to run · F torch</div>`;
+  el('screen-content').innerHTML=`<small>${kind==='menu'?'AN ESCAPE THROUGH THE BASEMENT':kind==='won'?'THE ELEVATOR IS YOUR WAY OUT':'MONOCHROME'}</small><h1 id="screen-title">${heading}</h1><p>${sub}</p>${kind==='menu'?'<div class="intro-route"><span>Search drawers</span><b>·</b><span>Hide in closets</span><b>·</b><span>Return to the elevator</span></div>':''}<button id="screen-primary" class="primary-button">${kind==='menu'?'Enter the lobby':kind==='pause'?'Continue':kind==='dead'?'Try again':'Another run'}<span class="button-arrow" aria-hidden="true"></span></button>${kind==='menu'?'':'<button id="new-run" class="text-button">Return to main menu</button>'}<div class="menu-controls">WASD + mouse · Hold E to interact · Shift to run · F torch</div>`;
   if(kind==='pause'){
    const prefs=gamePreferences(),settings=document.createElement('fieldset');settings.className='game-settings';
    settings.innerHTML=`<legend>Make the dark your own</legend>
@@ -67,9 +66,8 @@ export function createGameUI(){
    const flash=age<.18||age>=.36&&age<.54?1:age<.36?.12:1;
    warning.style.opacity=String((reducedMotion()?1:flash)*Math.min(1,(HUNT_WARNING_SECONDS-age)/1.4));
   }
-  el('floor-name').textContent=run.layout?.halloweenMaze?(run.hidden?'INSIDE A CLOSET':player.z<=-25?'B1 SERVICE HUB':player.z<run.layout.stairs.bottomZ?'RETURN STAIRS':'BASEMENT B1'):run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
+  el('floor-name').textContent=run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
   const objective=objectiveFor(run);if(objective!==lastObjective){text('current-objective',objective);if(lastObjective&&!overlay)highlight(el('current-objective'));lastObjective=objective;}
-  el('keypad-title').previousElementSibling.textContent=run.halloween?'HOUSE SERVICE / SECURITY':'ELEVATOR / SECURITY';
   const keys=run.banked.size+run.carried.size;if(keys>previousKeys&&!overlay)highlight(el('key-lights'));previousKeys=keys;
   [...el('key-lights').children].forEach((e,i)=>e.classList.toggle('filled',i<run.banked.size));el('key-lights').setAttribute('aria-label',`${run.banked.size} of 4 keys banked`);
   el('carried-keys').textContent=run.carried.size?`Carrying ${run.carried.size} ${run.carried.size===1?'key':'keys'} · return to the lobby`:`${run.banked.size} / 4 keys banked`;
@@ -79,8 +77,8 @@ export function createGameUI(){
   crosshair?.classList.toggle('has-target',!!target&&!overlay);const interactionState=target&&!overlay?(hold>0?'holding':'ready'):'none';if(root.dataset.interacting!==interactionState)root.dataset.interacting=interactionState;
   el('interaction').hidden=!target||!!overlay;el('interaction-label').textContent=target?.label||'';el('hold-fill').style.width=`${Math.max(0,Math.min(1,hold))*100}%`;
   el('hold-fill').parentElement.setAttribute('aria-valuenow',String(Math.round(Math.max(0,Math.min(1,hold))*100)));
-  el('hide-mask').hidden=!run.hidden||!!run.layout?.halloweenMaze;
-  const stamina=el('stamina'),value=Math.max(0,Math.min(1,player.stamina??1));stamina.hidden=!run.layout?.halloweenMaze||!!overlay;stamina.classList.toggle('is-exhausted',!!player.exhausted);el('stamina-fill').style.transform=`scaleX(${value})`;el('stamina-percent').textContent=`${Math.round(value*100)}%`;el('stamina-label').textContent=player.exhausted?'CATCH YOUR BREATH':'STAMINA';stamina.querySelector('[role=progressbar]').setAttribute('aria-valuenow',String(Math.round(value*100)));document.body.classList.toggle('in-closet',run.hidden);
+  el('stamina').hidden=!run.mapUpdate;if(run.mapUpdate)el('stamina').querySelector('i').style.width=`${Math.round((player.stamina??1)*100)}%`;
+  el('hide-mask').hidden=!run.hidden||run.mapUpdate;document.body.classList.toggle('in-closet',run.hidden);
   if(performance.now()>toastUntil)el('toast').classList.remove('show');
  }
  root.addEventListener('keydown',event=>{

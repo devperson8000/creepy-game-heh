@@ -20,7 +20,7 @@ export function createHalloweenCountdown(){
   <p class="halloween-kicker"><span></span> OCTOBER 31 · HALLOWEEN UPDATE</p>
   <h2 class="halloween-title">The dark gets <em>darker.</em></h2>
   <p class="halloween-tease">Follow the invitation. Something is waiting below.</p>
-  <ul class="halloween-preview" aria-label="Inside the Halloween update"><li><span aria-hidden="true">01</span>Deeper B1 maze</li><li><span aria-hidden="true">02</span>Hidden Halloween Key</li><li><span aria-hidden="true">03</span>The B2 archive</li></ul>
+  <ul class="halloween-preview" aria-label="Inside the Halloween update"><li><span aria-hidden="true">01</span>Halloween atmosphere</li><li><span aria-hidden="true">02</span>Hidden Halloween Key</li><li><span aria-hidden="true">03</span>The B2 archive</li></ul>
   <div class="halloween-clock" role="timer" aria-live="off">
    ${['days','hours','minutes','seconds'].map(unit=>`<div class="halloween-unit"><strong data-countdown="${unit}">00</strong><span>${unit}</span></div>`).join('')}
   </div>

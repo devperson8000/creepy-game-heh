@@ -15,6 +15,3 @@ test('first-person lids blink twice then open fully as the camera stands up',()=
  assert.ok(arrivalFrame(6.9).eyeHeight<.35);assert.equal(arrivalFrame(9).eyeHeight,.22);assert.ok(arrivalFrame(10.5).eyeHeight>1.5);
  const end=arrivalFrame(ARRIVAL_DURATION);assert.equal(end.done,true);assert.equal(end.openness,1);assert.equal(end.eyeHeight,1.65);assert.equal(end.roll,0);
 });
-test('Halloween wake-up acknowledges the changed suit only while the player discovers it',()=>{
- assert.equal(arrivalFrame(9.3).dialogue,'');assert.equal(arrivalFrame(7,{halloween:true}).dialogue,'');assert.equal(arrivalFrame(9.3,{halloween:true}).dialogue,'I wasn’t wearing this suit.');assert.equal(arrivalFrame(ARRIVAL_DURATION,{halloween:true}).dialogue,'');
-});

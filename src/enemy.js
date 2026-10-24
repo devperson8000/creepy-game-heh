@@ -126,7 +126,7 @@ export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],naviga
   }else enemy.areaTime=(enemy.areaTime??0)+delta;
   if(!visible&&(enemy.idleFor>=MAX_IDLE_SECONDS-1e-6||enemy.areaTime>=12))resumeRoaming(enemy,layout,navigation);
   const nowDistance=Math.hypot(player.x-enemy.position.x,player.z-enemy.position.z);
-  return {caught:visible&&nowDistance<(layout.halloweenMaze?1:1.35),distance:nowDistance,visible,heard:!!sound};
+  return {caught:visible&&nowDistance<(layout.narrowMaze?1:1.35),distance:nowDistance,visible,heard:!!sound};
  }
  if(enemy.mode==='search'){
   enemy.searchRemaining=Math.min(enemy.searchRemaining,MAX_IDLE_SECONDS-(enemy.idleFor??0));
@@ -145,7 +145,7 @@ export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],naviga
   // Static destinations keep their collision-safe route; rebuilding a patrol
   // mid-corner can repeatedly select a shortcut that fails the collision sweep.
   if(!enemy.path.length||enemy.mode==='chase'&&enemy.repath<=0){enemy.path=routeTo(enemy,layout,target,navigation);enemy.repath=enemy.mode==='chase'?.25:enemy.mode==='investigate'?.55:.9;}
-  let travel=delta*(layout.halloweenMaze?MAZE_MONSTER_SPEED:MONSTER_SPEED)[enemy.mode];
+  let travel=delta*(layout.narrowMaze?MAZE_MONSTER_SPEED:MONSTER_SPEED)[enemy.mode];
   while(enemy.path.length&&travel>0){
    const next=enemy.path[0],dx=next.x-enemy.position.x,dz=next.z-enemy.position.z,d=Math.hypot(dx,dz);
    if(d<.001){enemy.path.shift();continue;}

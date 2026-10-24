@@ -19,4 +19,3 @@ export function createHalloweenRelease({fetchStatus=async()=>{
  return {sample,refresh,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},start(){if(!timer){let ticks=0;timer=setInterval(()=>{tick();if(++ticks%30===0)void refresh();},1000);}return refresh();},dispose(){disposed=true;clearInterval(timer);listeners.clear();},get released(){return sample().released;}};
 }
 export const halloweenRelease=createHalloweenRelease();
-export function halloweenEnabled(){return halloweenRelease.released||!!(import.meta.env?.DEV&&globalThis.location&&new URLSearchParams(location.search).get('halloween')==='preview');}

@@ -1,8 +1,0 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {createB2Voice} from '../src/b2-voice.js';
-test('B2 neural voice joins the current line after decoding and never loads monster audio or old Flite speech',async t=>{
- const requests=[],starts=[],sources=[];let context;const param=()=>({value:0,setTargetAtTime(){}});
- class Context{constructor(){context=this;this.currentTime=100;this.sampleRate=1000;this.state='running';this.destination={};}createGain(){return {gain:param(),connect(){},disconnect(){}};}createBuffer(c,n,r){return {duration:n/r,getChannelData:()=>new Float32Array(n)};}decodeAudioData(){return Promise.resolve({duration:2.56});}createBufferSource(){const s={connect(){},disconnect(){},start(when,offset){starts.push({when,offset});},stop(){this.stopped=true;}};sources.push(s);return s;}resume(){return Promise.resolve();}close(){this.closed=true;return Promise.resolve();}}
- globalThis.AudioContext=Context;globalThis.document={hidden:false,addEventListener(){},removeEventListener(){}};t.after(()=>{delete globalThis.AudioContext;delete globalThis.document;});
- t.mock.method(globalThis,'fetch',async url=>{requests.push(url);return {ok:true,arrayBuffer:async()=>new ArrayBuffer(1)};});const voice=createB2Voice();voice.update(3.8,{volume:.7});await new Promise(r=>setImmediate(r));
- assert.equal(requests.length,4);assert.ok(requests.every(url=>/b2-.*-v3\.mp3$/.test(url)));assert.ok(starts.some(s=>Math.abs(s.offset-.7)<.001),'the current stranger line starts at its correct offset');voice.pause();assert.ok(sources.every(s=>s.stopped));voice.dispose();voice.dispose();assert.ok(context.closed);
-});

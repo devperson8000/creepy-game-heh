@@ -24,13 +24,7 @@
     "test:browser:wall-notes": "node scripts/check-wall-notes-browser.mjs",
     "test:browser:halloween": "node scripts/check-halloween-browser.mjs",
     "test:browser:drawers": "node scripts/check-drawers-browser.mjs",
-    "test:browser:coop-drawers": "node scripts/check-coop-drawers-browser.mjs",
-    "test:browser:halloween-quest": "node scripts/check-halloween-quest-browser.mjs",
-    "test:browser:coop-halloween": "node scripts/check-coop-halloween-browser.mjs",
-    "test:browser:halloween-release": "node scripts/check-halloween-release-browser.mjs",
-    "test:browser:halloween-tests": "node scripts/check-halloween-test-page-browser.mjs",
-    "test:browser:halloween-test-coop": "node scripts/check-halloween-test-coop-browser.mjs",
-    "test:browser:teaser": "node scripts/check-teaser-browser.mjs"
+    "test:browser:coop-drawers": "node scripts/check-coop-drawers-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

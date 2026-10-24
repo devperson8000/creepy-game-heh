@@ -14,7 +14,7 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,mouthTexture,red
  const sun=new T.DirectionalLight(0xf2ecd3,0);sun.position.set(-6,12,10);scene.add(sun);
  let aspect=1,disposed=false;const target=new T.Vector3();
  function resize(value){aspect=Math.max(.2,value);camera.aspect=aspect;camera.fov=aspect<.8?82:58;camera.updateProjectionMatrix();}
- function sample(seconds,{reducedMotion:motion=reducedMotion}={}){
+ function sample(seconds){
   const elapsed=Math.max(0,Math.min(FINALE_DURATION,Number.isFinite(seconds)?seconds:0)),t=finaleChoreographyTime(elapsed),shot=finaleShot(elapsed).name;set.sample(t);
   const fov=aspect<.8?(t>=19&&t<21.35?98:82):58;
   if(camera.fov!==fov){camera.fov=fov;camera.updateProjectionMatrix();}
@@ -52,8 +52,8 @@ export function createFinaleScene({asset,cast,runnerId,buttonId,mouthTexture,red
   if(!epilogue){key.intensity=60;rim.intensity=12;}
   if(aspect<.8&&t<12){camera.position.x=2.8;camera.position.z=z-6;}
   if(aspect<.8&&t>=23&&t<35.3)camera.position.z=-3.42;
-  if(!motion&&t>=2&&t<21.2){camera.position.y+=Math.sin(t*18)*.025;camera.position.x+=Math.sin(t*9)*.012;}
-  if(!motion&&t>=23&&t<35.6)camera.position.x+=Math.sin(t*39)*.008*(t<24?2:1);
+  if(!reducedMotion&&t>=2&&t<21.2){camera.position.y+=Math.sin(t*18)*.025;camera.position.x+=Math.sin(t*9)*.012;}
+  if(!reducedMotion&&t>=23&&t<35.6)camera.position.x+=Math.sin(t*39)*.008*(t<24?2:1);
   camera.lookAt(target);camera.updateMatrixWorld(true);scene.updateMatrixWorld(true);
   const fade=t<2?1-smooth(.4,2,t):t>42.5&&t<45.2?(t<44?smooth(42.5,44,t):1-smooth(44,45.2,t)):0;
   return {shot,fade,title:t>=49?['YOU ESCAPED.',...(t>=50.2?['TOGETHER.']:[])]:[],complete:elapsed>=FINALE_DURATION};

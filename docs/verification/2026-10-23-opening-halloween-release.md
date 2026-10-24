@@ -1,5 +1,0 @@
-# Opening postponed to the Halloween update
-
-Normal page startup now waits for the existing server-confirmed Halloween release signal. Before October 31, 2026 at 16:00 Australia/Sydney, it opens mode selection without creating the cinematic or requesting its dialogue. At/after that deadline, new page loads play the completed opening. An unavailable or invalid signal keeps it disabled. Current games and open menus are not interrupted at the deadline. Existing authorized test-frame/co-op startup routes are unchanged.
-
-Verification: all 267 tests and the production build passed (the existing chunk-size advisory remains). `node scripts/check-opening-release-browser.mjs` passed before-release, failed-signal and exact-deadline cases in Chromium. A visitor clock set to 2035 did not unlock the intro early. The released case still loaded all four dialogue files, supported hold-to-title and handed off to the normal menu. Full-film verification explicitly simulates the server release in the test browser; the live smoke check respects the actual production release status.

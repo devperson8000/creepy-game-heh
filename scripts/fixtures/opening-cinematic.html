@@ -1,8 +1,0 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body,#scene{margin:0;width:100%;height:100%;overflow:hidden;background:black}canvas{display:block}</style></head><body><div id="scene"></div><script type="module">
-import {createOpeningFilm} from '/src/opening-film.js';
-import {openingFrame} from '/src/opening-sequence.js';
-localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',volume:0}));
-const film=createOpeningFilm(document.querySelector('#scene'));await film.ready;
-window.openingFixture={render(time){film.render(openingFrame(time));},dispose(){film.dispose();}};
-window.openingFixture.render(3);
-</script></body></html>

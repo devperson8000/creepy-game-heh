@@ -36,7 +36,7 @@ export function createWallNotes(layout){
  return layout.rooms.flatMap((room,index)=>{
   const candidates=[];
   for(const lane of [0,-1,1])for(const [dx,dz] of [[0,-1],[-1,0],[0,1],[1,0]]){
-   const offset=layout.halloweenMaze?1:2;const cell={x:room.x+dx*offset+(dz?lane:0),z:room.z+dz*offset+(dx?lane:0)};
+   const offset=layout.narrowMaze?1:2;const cell={x:room.x+dx*offset+(dz?lane:0),z:room.z+dz*offset+(dx?lane:0)};
    const inside={x:cell.x-dx,z:cell.z-dz};
    if(!walkable(layout,cell)&&walkable(layout,inside))candidates.push({cell,dx,dz});
   }
@@ -44,7 +44,7 @@ export function createWallNotes(layout){
   // Prefer the north/west wall, clear of the east-side closet and clue desk.
   const {cell,dx,dz}=candidates[0],p=worldPoint(cell),rng=randomSource(layout.seed^Math.imul(index+1,0x4e07));
   const text=MESSAGES[index%MESSAGES.length],note=new THREE.Mesh(new THREE.PlaneGeometry(2.1,.79),writing(text,rng));
-  note.position.set(p.x-dx*(CELL/2+(layout.halloweenMaze?.1:0)+.018),(layout.floorHeight??0)+1.93+(rng()-.5)*.18,p.z-dz*(CELL/2+(layout.halloweenMaze?.1:0)+.018));
+  note.position.set(p.x-dx*(CELL/2+(layout.narrowMaze?.1:0)+.018),(layout.floorHeight??0)+1.93+(rng()-.5)*.18,p.z-dz*(CELL/2+(layout.narrowMaze?.1:0)+.018));
   note.rotation.y=Math.atan2(-dx,-dz);
   note.userData={wallNote:true,noteText:text,wallCell:cell,roomIndex:index};
   return [note];

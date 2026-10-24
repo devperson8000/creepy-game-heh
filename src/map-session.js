@@ -1,0 +1,4 @@
+/** The owner selects the round's map once. Guest device time cannot change it. */
+export async function waitForMapSession(client,session){
+ return new Promise((resolve,reject)=>{let done=false,timer,poll;const finish=value=>{if(done)return;done=true;clearTimeout(timer);clearInterval(poll);off();resolve(value);};const off=client.subscribe(e=>{if(e.type==='snapshot'&&e.snapshot?.state?.seed===session.seed)finish(!!e.snapshot.state.run.mapUpdate);if(e.type==='roomClosed'){if(!done){done=true;clearTimeout(timer);clearInterval(poll);off();reject(new Error('The lobby closed.'));}}});const read=()=>client.readRoundSnapshot?.(session.lobbyId).then(snapshot=>{if(snapshot?.state?.seed===session.seed)finish(!!snapshot.state.run.mapUpdate);}).catch(()=>{});timer=setTimeout(()=>{if(!done){done=true;clearInterval(poll);off();reject(new Error('The host map could not be confirmed. Please rejoin.'));}},20000);poll=setInterval(read,750);void read();});
+}
