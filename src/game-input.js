@@ -11,10 +11,10 @@ export function gameInput(camera,canvas,ui,onPause,onCapture=()=>{}){
  canvas.addEventListener('pointerdown',e=>{if(!ui.overlay&&!document.pointerLockElement){drag={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);}});
  canvas.addEventListener('pointermove',e=>{if(drag&&!ui.overlay&&!document.pointerLockElement){look(e.clientX-drag.x,e.clientY-drag.y);drag={x:e.clientX,y:e.clientY};}});
  for(const event of ['pointerup','pointercancel','lostpointercapture'])canvas.addEventListener(event,()=>{drag=null;});
- document.addEventListener('keydown',e=>{if(e.code==='Escape'){if(e.repeat)return;clearKeys();onPause();return;}if(ui.overlay||e.target.closest?.('button,input,textarea,select,[contenteditable="true"]'))return;if(['KeyW','KeyA','KeyS','KeyD','KeyE','ShiftLeft','ShiftRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)){e.preventDefault();keys.add(e.code);}});
- document.addEventListener('keyup',e=>keys.delete(e.code));
+ document.addEventListener('keydown',e=>{if(e.code==='Escape'){if(e.repeat)return;clearKeys();onPause();return;}if(ui.overlay||e.target?.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName??''))return;if(['KeyW','KeyA','KeyS','KeyD','KeyE','ShiftLeft','ShiftRight','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)){e.preventDefault();keys.add(e.code);}},{capture:true});
+ document.addEventListener('keyup',e=>keys.delete(e.code),{capture:true});
  document.addEventListener('pointerlockchange',()=>{clearKeys();drag=null;if(!document.pointerLockElement&&!ui.overlay&&matchMedia('(pointer:fine)').matches)onPause();});
- window.addEventListener('blur',()=>{clearKeys();if(!ui.overlay)onPause();});
+ window.addEventListener('blur',()=>{clearKeys();if(!ui.overlay)onPause();});document.addEventListener('visibilitychange',()=>{if(document.hidden)clearKeys();});
  touchButtons.forEach(button=>{
   button.addEventListener('pointerdown',e=>{if(ui.overlay)return;e.preventDefault();keys.add(button.dataset.walk);button.setAttribute('aria-pressed','true');button.setPointerCapture(e.pointerId);});
   for(const t of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(t,()=>{keys.delete(button.dataset.walk);button.setAttribute('aria-pressed','false');});
