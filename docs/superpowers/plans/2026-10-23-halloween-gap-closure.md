@@ -24,7 +24,7 @@
 Files: new src/maze-wall-surfaces.js; src/maze-world.js; tests/maze-wall-surfaces.test.js; browser wall sweep script.
 Interface: mazeWallHalf(layout,x,z), buildMazeWallSurfaces(layout) returns bounded chunk BufferGeometries and face metadata; meshes tagged mazeWall.
 - [x] Reproduce visible same-plane overlap on seed42; failing actual-scene overlap/ray/aperture tests.
-- [ ] Implement union boundary geometry with closet casing and shared widths; verify seeded routes/rays, browser moving viewpoints, commit.
+- [x] Implement union boundary geometry with closet casing and shared widths; verify seeded routes/rays, browser moving viewpoints, commit.
 
 ### Task 2: Imported black hooded keeper
 Files: public/models/b2/, docs/assets/b2-keeper/, conversion script; src/hooded-stranger.js or new source-backed keeper module; B2 integration/tests.
@@ -48,9 +48,9 @@ Interface: audio.update(distance,active,delta,{listener,source,occluded}) retain
 Files: src/lobby-client.js, src/coop-game.js, snapshot restore helper/simulation, SQL migration only if account available; tests.
 Interface: recover same client identity and request current authoritative snapshot; owner transitions are server-backed and restore existing state.
 - [x] Inspect account/schema/docs; failing transient recovery/authority/state restore tests.
-- [ ] Implement bounded reconnect/fresh snapshot and server succession where available; verify actual network interruption and old authority rejection, commit.
+- [x] Implement bounded reconnect/fresh snapshot and server succession where available; verify actual network interruption and old authority rejection, commit.
 
 ### Task 6: Integrated QA, audit and publication
-- [ ] Full suite/build; sequential wall/keeper/B2/ending/intro/release lifecycle browsers; four actual client transport and emulated touch controls; record measured requests/draw calls and remaining physical QA limits.
-- [ ] Fresh whole-branch review, one evidence-backed fix pass, audit table statuses and documentation.
+- [x] Full suite/build; sequential wall/keeper/B2/ending/intro/release lifecycle browsers; four actual client transport and emulated touch controls; record measured requests/draw calls and remaining physical QA limits.
+- [x] Fresh whole-branch review, one evidence-backed fix pass, audit table statuses and documentation.
 - [ ] Commit, fast-forward/push main, verify Vercel commit/alias and live private/public flows; concise result with exact remaining limits.
