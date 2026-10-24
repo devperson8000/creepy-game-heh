@@ -32,3 +32,9 @@ Tests use Chromium/Playwright. The four-client transport harness suppresses nati
 A fresh whole-branch review completed after the first review model became unavailable. Three Important findings were independently reproduced and fixed in one pass: inactive B1 pointer events loading teaser media; same-owner simulation recovery leaving old guest motion sequences stranded; missing pause on the disabled pre-release experience. Focused and full tests pass. No other material findings or deferred minor findings were reported.
 
 Remaining external work is stated in the [gap audit](2026-10-23-halloween-story-gaps.md): selected Needlelimbs source/animation, physical-phone performance/comfort and a full human playthrough across separate networks. A hard crash resumes the last persisted checkpoint rather than guaranteeing the last unsent frame.
+
+## Production verification
+
+Published `9edc2c082f177243081c859bc275692569de99fe` to remote `main`. Vercel production deployment `dpl_ENVf4r4jbT1hy4yjV9epmFfbPNsj` is READY and owns `creepy-game-heh.vercel.app`. The live keeper GLB matches the reviewed asset SHA-256 `0a392d7dd9bb20b867e60b10cebea954648211200f65caeec06a8526c00b298c`.
+
+Live production checks passed for the trusted release gate, complete password-only B2 scene/key/voice/teaser/return/portrait flow, and pre-release co-op stale-snapshot recovery followed by movement. The real release API still reports `released:false` with the original Sydney deadline. The merged checkout also passed its full runner (990 tests, including the nested worktree suites); the isolated feature suite contains 338 tests. Only this verification record and completion checkboxes change after that verified build.

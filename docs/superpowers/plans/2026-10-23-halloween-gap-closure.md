@@ -53,4 +53,4 @@ Interface: recover same client identity and request current authoritative snapsh
 ### Task 6: Integrated QA, audit and publication
 - [x] Full suite/build; sequential wall/keeper/B2/ending/intro/release lifecycle browsers; four actual client transport and emulated touch controls; record measured requests/draw calls and remaining physical QA limits.
 - [x] Fresh whole-branch review, one evidence-backed fix pass, audit table statuses and documentation.
-- [ ] Commit, fast-forward/push main, verify Vercel commit/alias and live private/public flows; concise result with exact remaining limits.
+- [x] Commit, fast-forward/push main, verify Vercel commit/alias and live private/public flows; concise result with exact remaining limits.
