@@ -18,9 +18,7 @@ export function createHalloweenCountdown(){
    <svg class="halloween-web" viewBox="0 0 100 100"><path d="M0 0 100 100M0 0 100 38M0 0 38 100M0 0v100M0 0h100M0 24q12-1 15-9t9-15M0 49q21-3 30-19t19-30M0 76q31-4 46-30t30-46M0 99q41-4 60-39t39-60"/></svg>
   </div>
   <p class="halloween-kicker"><span></span> OCTOBER 31 · HALLOWEEN UPDATE</p>
-  <h2 class="halloween-title">The dark gets <em>darker.</em></h2>
-  <p class="halloween-tease">Follow the invitation. Something is waiting below.</p>
-  <ul class="halloween-preview" aria-label="Inside the Halloween update"><li><span aria-hidden="true">01</span>Halloween atmosphere</li><li><span aria-hidden="true">02</span>Hidden Halloween Key</li><li><span aria-hidden="true">03</span>The B2 archive</li></ul>
+  <h2 class="halloween-title">Halloween update</h2>
   <div class="halloween-clock" role="timer" aria-live="off">
    ${['days','hours','minutes','seconds'].map(unit=>`<div class="halloween-unit"><strong data-countdown="${unit}">00</strong><span>${unit}</span></div>`).join('')}
   </div>

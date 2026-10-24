@@ -11,8 +11,15 @@ async function cleanMenu(){
  assert.equal(await page.locator('#two-tab-test,.finale-ui').count(),0);
  assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('study-mode')||el.classList.contains('two-tab-mode')),false);
 }
+async function checkCountdownLayout(){
+ const layout=await page.evaluate(()=>{const h=document.querySelector('.halloween-countdown').getBoundingClientRect(),m=document.querySelector('.map-countdown').getBoundingClientRect(),copy=document.querySelector('.halloween-countdown').textContent;return {halloweenBottom:h.bottom,mapTop:m.top,teases:/Hidden Halloween Key|B2 archive|Follow the invitation/i.test(copy),overflow:document.documentElement.scrollWidth>innerWidth};});
+ assert.equal(layout.teases,false,'Halloween feature teasers must stay out of the map release menu');
+ assert.ok(layout.mapTop>=layout.halloweenBottom-1,`release cards overlap: ${JSON.stringify(layout)}`);
+ assert.equal(layout.overflow,false,'countdown cards must fit the viewport width');
+}
 try{
  for(const query of ['', '?mode=study','?mode=coop-test','?mode=coop-test&role=guest&session=test-1234','?mode=finale']){await page.goto(base+'/'+query);await cleanMenu();console.log('Clean menu:',query||'/');}
+ for(const viewport of [{width:1280,height:900},{width:1200,height:800},{width:390,height:844}]){await page.setViewportSize(viewport);await checkCountdownLayout();console.log('Countdown cards fit:',viewport);}
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
  await page.locator('#lobby-multiplayer').click();await page.locator('#lobby-back').waitFor();await page.locator('#lobby-back').click();await cleanMenu();
  await page.setViewportSize({width:1200,height:800});await page.locator('#lobby-singleplayer').click();await page.waitForFunction(()=>!!window.monochrome);await page.evaluate(()=>{monochrome.renderer.render=()=>{};});await page.locator('.arrival-skip').click();await page.waitForFunction(()=>!monochrome.arrival.active);
