@@ -14,7 +14,7 @@ export function hasRecoveredFootage(){try{return localStorage.getItem(FOOTAGE_KE
 export function rememberFootage(){try{localStorage.setItem(FOOTAGE_KEY,'1');}catch{}}
 
 export function createHalloweenExperience({renderer,camera,run,input,ui,world=null,torch=null,players=()=>[],localId='solo',onReturn=()=>{},onMute=()=>{},isMuted=()=>false,poseFor=p=>p,replay=false,teaserPreview=false}){
- if(!run.halloween)return {render:()=>false,finish(){},dispose(){}};
+ if(!run.halloween)return {render:()=>false,finish(){},pause(){},dispose(){}};
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x030405);scene.fog=new THREE.FogExp2(0x050607,.065);
  const resources=new Set(),root=new THREE.Group();scene.add(root);
  const mat=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.88,...extra});resources.add(m);return m;};
@@ -39,7 +39,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
  const overlay=document.createElement('section');overlay.className='b2-overlay';overlay.hidden=true;overlay.innerHTML='<div class="b2-top"><div><small>RESTRICTED SERVICE ACCESS</small><strong>B2 / THE ARCHIVE</strong></div><button class="b2-mute">Sound on · M</button></div><div class="b2-letterbox"></div><p class="b2-subtitle" aria-live="polite"></p><div class="b2-fade"></div><div class="b2-bottom"><p class="b2-hint"></p><button class="b2-return" hidden>Return to B1</button></div>';
  document.body.append(overlay);const el=s=>overlay.querySelector(s),sub=el('.b2-subtitle'),fade=el('.b2-fade'),hint=el('.b2-hint'),returnButton=el('.b2-return');returnButton.onclick=()=>{renderer.domElement.focus();onReturn();};el('.b2-mute').onclick=()=>{onMute();resumeScore();renderer.domElement.focus();};
  const score=createHalloweenAudio(),{scene:teaserScene,audio:teaserAudio,sample:sampleFilm}=createDeferredTeaser();
- const voice=createB2Voice();const resumeScore=()=>{score.resume();teaserAudio.resume();voice.resume();};renderer.domElement.addEventListener('pointerdown',resumeScore);overlay.addEventListener('pointerdown',resumeScore);const unlockKey=()=>{if(active)resumeScore();};document.addEventListener('keydown',unlockKey);
+ const voice=createB2Voice();const resumeScore=()=>{if(disposed||!active)return;score.resume();teaserAudio.resume();voice.resume();};renderer.domElement.addEventListener('pointerdown',resumeScore);overlay.addEventListener('pointerdown',resumeScore);const unlockKey=()=>{if(active)resumeScore();};document.addEventListener('keydown',unlockKey);
  const visibility=()=>{if(document.hidden){voice.pause();score.pause();teaserAudio.pause();}};document.addEventListener('visibilitychange',visibility);
  const avatars=new Map();let asset,disposed=false,avatarLoading=null;function prepareAvatars(){avatarLoading??=loadPlayerAvatarAsset().then(a=>{if(!disposed)asset=a;}).catch(()=>{});return avatarLoading;}
  let active=false,stageKey='',recordElapsed=-1,recordAt=0,interactHeld=false,entryPose=null,unlockEntry=null,reveal=null;

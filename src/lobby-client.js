@@ -329,10 +329,10 @@ export function createLobbyClient(options = {}) {
       else commandQueue = commandQueue.then(execute, execute);
       return true;
     },
-    recover() {
+    recover({resumeOwner=room?.ownerId===id}={}) {
       if(!connected||!id)return Promise.reject(new Error('The session is closed.'));
       if(recoveryPromise)return recoveryPromise;const currentGeneration=generation;
-      recoveryPromise=(async()=>{try{const data=await rpc('game_recover');if(currentGeneration!==generation||!connected)return;
+      recoveryPromise=(async()=>{try{const data=await rpc('game_recover',{p_resume:resumeOwner});if(currentGeneration!==generation||!connected)return;
         if(!data?.room)throw new Error('NOT_MEMBER');removeRoomSubscription();removeVoice();room=data.room;await subscribeToRoom(room);if(currentGeneration!==generation||!connected)return;
         roomJson=JSON.stringify(room);emit({type:'lobby',lobby:room});emit({type:'recovered',lobby:room,snapshot:data.snapshot,serverNow:data.serverNow});emit({type:'connection',status:'connected'});return data;
       }catch(error){if(currentGeneration===generation){if(error.message==='NOT_MEMBER'||error.message==='ROOM_NOT_FOUND')clearRoom();else emit({type:'connection',status:'reconnecting'});}throw new Error(normalizeError(error).message,{cause:error});

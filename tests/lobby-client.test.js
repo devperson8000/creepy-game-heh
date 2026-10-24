@@ -318,3 +318,13 @@ test('only bounded unload checkpoints opt into keepalive', async () => {
  const url='https://project.supabase.co/rest/v1/rpc/game_publish_snapshot';await fetcher(url,{body:'{}'});unloading=true;await fetcher(url,{body:'{}'});await fetcher(url,{body:'x'.repeat(50000)});
  assert.notEqual(requests[0].keepalive,true);assert.equal(requests[1].keepalive,true);assert.notEqual(requests[2].keepalive,true);
 });
+
+test('an owner transport recovery rotates server authority before rebuilding the simulation; guests do not',async()=>{
+ for(const owner of [true,false]){const b=backend(),running={...room,status:'running',seed:42,ownerId:owner?'user-1':'another',ownerEpoch:3};b.values.set('game_room',{data:running});b.values.set('game_recover',{data:{room:{...running,ownerEpoch:owner?4:3},snapshot:{sequence:22}}});const client=createLobbyClient({client:b.client});await client.connect();await client.recover();assert.deepEqual(b.calls.find(([name])=>name==='game_recover')[1],{p_resume:owner});await client.close();}
+});
+
+// A just-elected successor already has a new server epoch; only a rebuilt
+// existing owner's simulation needs another rotation.
+test('a newly elected owner can accept the server handoff without rotating its epoch again',async()=>{
+ const b=backend(),running={...room,status:'running',seed:42,ownerEpoch:1};b.values.set('game_room',{data:running});b.values.set('game_recover',{data:{room:running,snapshot:{sequence:22}}});const client=createLobbyClient({client:b.client});await client.connect();await client.recover({resumeOwner:false});assert.deepEqual(b.calls.find(([name])=>name==='game_recover')[1],{p_resume:false});await client.close();
+});
