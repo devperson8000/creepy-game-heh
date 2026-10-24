@@ -9,7 +9,7 @@ test('eight-second sprint exhausts, restores after a delay, and walking is slowe
  for(let i=0;i<160;i++)predict.step(command,.05);
  assert.ok(p.stamina<1e-6);assert.equal(p.exhausted,true);assert.ok(Math.abs(p.z-8*6.2)<.01);
  const at=p.z;for(let i=0;i<20;i++)predict.step({...command,sprint:false},.05);assert.ok(Math.abs(p.z-at-4.6)<.01);assert.ok(p.stamina<1e-6);
- assert.ok(MAZE_MOVEMENT.walk<MAZE_MONSTER_SPEED.chase&&MAZE_MOVEMENT.sprint>MAZE_MONSTER_SPEED.chase);
+ assert.ok(MAZE_MOVEMENT.walk<MAZE_MONSTER_SPEED.chase);assert.equal(MAZE_MOVEMENT.sprint,MAZE_MONSTER_SPEED.chase);
  for(let i=0;i<123;i++)predict.step({...command,sprint:false},.05);assert.ok(p.stamina>.99);assert.equal(p.exhausted,false);
 });
 test('delayed co-op command replay converges for position and stamina through exhaustion and recovery',()=>{

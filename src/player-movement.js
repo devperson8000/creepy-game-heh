@@ -1,6 +1,6 @@
 import {groundHeight,moveInWorld} from './level.js';
 export const MAZE_MOVEMENT=Object.freeze({walk:4.6,sprint:6.2,sprintSeconds:8,recoveryDelay:1.1,recoverySeconds:6,restartAt:.25});
-export const MAZE_MONSTER_SPEED=Object.freeze({patrol:3.2,investigate:4.6,chase:5.5});
+export const MAZE_MONSTER_SPEED=Object.freeze({patrol:3.2,investigate:4.6,chase:MAZE_MOVEMENT.sprint});
 export function mazeMovement(canMove){return (typeof canMove.gameplay==='function'?canMove.gameplay():canMove.gameplay)==='maze';}
 /** Identical bounded physics for solo, host inputs, prediction and command replay. */
 export function movePlayer(player,command,delta,canMove){
