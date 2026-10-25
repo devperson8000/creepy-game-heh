@@ -19,7 +19,7 @@ test('the approach travels toward a fixed corner then settles into the peek with
   const s=sampleNeedlelimbsTeaser(f/60);phases.add(s.shot);
   for(const n of [...s.needle.position,s.needle.peek,s.needle.walk,s.monochrome.walk,...s.monochrome.position])assert.ok(Number.isFinite(n));
   if(last&&s.needle.visible&&last.needle.visible)assert.ok(Math.hypot(...s.needle.position.map((x,i)=>x-last.needle.position[i]))<.08);
-  if(s.needle.visible&&s.needle.peek>.9)assert.ok(s.needle.walk<.1,'peek settles into a planted stance');
+  if(s.needle.visible&&s.needle.peek>.99)assert.ok(s.needle.walk<.1,'peek settles into a planted stance');
   last=s;
  }
  assert.deepEqual([...phases],['arrival','corner','rebuilt','title']);
@@ -30,7 +30,7 @@ test('Monochrome approaches behind Needlelimbs before a sustained mechanical hea
  const a=sampleNeedlelimbsTeaser(12.5),b=sampleNeedlelimbsTeaser(15.5),c=sampleNeedlelimbsTeaser(18);
  assert.equal(a.shot,'rebuilt');assert.ok(a.needle.visible&&a.monochrome.visible);
  const gap=s=>Math.hypot(...s.monochrome.position.map((x,i)=>x-s.needle.position[i]));
- assert.ok(gap(a)>gap(b));assert.ok(c.monochrome.closeup>.9);
+ assert.ok(b.monochrome.position[0]<a.monochrome.position[0]);assert.ok(c.monochrome.closeup>.9);
  assert.equal(sampleNeedlelimbsTeaser(20.9).blackout,true);assert.equal(sampleNeedlelimbsTeaser(22).shot,'title');
 });
 test('the replacement head has solid metal plates, articulated jaw, neck damage and no original head meshes',()=>{
@@ -66,4 +66,12 @@ test('unidentified animations need an explicit reviewed clip selection',()=>{
  const asset=rig();asset.animations[0].name='Take 001';
  assert.throws(()=>createNeedlelimbsActor(asset),/walk|animation/i);
  const actor=createNeedlelimbsActor(asset,{walkClipName:'Take 001'});actor.sample({travel:.3});actor.dispose();
+});
+
+test('Needlelimbs keeps its body behind the corner and withdraws before the mechanical reveal',()=>{
+ for(let t=4;t<20.65;t+=1/60){const n=sampleNeedlelimbsTeaser(t).needle;assert.ok(n.position[0]>=4.25-1e-6);}
+ assert.ok(sampleNeedlelimbsTeaser(7.6).needle.peek>.99);
+ assert.equal(sampleNeedlelimbsTeaser(8.7).needle.peek,0);
+ assert.equal(sampleNeedlelimbsTeaser(10.6).needle.travel,0);
+ assert.equal(sampleNeedlelimbsTeaser(12).needle.position[0],6.15);
 });

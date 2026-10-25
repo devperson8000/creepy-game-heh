@@ -42,7 +42,11 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
   const moving=THREE.MathUtils.clamp(walk,0,1);
   for(const [name,bone] of bones)if(/^(thigh|shin|foot|leg)/.test(name))bone.quaternion.slerp(bind.get(bone).quaternion,1-moving);
   const p=THREE.MathUtils.clamp(peek,0,1);
-  if(neck){neck.rotation.y+=p*.15;neck.rotation.z-=p*.1;}
+  // Lean from the upper spine, then turn the neck/head; the planted root stays behind cover.
+  const chest=find(/^(spine002|chest)$/),shoulders=find(/^spine003$/);
+  if(chest)chest.rotation.x+=p*.07;
+  if(shoulders)shoulders.rotation.x+=p*.04;
+  if(neck){neck.rotation.x+=p*.06;neck.rotation.y+=p*.15;neck.rotation.z-=p*.1;}
   head.rotation.y+=p*.5;head.rotation.z-=p*.16;
   root.position.fromArray(position);root.rotation.set(0,yaw,0);
   // Preserve the imported bent stance and source skeletal gait.

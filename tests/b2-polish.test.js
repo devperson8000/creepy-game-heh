@@ -17,3 +17,10 @@ test('B2 camera starts and finishes at the actual player view and holds the whol
 test('hooded figure reaches the actual switch with its fingers and keeps its feet grounded',()=>{
  const npc=createHoodedStranger(),switchAt=[.4,1.11,-2.13];npc.sample(10,{reach:1,press:1,switchAt});const tip=npc.fingerTip.getWorldPosition(new THREE.Vector3());assert.ok(tip.distanceTo(new THREE.Vector3(...switchAt))<.06);assert.equal(npc.root.position.y,.06);assert.ok(npc.root.getObjectByName('hood-opening'));assert.ok(new THREE.Box3().setFromObject(npc.root).max.y>1.9);npc.dispose();npc.dispose();
 });
+
+test('the complete monitor bezel fits both viewport axes including a short ultrawide test frame',()=>{
+ for(const [width,height]of [[390,600],[1100,570],[1600,500],[950,240],[1920,1080]])for(const fov of [49,66,75]){
+  const aspect=width/height,frame=b2Frame(30,{aspect,fov,viewportHeight:height}),camera=new THREE.PerspectiveCamera(fov,aspect,.06,85);camera.position.fromArray(frame.camera);camera.lookAt(new THREE.Vector3(...frame.look));camera.updateMatrixWorld();
+  for(const x of [-.65-.775,-.65+.775])for(const y of [1.57-.52,1.57+.52]){const p=new THREE.Vector3(x,y,-1.94).project(camera);assert.ok(Math.abs(p.x)<.96&&Math.abs(p.y)<.88,`clipped bezel ${width}x${height} fov${fov}: ${p.toArray()}`);}
+ }
+});

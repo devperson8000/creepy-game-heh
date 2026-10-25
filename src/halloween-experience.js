@@ -68,7 +68,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
   ui.overlay=cinematic?'halloween':null;ui.root.hidden=cinematic;overlay.classList.toggle('cinematic',cinematic);
   el('.b2-mute').textContent=isMuted()?'Sound off · M':'Sound on · M';el('.b2-top strong').textContent=v.stage==='unlock'?'B1 / SERVICE ACCESS':'B2 / THE ARCHIVE';
   const prefs=gamePreferences();if(v.elapsed!==recordElapsed){recordElapsed=v.elapsed;recordAt=performance.now();}
-  const elapsed=v.elapsed+(replay?0:Math.min(.35,(performance.now()-recordAt)/1000)),conversation=v.stage==='conversation',own=players().find(p=>(p.id??'solo')===localId),frame=conversation?b2Frame(elapsed,{entry:entryPose??undefined,aspect:camera.aspect,fov:camera.fov}):null;
+  const elapsed=v.elapsed+(replay?0:Math.min(.35,(performance.now()-recordAt)/1000)),conversation=v.stage==='conversation',own=players().find(p=>(p.id??'solo')===localId),frame=conversation?b2Frame(elapsed,{entry:entryPose??undefined,aspect:camera.aspect,fov:camera.fov,viewportHeight:renderer.domElement.clientHeight}):null;
   score.update(v.stage,elapsed,{muted:isMuted()||(conversation&&frame.watching),volume:prefs.volume});
   const towardPlayer=entryPose?Math.atan2(entryPose.position[0]-.55,entryPose.position[2]+3):0;
   stranger.visible=!q.seen&&(!conversation||frame.strangerVisible);keeper.sample(elapsed,{reach:frame?.reach??0,press:frame?.press??0,headYaw:towardPlayer*(1-(frame?.monitorTurn??0))-.8*(frame?.monitorTurn??0),reducedMotion:reducedMotion(),switchAt:[.4,1.11,-2.13]});
