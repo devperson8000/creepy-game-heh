@@ -27,7 +27,7 @@ import {createArrival} from './arrival.js';
 
 export function startGame(container,{seed,autostart=false,halloween=false}={}){
  const ambience=createRoomAmbience();
- const arrival=autostart?createArrival({halloween}):null;
+ const arrival=autostart?createArrival({halloween,isMuted:()=>monsterAudio.muted}):null;
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed,{halloween}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});

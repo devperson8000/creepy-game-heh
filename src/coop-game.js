@@ -30,7 +30,7 @@ import {createArrival} from './arrival.js';
 
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience();
- const arrival=createArrival({halloween:session.halloween===true});
+ const arrival=createArrival({halloween:session.halloween===true,isMuted:()=>audio.muted});
  const savedRun=session.checkpoint?.state?.run;const state=createCoopState(session.seed,session.players,{halloween:savedRun?!!savedRun.halloween:session.halloween===true,maze:savedRun?.halloween?.maze??session.maze!==false,drawerRows:savedRun?.halloween?.drawerRows??session.drawerRows,initialPlayerCount:savedRun?.initialPlayerCount??session.players.length}),run=state.run;
  state.ownerId=session.ownerId;
  const localId=client.id;session.ownerEpoch??=0;let isHost=localId===session.ownerId;state.ownerEpoch=session.ownerEpoch;
