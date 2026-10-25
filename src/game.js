@@ -20,7 +20,7 @@ import {createArrival} from './arrival.js';
 
 export function startGame(container,{seed,autostart=false,mapUpdate=false}={}){
  const ambience=createRoomAmbience();
- const arrival=autostart?createArrival():null;
+ const arrival=autostart?createArrival({isMuted:()=>monsterAudio.muted}):null;
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed,{mapUpdate}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});

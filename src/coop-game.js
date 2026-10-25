@@ -24,7 +24,7 @@ import {createArrival} from './arrival.js';
 
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience();
- const arrival=createArrival();
+ const arrival=createArrival({isMuted:()=>audio.muted});
  const state=createCoopState(session.seed,session.players,{mapUpdate:!!session.mapUpdate}),run=state.run;
  state.ownerId=session.ownerId;
  const localId=client.id,isHost=localId===session.ownerId;
