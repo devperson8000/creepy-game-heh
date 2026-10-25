@@ -1,0 +1,37 @@
+[
+  {
+    "file": "needle-breath.mp3",
+    "title": "Terrifying Creature Breath",
+    "mixkitId": 2234,
+    "source": "https://assets.mixkit.co/active_storage/sfx/2234/2234.wav",
+    "sha256": "69f78ac2760d5cd990fac4da2206989d92b9532eb59b941ecb14ac64f88f7392"
+  },
+  {
+    "file": "needle-breath-heavy.mp3",
+    "title": "Creepy demon heavy breathing",
+    "mixkitId": 2240,
+    "source": "https://assets.mixkit.co/active_storage/sfx/2240/2240.wav",
+    "sha256": "cd6acf1dc873dc3716062221ac373bd60f96dc3f876a61235ddc503975de01c3"
+  },
+  {
+    "file": "room-dread.mp3",
+    "title": "Horror ambience",
+    "mixkitId": 2482,
+    "source": "https://assets.mixkit.co/active_storage/sfx/2482/2482.wav",
+    "sha256": "9f623396410f8aba9ef85d7bc048272f6d5f2231c6bce51157db582d46625de4"
+  },
+  {
+    "file": "vent-wind.mp3",
+    "title": "Horror sci-fi wind tunnel",
+    "mixkitId": 894,
+    "source": "https://assets.mixkit.co/active_storage/sfx/894/894.wav",
+    "sha256": "ccdc075125633e781e5c1d95920b3dd91905bda42b52262eda3e098474d764e4"
+  },
+  {
+    "file": "monitor-static.mp3",
+    "title": "Broken radio frequency signal",
+    "mixkitId": 2563,
+    "source": "https://assets.mixkit.co/active_storage/sfx/2563/2563.wav",
+    "sha256": "85c27d23c4adb161796acca506fa1b58e76b1c74c899adba67762e389ecfa314"
+  }
+]
