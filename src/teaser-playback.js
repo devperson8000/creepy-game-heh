@@ -6,5 +6,5 @@ import {sampleNeedlelimbsTeaser,NEEDLELIMBS_VOICES,NEEDLELIMBS_SOUND_CUES,NEEDLE
 
 /** B2, replay and tests share the supplied Needlelimbs edit. */
 export function createTeaserPlayback(){
- return prependFinaleRecap({scene:createNeedlelimbsTeaserScene({allowMissingNeedlelimbs:!NEEDLELIMBS_READY}),audio:createTeaserAudio({voices:NEEDLELIMBS_VOICES,soundCues:NEEDLELIMBS_SOUND_CUES,monsterCue:NEEDLELIMBS_MONSTER_CUE}),sample:sampleNeedlelimbsTeaser});
+ return prependFinaleRecap({scene:createNeedlelimbsTeaserScene({allowMissingNeedlelimbs:!NEEDLELIMBS_READY}),audio:createTeaserAudio({footsteps:false,voices:NEEDLELIMBS_VOICES,soundCues:NEEDLELIMBS_SOUND_CUES,monsterCue:NEEDLELIMBS_MONSTER_CUE}),sample:sampleNeedlelimbsTeaser});
 }

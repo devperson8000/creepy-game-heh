@@ -28,7 +28,7 @@ test('the approach travels toward a fixed corner then settles into the peek with
 });
 test('Monochrome approaches behind Needlelimbs before a sustained mechanical head reveal',()=>{
  const a=sampleNeedlelimbsTeaser(12.5),b=sampleNeedlelimbsTeaser(15.5),c=sampleNeedlelimbsTeaser(18);
- assert.equal(a.shot,'rebuilt');assert.ok(a.needle.visible&&a.monochrome.visible);
+ assert.equal(a.shot,'rebuilt');assert.equal(a.needle.visible,false);assert.equal(a.monochrome.visible,true);
  const gap=s=>Math.hypot(...s.monochrome.position.map((x,i)=>x-s.needle.position[i]));
  assert.ok(b.monochrome.position[0]<a.monochrome.position[0]);assert.ok(c.monochrome.closeup>.9);
  assert.equal(sampleNeedlelimbsTeaser(20.9).blackout,true);assert.equal(sampleNeedlelimbsTeaser(22).shot,'title');
@@ -74,4 +74,8 @@ test('Needlelimbs keeps its body behind the corner and withdraws before the mech
  assert.equal(sampleNeedlelimbsTeaser(8.7).needle.peek,0);
  assert.equal(sampleNeedlelimbsTeaser(10.6).needle.travel,0);
  assert.equal(sampleNeedlelimbsTeaser(12).needle.position[0],6.15);
+});
+
+test('the creatures never share the reveal: Needlelimbs clears before Monochrome enters',()=>{
+ for(let t=0;t<25;t+=1/120){const s=sampleNeedlelimbsTeaser(t);assert.equal(s.needle.visible&&s.monochrome.visible,false);}
 });

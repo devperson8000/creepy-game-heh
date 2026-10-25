@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createNeedleGait} from './needlelimbs-gait.js';
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 export const NEEDLELIMBS_MODEL_URL='/models/teaser/needlelimbs.glb';
@@ -31,10 +32,13 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
   const base=bind.get(bone)?.position??bone.position;
   for(let i=0;i<track.values.length;i+=3){track.values[i]=base.x;track.values[i+2]=base.z;}
  }
- const mixer=new THREE.AnimationMixer(model),action=mixer.clipAction(clip);action.play();
- function sample({travel=0,walk=1,peek=0,position=[0,0,0],yaw=0}={}){
+ const mixer=new THREE.AnimationMixer(model),action=mixer.clipAction(clip);action.play();mixer.setTime(0);
+ root.updateMatrixWorld(true);model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
+ model.position.y-=new THREE.Box3().setFromObject(model).min.y;root.updateMatrixWorld(true);
+ const gait=createNeedleGait(model),basePosition=model.position.clone();
+ function sample({travel=0,walk=1,peek=0,time=0,position=[0,0,0],yaw=0}={}){
   if(disposed)return;
-  action.stop();
+  action.stop();model.position.copy(basePosition);
   for(const [bone,saved] of bind){bone.position.copy(saved.position);bone.quaternion.copy(saved.quaternion);bone.scale.copy(saved.scale);}
   // Continuous distance-based sampling makes seeking and co-op clocks deterministic.
   action.reset().play();action.enabled=true;action.setEffectiveWeight(1);mixer.setTime(Math.max(0,travel)*.9);
@@ -44,7 +48,7 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
   const p=THREE.MathUtils.clamp(peek,0,1);
   // Lean from the upper spine, then turn the neck/head; the planted root stays behind cover.
   const chest=find(/^(spine002|chest)$/),shoulders=find(/^spine003$/);
-  if(chest)chest.rotation.x+=p*.07;
+  if(chest){chest.rotation.x+=p*.07+Math.sin(time*1.8)*.006;chest.rotation.z+=Math.sin(travel/.95*Math.PI*2)*.012*moving;}
   if(shoulders)shoulders.rotation.x+=p*.04;
   if(neck){neck.rotation.x+=p*.06;neck.rotation.y+=p*.15;neck.rotation.z-=p*.1;}
   head.rotation.y+=p*.5;head.rotation.z-=p*.16;
@@ -53,10 +57,12 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
   root.updateMatrixWorld(true);
   // Refresh skinned bounds: cached rest-pose bounds cannot ground an animated rig.
   model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
-  const sole=new THREE.Box3().setFromObject(model).min.y;
-  if(Number.isFinite(sole))model.position.y+=position[1]-sole;
+
+  gait.sample({travel,walk:moving,position,yaw});
+  root.updateMatrixWorld(true);
+  model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
   root.updateMatrixWorld(true);
  }
  function dispose(){if(disposed)return;disposed=true;mixer.stopAllAction();mixer.uncacheRoot(model);skeletons.forEach(s=>s.dispose());surfaces.forEach(m=>m.dispose());root.removeFromParent();}
- return {root,model,head,neck,sample,dispose};
+ return {root,model,head,neck,gait,sample,dispose};
 }

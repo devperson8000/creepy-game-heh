@@ -26,7 +26,7 @@ export function prependFinaleRecap(film,{loadAsset=loadPlayerAvatarAsset,createH
   const f=recapFrame(time);if(f.phase==='teaser'){film.scene.render(renderer,f.teaserTime,options);return;}
   if(historical&&f.phase==='recap'){historical.sample(f.finaleTime,options);veilMaterial.opacity=f.fade;}
   const previous=renderer.getRenderTarget(),exposure=renderer.toneMappingExposure,auto=renderer.autoClear,viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest();
-  try{renderer.setRenderTarget(film.scene.target);renderer.setViewport(0,0,film.scene.target.width,film.scene.target.height);renderer.setScissorTest(false);renderer.autoClear=true;renderer.toneMappingExposure=.85;
+  try{renderer.setRenderTarget(film.scene.target);renderer.setScissorTest(false);renderer.autoClear=true;renderer.toneMappingExposure=.85;
    renderer.render(f.phase==='recap'&&historical?historical.scene:slate,f.phase==='recap'&&historical?historical.camera:camera);
   }finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.toneMappingExposure=exposure;renderer.autoClear=auto;}
  }

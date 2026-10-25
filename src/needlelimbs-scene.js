@@ -30,7 +30,7 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset,all
  box(5,4.4,.2,0,2.1,6.5,dark);const doors=[box(1.15,3,.12,-.58,1.5,6.3,steel),box(1.15,3,.12,.58,1.5,6.3,steel)];
  box(.15,3.2,.25,-1.25,1.6,6.2);box(.15,3.2,.25,1.25,1.6,6.2);box(2.65,.12,.25,0,3.15,6.2,fixture);
  const rebuilt=createRebuiltMonochrome();scene.add(rebuilt.root);
- const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const ctx=canvas.getContext('2d');ctx.fillStyle='#040707';ctx.fillRect(0,0,1280,720);ctx.textAlign='center';ctx.fillStyle='#e2e4da';ctx.font='bold 82px sans-serif';ctx.fillText('MONOCHROME',590,375);ctx.fillStyle='#b6a07e';ctx.fillText('II',983,375);ctx.fillStyle='#65736d';ctx.fillRect(435,425,410,1);
+ const canvas=document.createElement('canvas');canvas.width=1280;canvas.height=720;const ctx=canvas.getContext('2d');ctx.fillStyle='#040707';ctx.fillRect(0,0,1280,720);ctx.textAlign='center';ctx.fillStyle='#e2e4da';ctx.font='bold 74px sans-serif';ctx.fillText('MONOCHROME',640,330,1000);ctx.fillStyle='#b6a07e';ctx.font='52px sans-serif';ctx.fillText('II',640,425);ctx.fillStyle='#65736d';ctx.fillRect(480,475,320,1);
  const titleTexture=new THREE.CanvasTexture(canvas);titleTexture.colorSpace=THREE.SRGBColorSpace;textures.add(titleTexture);
  const overlayGeometry=new THREE.PlaneGeometry(2*Math.tan(49*Math.PI/360)*16/9,2*Math.tan(49*Math.PI/360));geometries.add(overlayGeometry);
  const titleMaterial=new THREE.MeshBasicMaterial({map:titleTexture,depthTest:false,depthWrite:false,toneMapped:false});materials.add(titleMaterial);
@@ -63,7 +63,7 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset,all
  function render(renderer,t,options={}){
   const width=options.quality==='low'?640:960;if(target.width!==width)target.setSize(width,width*9/16);sample(t,options);
   const previous=renderer.getRenderTarget(),exposure=renderer.toneMappingExposure,auto=renderer.autoClear,viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest();
-  try{renderer.setRenderTarget(target);renderer.setViewport(0,0,target.width,target.height);renderer.setScissorTest(false);renderer.autoClear=true;renderer.toneMappingExposure=1.1;renderer.render(scene,camera);}
+  try{renderer.setRenderTarget(target);renderer.setScissorTest(false);renderer.autoClear=true;renderer.toneMappingExposure=1.1;renderer.render(scene,camera);}
   finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.toneMappingExposure=exposure;renderer.autoClear=auto;}
  }
  function dispose(){if(disposed)return;disposed=true;survivor?.dispose();needle?.dispose();rebuilt.dispose();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());target.dispose();}
