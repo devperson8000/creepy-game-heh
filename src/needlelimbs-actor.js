@@ -13,7 +13,7 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
  const root=new THREE.Group(),model=clone(asset.scene);root.name='teaser-needlelimbs';root.add(model);
  const bones=new Map(),surfaces=new Map(),skeletons=new Set();let disposed=false;
  model.traverse(o=>{if(o.isBone)bones.set(o.name.toLowerCase().replace(/[^a-z0-9]/g,''),o);if(!o.isMesh)return;o.frustumCulled=false;o.castShadow=true;if(o.isSkinnedMesh)skeletons.add(o.skeleton);
-  const copy=m=>{if(!surfaces.has(m)){const c=m.clone();if(c.color)c.color.multiplyScalar(.65);c.roughness=Math.max(.58,c.roughness??.8);surfaces.set(m,c);}return surfaces.get(m);};o.material=Array.isArray(o.material)?o.material.map(copy):copy(o.material);
+  const copy=m=>{if(!surfaces.has(m)){const c=m.clone();if(c.color)c.color.multiplyScalar(c.map?.9:.65);c.roughness=Math.max(.58,c.roughness??.8);surfaces.set(m,c);}return surfaces.get(m);};o.material=Array.isArray(o.material)?o.material.map(copy):copy(o.material);
  });
  model.updateMatrixWorld(true);model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
  const bounds=new THREE.Box3().setFromObject(model),height=bounds.max.y-bounds.min.y;

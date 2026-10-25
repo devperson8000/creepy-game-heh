@@ -1,5 +1,5 @@
 """Run with Blender --background --python ... -- /absolute/Needle.fbx.
-Exports the supplied skinned model and its source animation, without missing image references.
+Exports the supplied skinned model and its source animation, with the supplied texture maps embedded when available.
 """
 import bpy, sys, os, json
 source=sys.argv[sys.argv.index('--')+1]
@@ -11,6 +11,8 @@ action.name='Needlelimbs_Walk'
 # The supplied Rigify metarig uses numbered spine bones for its neck and head.
 rig.data.bones['spine.006'].name='Head'
 rig.data.bones['spine.005'].name='Neck'
+# Source maps extracted from the user-supplied textures.docx.
+texture_dir=os.path.join(os.path.dirname(os.path.abspath(__file__)),'needlelimbs')
 # Missing source texture must not become a broken image in the browser.
 for o in bpy.context.scene.objects:
  if o.type!='MESH': continue
@@ -22,6 +24,20 @@ for o in bpy.context.scene.objects:
   bsdf.inputs['Base Color'].default_value=(.065,.075,.061,1)
   bsdf.inputs['Roughness'].default_value=.87
   bsdf.inputs['Metallic'].default_value=0
+  def image_node(filename,colorspace):
+   image=bpy.data.images.load(os.path.join(texture_dir,filename),check_existing=True)
+   image.colorspace_settings.name=colorspace
+   node=m.node_tree.nodes.new('ShaderNodeTexImage');node.image=image
+   return node
+  if os.path.exists(os.path.join(texture_dir,'base-color.jpg')):
+   color=image_node('base-color.jpg','sRGB')
+   m.node_tree.links.new(color.outputs['Color'],bsdf.inputs['Base Color'])
+   rough=image_node('roughness.jpg','Non-Color')
+   m.node_tree.links.new(rough.outputs['Color'],bsdf.inputs['Roughness'])
+   normal=image_node('normal.png','Non-Color')
+   normal_node=m.node_tree.nodes.new('ShaderNodeNormalMap')
+   m.node_tree.links.new(normal.outputs['Color'],normal_node.inputs['Color'])
+   m.node_tree.links.new(normal_node.outputs['Normal'],bsdf.inputs['Normal'])
 # Export only the real skeleton/model and its one reviewed source action.
 for a in list(bpy.data.actions):
  if a!=action: bpy.data.actions.remove(a)

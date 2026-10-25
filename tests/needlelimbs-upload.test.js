@@ -8,7 +8,12 @@ import {sampleNeedlelimbsTeaser} from '../src/needlelimbs-timeline.js';
 import {NEEDLELIMBS_READY} from '../src/teaser-edition.js';
 test('uploaded Needle rig walks, grounds, peeks independently and supports deterministic replay',async()=>{
  const bytes=readFileSync('public/models/teaser/needlelimbs.glb');
- const asset=await new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ // Node checks rig/texture bindings; the browser check decodes actual embedded images.
+ const loader=new GLTFLoader();loader.register(()=>({name:'NodeTextureFixture',loadTexture:()=>Promise.resolve(new THREE.DataTexture(new Uint8Array([128,128,255,255]),1,1))}));
+ const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const doc=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
+ assert.equal(doc.images.length,3);assert.ok(doc.images.every(i=>Number.isInteger(i.bufferView)&&!i.uri),'textures are embedded with no external requests');
+ const material=doc.materials[0];assert.ok(material.pbrMetallicRoughness.baseColorTexture);assert.ok(material.pbrMetallicRoughness.metallicRoughnessTexture);assert.ok(material.normalTexture);
  assert.equal(NEEDLELIMBS_READY,true);assert.equal(asset.animations[0].name,'Needlelimbs_Walk');
  const a=createNeedlelimbsActor(asset),leg=a.model.getObjectByName('thighL');assert.ok(leg);
  a.sample(sampleNeedlelimbsTeaser(4.3).needle);const before=leg.quaternion.clone();
