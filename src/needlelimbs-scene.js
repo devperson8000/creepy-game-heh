@@ -4,7 +4,7 @@ import {loadNeedlelimbsAsset,createNeedlelimbsActor} from './needlelimbs-actor.j
 import {createRebuiltMonochrome} from './mechanical-head.js';
 import {sampleNeedlelimbsTeaser} from './needlelimbs-timeline.js';
 
-/** Current edit: keep the Needlelimbs corner reserved until its selected rig arrives. */
+/** Current edit uses the supplied animated Needlelimbs rig in the corner reveal. */
 export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset,allowMissingNeedlelimbs=false}={}){
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x060809);scene.fog=new THREE.Fog(0x080b0c,13,30);
  const camera=new THREE.PerspectiveCamera(49,16/9,.05,45);scene.add(camera);

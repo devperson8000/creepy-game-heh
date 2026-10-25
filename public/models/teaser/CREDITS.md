@@ -31,4 +31,8 @@ Source: https://sketchfab.com/3d-models/backrooms-entity-38-needlelimbs-6e8ad10c
 
 Listing license: https://creativecommons.org/licenses/by/4.0/
 
-**No Needlelimbs mesh is included yet.** The official model download requires sign-in. `src/needlelimbs-actor.js` prepares an importer for the real animated asset; the replacement edit remains disabled until that source is obtained, credited and visually verified. The mechanical Monochrome head is original game geometry authored in `src/mechanical-head.js`.
+The user supplied `Needle.fbx` on 25 October 2026, identifying it as their selected Needlelimbs model. Converted to `needlelimbs.glb` with the supplied skeleton, skin weights, and animation; metarig head/neck bones mapped to the teaser controls. Source locomotion is sampled by approach distance, with a planted stop and independent head/neck peek. No replacement creature is used.
+
+The supplied FBX references `Material.001_Base_color.png` but does not embed it. The GLB currently uses a temporary dark rough material; the source base-color image is still needed for the intended textured appearance. Height and roughness images are optional refinements. The CC0 license in this directory belongs to the older assets, not Needlelimbs; the listing attribution/license above is retained for Needlelimbs.
+
+The mechanical Monochrome head is original game geometry authored in `src/mechanical-head.js`.

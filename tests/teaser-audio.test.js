@@ -22,9 +22,9 @@ test('unlocking a suspended audio context joins the current film instead of repl
  globalThis.document={hidden:false,addEventListener(){},removeEventListener(){}};
  t.mock.method(globalThis,'fetch',async url=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(url.includes('help')?2:url.includes('radio-out')?1:3)}));
  const audio=createTeaserAudio();audio.resume();await flush();await flush();
- for(let i=0;i<=50;i++)audio.update(i/10);
+ for(let i=0;i<=80;i++)audio.update(i/10);
  assert.equal(starts.length,0);
  context.state='running';pending.splice(0).forEach(resolve=>resolve());await flush();
  const voices=starts.filter(s=>s.duration>1);assert.equal(voices.length,1,'the radio line has finished and must not replay late');
- assert.ok(Math.abs(voices[0].when-15.05)<.05,'the distant Monochrome sound joins the final beat of the film');audio.dispose();
+ assert.ok(Math.abs(voices[0].when-4.5)<.05,'the metallic Monochrome cue joins at the current edit time');audio.dispose();
 });

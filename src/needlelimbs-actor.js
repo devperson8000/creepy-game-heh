@@ -26,22 +26,31 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
  // The director owns horizontal travel. Keep vertical weight shifts from the actual clip.
  const clip=walkClip.clone();
  for(const track of clip.tracks){
-  const binding=THREE.PropertyBinding.parseTrackName(track.name),name=String(binding.objectIndex??binding.nodeName??'').toLowerCase().replace(/[^a-z0-9]/g,''),bone=bones.get(name);
+  const binding=THREE.PropertyBinding.parseTrackName(track.name),name=String(binding.objectIndex??binding.nodeName??'').toLowerCase().replace(/[^a-z0-9]/g,''),bone=bones.get(name)??model.getObjectByName(binding.nodeName);
   if(binding.propertyName!=='position'||!bone||bone.parent?.isBone&&!/(hips|root|pelvis)/.test(name))continue;
-  const base=bind.get(bone).position;
+  const base=bind.get(bone)?.position??bone.position;
   for(let i=0;i<track.values.length;i+=3){track.values[i]=base.x;track.values[i+2]=base.z;}
  }
  const mixer=new THREE.AnimationMixer(model),action=mixer.clipAction(clip);action.play();
- function sample({travel=0,peek=0,position=[0,0,0],yaw=0}={}){
+ function sample({travel=0,walk=1,peek=0,position=[0,0,0],yaw=0}={}){
   if(disposed)return;
+  action.stop();
   for(const [bone,saved] of bind){bone.position.copy(saved.position);bone.quaternion.copy(saved.quaternion);bone.scale.copy(saved.scale);}
   // Continuous distance-based sampling makes seeking and co-op clocks deterministic.
-  action.enabled=true;action.setEffectiveWeight(1);mixer.setTime(Math.max(0,travel)*.9);
+  action.reset().play();action.enabled=true;action.setEffectiveWeight(1);mixer.setTime(Math.max(0,travel)*.9);
+  // Settle the source legs toward their planted imported stance as travel eases out.
+  const moving=THREE.MathUtils.clamp(walk,0,1);
+  for(const [name,bone] of bones)if(/^(thigh|shin|foot|leg)/.test(name))bone.quaternion.slerp(bind.get(bone).quaternion,1-moving);
   const p=THREE.MathUtils.clamp(peek,0,1);
   if(neck){neck.rotation.y+=p*.15;neck.rotation.z-=p*.1;}
   head.rotation.y+=p*.5;head.rotation.z-=p*.16;
   root.position.fromArray(position);root.rotation.set(0,yaw,0);
-  // A low stance keeps the real rig's silhouette; motion comes from its clip, not root bobbing.
+  // Preserve the imported bent stance and source skeletal gait.
+  root.updateMatrixWorld(true);
+  // Refresh skinned bounds: cached rest-pose bounds cannot ground an animated rig.
+  model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
+  const sole=new THREE.Box3().setFromObject(model).min.y;
+  if(Number.isFinite(sole))model.position.y+=position[1]-sole;
   root.updateMatrixWorld(true);
  }
  function dispose(){if(disposed)return;disposed=true;mixer.stopAllAction();mixer.uncacheRoot(model);skeletons.forEach(s=>s.dispose());surfaces.forEach(m=>m.dispose());root.removeFromParent();}

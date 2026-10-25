@@ -1,4 +1,4 @@
-/** The new edit is staged until the selected, animated Needlelimbs source arrives. */
+/** Shared choreography for the supplied animated Needlelimbs source. */
 export const NEEDLELIMBS_DURATION=25;
 export const NEEDLELIMBS_VOICES=[
  {at:1.1,end:2.4,file:'radio-out-v2',subtitle:'RADIO: “You made it out?”'},
