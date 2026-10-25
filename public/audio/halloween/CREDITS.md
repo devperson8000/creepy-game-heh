@@ -21,3 +21,13 @@ The Halloween metal form now uses the same original monster and jumpscare record
 Halloween wake-up: `arrival-suit-v1.mp3` is original game dialogue (“I wasn’t wearing this suit.”), generated locally with Kokoro `am_michael` at1.06 speed, matching B2’s protagonist. It lasts1.62s and ships as a21kB local MP3. No actor voice was cloned; no online speech service/model weights are shipped. It follows the same Kokoro/source licence notices as the v3 B2 lines above.
 
 Current survivor reply (v3): `survivor-reply-v3.mp3` uses Kokoro-82M v1.0 via kokoro-onnx with `am_michael`, matching the house and B2 protagonist. Original script: “Yes. But I don't think it was just Monochrome.” Two natural phrases, 120 ms hesitation, speeds 1.05/1.12; total spoken duration 3.128 s (MP3 container 3.192 s). High-pass 70 Hz, low-pass 11 kHz, -17 LUFS / -2 dBTP, mono 24 kHz / 96 kbps. No cloned voice or runtime TTS service. Generation script: scripts/audio/teaser-survivor.py; same Kokoro licence/acknowledgements as above.
+
+Halloween update sound pass (26 October 2026 Sydney): Mixkit Sound Effects Free License, https://mixkit.co/license/#sfxFree. Official WAV downloads are identified with original-file SHA-256 hashes in `sfx/sources.json`. The game embeds local MP3 derivatives; no runtime request goes to Mixkit.
+
+- `sfx/needle-breath.mp3`: “Terrifying Creature Breath”, Mixkit 2234. Main Needlelimbs peek breath, after the survivor reply.
+- `sfx/needle-breath-heavy.mp3`: “Creepy demon heavy breathing”, Mixkit 2240. A quieter filtered approach accent.
+- `sfx/room-dread.mp3`: “Horror ambience”, Mixkit 2482. Intermittent corridor atmosphere with quiet gaps.
+- `sfx/vent-wind.mp3`: “Horror sci-fi wind tunnel”, Mixkit 894. Sparse directional ventilation swells.
+- `sfx/monitor-static.mp3`: “Broken radio frequency signal”, Mixkit 2563. Brief archive-monitor interference.
+
+Sources: https://mixkit.co/free-sound-effects/horror/ and https://mixkit.co/free-sound-effects/monster/. Conversion: high-pass 70 Hz, low-pass 9 kHz, -20 LUFS / -3 dBTP, mono 24 kHz / 80 kbps MP3. Playback adds scene-specific attenuation, filtering and short fades; no voice imitation. These samples load only in enabled Halloween gameplay or the authorized Halloween teaser/test scenes. The ordinary public map release is unchanged.

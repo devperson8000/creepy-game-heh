@@ -28,3 +28,8 @@ export function sampleNeedlelimbsTeaser(value){
   monochrome:{visible:time>=12&&time<20.65,position:[7.5-distance,0,-6.2],yaw:-Math.PI/2+.3*smooth(17,19,time),travel:distance,walk:smooth(12,12.5,time)*(1-smooth(16,17,time)),closeup:smooth(16.5,18,time),jaw:smooth(17.7,19.4,time)}
  };
 }
+
+export const NEEDLELIMBS_RECORDED_CUES=[
+ {at:4.65,end:5.25,file:'sfx/needle-breath-heavy',gain:.045,offset:.35,pan:.65,lowpass:2300},
+ {at:7.3,end:8.2,file:'sfx/needle-breath',gain:.22,offset:.12,pan:.48,lowpass:4800}
+];

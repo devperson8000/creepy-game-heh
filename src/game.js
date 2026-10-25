@@ -26,7 +26,7 @@ import {createSoundOcclusion} from './sound-occlusion.js';
 import {createArrival} from './arrival.js';
 
 export function startGame(container,{seed,autostart=false,halloween=false}={}){
- const ambience=createRoomAmbience();
+ const ambience=createRoomAmbience({halloween});
  const arrival=autostart?createArrival({halloween,isMuted:()=>monsterAudio.muted}):null;
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed,{halloween}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
@@ -179,7 +179,7 @@ export function startGame(container,{seed,autostart=false,halloween=false}={}){
   if(Math.abs(camera.fov-breathingFov)>.01){camera.fov=breathingFov;camera.updateProjectionMatrix();}
   world.update(!ui.overlay&&run.phase==='playing'?frameDelta:0,time,player,threat,hold,{position:{...enemy.position,height:groundHeight(enemy.position)},hunting:enemy.mode==='chase',active:huntActive(run)});
   torch.update({ceilingPower:world.lighting.visibility,time,delta:frameDelta,surfaceDistance,sprinting:player.sprint,hold,moving:!run.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
-  const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update({huntElapsed:run.huntElapsed,threat:ambushResult.silent?0:threat,hidden:run.hidden,sprinting:!run.hidden&&player.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta:frameDelta});
+  const prefs=gamePreferences();quality.update(frameDelta,prefs.quality);monsterAudio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay)ambience.update({yaw:input.yaw,huntElapsed:run.huntElapsed,threat:ambushResult.silent?0:threat,hidden:run.hidden,sprinting:!run.hidden&&player.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta:frameDelta});
   renderer.toneMappingExposure=torch.exposure*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));

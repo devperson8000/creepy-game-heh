@@ -29,7 +29,7 @@ import {createSoundOcclusion} from './sound-occlusion.js';
 import {createArrival} from './arrival.js';
 
 export function startCoopGame(container,{client,session}){
- const ambience=createRoomAmbience();
+ const ambience=createRoomAmbience({halloween:session.halloween===true});
  const arrival=createArrival({halloween:session.halloween===true,isMuted:()=>audio.muted});
  const savedRun=session.checkpoint?.state?.run;const state=createCoopState(session.seed,session.players,{halloween:savedRun?!!savedRun.halloween:session.halloween===true,maze:savedRun?.halloween?.maze??session.maze!==false,drawerRows:savedRun?.halloween?.drawerRows??session.drawerRows,initialPlayerCount:savedRun?.initialPlayerCount??session.players.length}),run=state.run;
  state.ownerId=session.ownerId;
@@ -367,7 +367,7 @@ export function startCoopGame(container,{client,session}){
   world.update(disconnected?0:delta,time,watched,threat,hold,{position:{...enemyView.position,height:groundHeight(enemyView.position)},hunting:enemyView.mode==='chase',active:hunting});
   torch.update({ceilingPower:world.lighting.visibility,time,delta,surfaceDistance,sprinting:own.sprint,hold,moving:own.status==='alive'&&!own.hidden&&!ui.overlay&&(input.movement.forward!==0||input.movement.right!==0)});
   torch.beam.intensity=(own.status==='alive'?torch.on:watched.torch)?torch.power:0;
-  const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update({huntElapsed:renderedRun.huntElapsed,threat:silent?0:threat,hidden:watched.hidden,sprinting:own.status==='alive'&&own.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta});
+  const prefs=gamePreferences();if(!document.hidden)quality.update(delta,prefs.quality);audio.setVolume(prefs.volume);ambience.setVolume(prefs.volume);if(!ui.overlay&&!disconnected)ambience.update({yaw:input.yaw,huntElapsed:renderedRun.huntElapsed,threat:silent?0:threat,hidden:watched.hidden,sprinting:own.status==='alive'&&own.sprint&&(input.movement.forward!==0||input.movement.right!==0),delta});
   renderer.toneMappingExposure=(own.status==='alive'?torch.exposure:.95*(watched.torch?1:world.lighting.visibility))*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(arrival.active){

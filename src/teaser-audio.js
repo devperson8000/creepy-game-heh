@@ -2,7 +2,7 @@ import {TEASER_VOICES,TEASER_SOUND_CUES,TEASER_MONSTER_CUE} from './teaser-timel
 import {MONSTER_SOUND_URL} from './monster-audio.js';
 import {createMetallicTeaserVoice} from './teaser-metallic-voice.js';
 /** Schedule dialogue on the audio clock, so a slow rendered frame cannot miss a line. */
-export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_CUES,monsterCue=TEASER_MONSTER_CUE,footsteps=true}={}){
+export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_CUES,monsterCue=TEASER_MONSTER_CUE,recordedCues=[],footsteps=true}={}){
  let context,master,noise,anchor=null,last=-1,lastAt=0,disposed=false,active=false;
  const buffers=new Map(),scheduled=new Set(),nodes=new Set(),cleanups=new Map(),abort=new AbortController();
  function track(source,gain,filter,extraCleanup){
@@ -12,13 +12,15 @@ export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_C
  function schedule(){
   if(disposed||!active||context?.state!=='running'||anchor===null||document.hidden)return;
   const time=context.currentTime-anchor;
-  for(const [i,cue] of [...voices,monsterCue].filter(Boolean).entries()){
+  for(const [i,cue] of [...voices,monsterCue,...recordedCues].filter(Boolean).entries()){
    const buffer=buffers.get(cue.file);if(!buffer||scheduled.has(i))continue;
-   const offset=Math.max(0,time-cue.at);if(time>=cue.end||offset>=buffer.duration){scheduled.add(i);continue;}
-   const source=context.createBufferSource(),gain=context.createGain();source.buffer=buffer;source.loop=cue.file==='monster';gain.gain.value=cue.file==='monster'?.34:.86;
-   source.connect(gain);
+   const offset=Math.max(0,time-cue.at)+(cue.offset??0);if(time>=cue.end||offset>=buffer.duration){scheduled.add(i);continue;}
+   const source=context.createBufferSource(),gain=context.createGain();source.buffer=buffer;source.loop=cue.file==='monster';gain.gain.value=cue.gain??(cue.file==='monster'?.34:.86);
+   let panner,filter;const end=Math.min(Math.max(context.currentTime,anchor+cue.at)+buffer.duration-offset,anchor+cue.end);
+   if(cue.gain!==undefined){const level=cue.gain,begin=Math.max(context.currentTime,anchor+cue.at),fade=Math.min(.09,(end-begin)/3);gain.gain.setValueAtTime(0,begin);gain.gain.linearRampToValueAtTime(level,begin+fade);gain.gain.setValueAtTime(level,end-fade);gain.gain.linearRampToValueAtTime(0,end);}
+   if(cue.lowpass){filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.value=cue.lowpass;source.connect(filter);filter.connect(gain);}else source.connect(gain);
    const metal=cue.file==='monster'?createMetallicTeaserVoice(context,master):null;
-   gain.connect(metal?.input??master);track(source,gain,null,()=>metal?.dispose());
+   if(cue.pan!==undefined&&context.createStereoPanner){panner=context.createStereoPanner();panner.pan.value=cue.pan;gain.connect(panner);panner.connect(master);}else gain.connect(metal?.input??master);track(source,gain,filter,()=>{metal?.dispose();panner?.disconnect();});
    const when=Math.max(context.currentTime,anchor+cue.at);source.start(when,offset);source.stop(Math.min(when+buffer.duration-offset,anchor+cue.end));scheduled.add(i);
   }
   for(const [i,cue] of soundCues.entries()){const key=`fx:${i}`;if(scheduled.has(key))continue;scheduled.add(key);if(time<cue.at+.2)sound(cue.kind,Math.max(context.currentTime,anchor+cue.at));}
@@ -28,7 +30,7 @@ export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_C
    if(!context){
     const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return;context=new C();master=context.createGain();master.gain.value=0;master.connect(context.destination);
     noise=context.createBuffer(1,context.sampleRate,context.sampleRate);const data=noise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;
-    for(const file of new Set([...voices.map(v=>v.file),...(monsterCue?['monster']:[])]))void fetch(file==='monster'?MONSTER_SOUND_URL:`/audio/halloween/${file}.mp3`,{signal:abort.signal}).then(r=>{if(!r.ok)throw new Error('Tape audio unavailable');return r.arrayBuffer();}).then(bytes=>context.decodeAudioData(bytes)).then(buffer=>{if(!disposed){buffers.set(file,buffer);schedule();}}).catch(()=>{});
+    for(const file of new Set([...voices.map(v=>v.file),...recordedCues.map(v=>v.file),...(monsterCue?['monster']:[])]))void fetch(file==='monster'?MONSTER_SOUND_URL:`/audio/halloween/${file}.mp3`,{signal:abort.signal}).then(r=>{if(!r.ok)throw new Error('Tape audio unavailable');return r.arrayBuffer();}).then(bytes=>context.decodeAudioData(bytes)).then(buffer=>{if(!disposed){buffers.set(file,buffer);schedule();}}).catch(()=>{});
    }
    void context.resume().then(()=>{if(!disposed&&active&&anchor===null){anchor=context.currentTime-(last+Math.max(0,(performance.now()-lastAt)/1000));}schedule();}).catch(()=>{});
   }catch{}

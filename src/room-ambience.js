@@ -1,3 +1,4 @@
+import {createHalloweenSoundscape} from './halloween-soundscape.js';
 import {HUNT_START_SECONDS} from './hunt-clock.js';
 const clamp=value=>Math.max(0,Math.min(1,Number.isFinite(value)?value:0));
 export function ambienceMix({huntElapsed=0,threat=0,hidden=false,sprinting=false}={}){
@@ -6,7 +7,9 @@ export function ambienceMix({huntElapsed=0,threat=0,hidden=false,sprinting=false
  return {room:1-hush*.9,heartbeat:clamp((danger-.25)/.75),breath:clamp((sprinting?.7:0)+danger*.25)*(hidden?.25:1),drone:hunting?.15+danger*.55:0};
 }
 /** Generated room tone, exertion and restrained threat cues. Gesture-gated. */
-export function createRoomAmbience(){
+export function createRoomAmbience({halloween=false}={}){
+ let seasonal;
+ const visibility=()=>{if(globalThis.document?.hidden)seasonal?.pause();};if(halloween)globalThis.document?.addEventListener?.('visibilitychange',visibility);
  let context,master,hum,air,drone,droneGain,breath,breathGain,disposed=false,muted=false,nextKnock=0,nextBeat=0,volume=1,mix=ambienceMix(),breathPhase=0,lastBus=null;
  const sounds=new Set();
  function bus(){if(!master||context.state==='closed')return;const target=muted?0:.028*volume*mix.room;if(target===lastBus)return;lastBus=target;master.gain.setTargetAtTime(target,context.currentTime,.12);}
@@ -14,7 +17,7 @@ export function createRoomAmbience(){
   if(disposed||muted)return;
   try{
    if(!context){
-    const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return;context=new C();master=context.createGain();master.gain.value=.028*volume;master.connect(context.destination);
+    const C=globalThis.AudioContext||globalThis.webkitAudioContext;if(!C)return;context=new C();master=context.createGain();master.gain.value=.028*volume;master.connect(context.destination);if(halloween)seasonal=createHalloweenSoundscape(context);
     hum=context.createOscillator();hum.type='sine';hum.frequency.value=54;hum.connect(master);hum.start();
     const buffer=context.createBuffer(1,Math.floor(context.sampleRate*3),context.sampleRate),data=buffer.getChannelData(0);let previous=0;
     for(let i=0;i<data.length;i++){previous=(previous+.035*(Math.random()*2-1))/1.025;data[i]=previous*.6;}
@@ -35,7 +38,7 @@ export function createRoomAmbience(){
   oscillator.start(now);oscillator.stop(now+duration+.02);sounds.add(oscillator);oscillator.onended=()=>{sounds.delete(oscillator);oscillator.disconnect();gain.disconnect();panner?.disconnect();};
  }
  function update(options={}){
-  mix=ambienceMix(options);if(!context||context.state!=='running'||disposed)return;bus();
+  mix=ambienceMix(options);seasonal?.update({...options,hush:mix.room,muted,volume});if(!context||context.state!=='running'||disposed)return;bus();
   const dt=Math.max(0,Math.min(.2,options.delta??1/60));breathPhase+=dt*(options.sprinting?1.1:.65)*Math.PI*2;
   droneGain.gain.setTargetAtTime(mix.drone*.5,context.currentTime,.4);breathGain.gain.setTargetAtTime(muted?0:mix.breath*.45*Math.pow(Math.max(0,Math.sin(breathPhase)),1.8),context.currentTime,.045);
   if(muted)return;
@@ -43,10 +46,10 @@ export function createRoomAmbience(){
   if(mix.heartbeat>.02&&now>=nextBeat){nextBeat=now+1100-mix.heartbeat*430;pulse(64,.16,mix.heartbeat*.65);pulse(54,.14,mix.heartbeat*.4,.19);}
   if(now<nextKnock||mix.room<.5)return;nextKnock=now+14000+Math.random()*18000;pulse(145+Math.random()*35,.5,.1,0,(Math.random()-.5)*1.5);
  }
- function setMuted(value){muted=!!value;bus();if(muted)for(const sound of sounds)sound.stop();}
+ function setMuted(value){muted=!!value;if(muted)seasonal?.pause();bus();if(muted)for(const sound of sounds)sound.stop();}
  function toggle(){setMuted(!muted);if(!muted)void resume();return !muted;}
  function setVolume(value){const next=clamp(value);if(next===volume)return;volume=next;bus();}
- function pause(){for(const sound of sounds)sound.stop();if(context?.state==='running')void context.suspend().catch(()=>{});}
- function dispose(){if(disposed)return;disposed=true;hum?.stop();air?.stop();drone?.stop();breath?.stop();for(const sound of sounds)sound.stop();sounds.clear();void context?.close();}
+ function pause(){seasonal?.pause();for(const sound of sounds)sound.stop();if(context?.state==='running')void context.suspend().catch(()=>{});}
+ function dispose(){if(disposed)return;disposed=true;globalThis.document?.removeEventListener?.('visibilitychange',visibility);seasonal?.dispose();hum?.stop();air?.stop();drone?.stop();breath?.stop();for(const sound of sounds)sound.stop();sounds.clear();void context?.close();}
  return {resume,update,toggle,setMuted,setVolume,pause,dispose,get muted(){return muted;}};
 }
