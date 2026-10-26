@@ -11,7 +11,7 @@ test('metal form owns its replacement and restores the original head when dispos
  const bounds=new THREE.Box3().setFromObject(machine.root);assert.ok(bounds.max.x-bounds.min.x>2);assert.ok(bounds.max.y-bounds.min.y<1.5);
  machine.dispose();machine.dispose();assert.ok(original.every(o=>o.visible));assert.equal(body.head.children.length,original.length);
 });
-test('Halloween jumpscare preserves lit steel, moving jaw and the original portrait framing',()=>{
+test('explicit sequel jumpscare preserves lit steel, moving jaw and the original portrait framing',()=>{
  const scare=createJumpscare({metallic:true});assert.ok(scare.face.getObjectByName('monochrome-mechanical-head'));
  const plate=scare.face.getObjectByName('mechanical-faceplate');assert.ok(plate.material.isMeshStandardMaterial);assert.ok(plate.material.metalness>.6);
  scare.resize(390/844);scare.start();scare.update(.15);assert.ok(Number.isFinite(scare.camera.position.z));assert.ok(scare.face.getObjectByName('mechanical-jaw').rotation.x>.1);

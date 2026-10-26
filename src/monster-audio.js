@@ -16,7 +16,7 @@ export function monsterGain(distance,active=true,{maze=false,elapsed=0}={}){
  return .85*Math.pow(proximity,maze?1.45:2.4)*(maze?Math.max(call,nearby):1);
 }
 
-export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{},maze=false,metallic=maze}={}){
+export function createMonsterAudio(url,{onError=()=>{},onScareError=()=>{},maze=false,metallic=false}={}){
  let context,gain,effectsGain,source,loading,noiseBuffer,wanted=false,muted=false,disposed=false,failed=false,volume=0;
  let masterVolume=1,elapsed=0,metalBus,scareMetal,spatialBus;
  let scareGain,scareBuffer,scareLoading,scareSource,scaring=false,scareStartedAt=0;

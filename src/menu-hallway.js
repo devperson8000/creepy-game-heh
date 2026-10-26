@@ -1,5 +1,3 @@
-import {halloweenEnabled} from './halloween-release.js';
-import {attachMechanicalHead} from './mechanical-head.js';
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {createCreature,applyRunning} from './creature.js';
@@ -41,7 +39,7 @@ export function startMenuHallway(container) {
   box(1.25,.04,.24,0,3.8,z,strip);
   const light=new THREE.PointLight(0xc1cfaf,15,13,2);light.position.set(0,3.45,z);scene.add(light);lamps.push(light);
  }
- const creature=createCreature();if(halloweenEnabled())attachMechanicalHead(creature);scene.add(creature.root);
+ const creature=createCreature();scene.add(creature.root);
  creature.root.scale.set(.82,.9,.82);
  // Eyes remain a suggestion at distance, without bright round pupils.
  creature.head.children.filter(child=>child.isMesh&&child.geometry.type==='SphereGeometry').forEach(eye=>{eye.visible=false;});
@@ -64,7 +62,7 @@ export function startMenuHallway(container) {
    const age=elapsed-event.start;
    if(age<.78&&!reducedMotion()){
     creature.root.visible=true;
-    applyRunning(creature,age*2.3);creature.mechanical?.sample(elapsed,{jaw:.2});
+    applyRunning(creature,age*2.3);
     creature.root.position.set(event.direction*(-5+age/.78*10),creature.root.position.y,event.z);
     creature.root.rotation.y=event.direction*Math.PI/2;
     creature.torso.rotation.x=.34;
@@ -79,7 +77,7 @@ export function startMenuHallway(container) {
  });
  return {dispose(){
   if(disposed)return;disposed=true;observer.disconnect();renderer.setAnimationLoop(null);
-  creature.mechanical?.dispose();const materials=new Set();scene.traverse(node=>{node.geometry?.dispose();if(node.material)materials.add(node.material);});
+  const materials=new Set();scene.traverse(node=>{node.geometry?.dispose();if(node.material)materials.add(node.material);});
   materials.forEach(material=>material.dispose());renderer.dispose();renderer.domElement.remove();
  }};
 }

@@ -48,3 +48,8 @@ test('failure loading the roaming loop does not disable the jumpscare channel',a
 test('legacy roaming sound keeps its original centred routing before the Halloween release',async t=>{
  const h=audioHarness(t),audio=createMonsterAudio('/loop.mp3');await audio.resume();await h.release();assert.equal(h.spatialPath('monster'),false);audio.dispose();
 });
+test('Halloween maze routing preserves the original voice and centred scream without enabling sequel processing',async t=>{
+ const h=audioHarness(t),errors=[],audio=createMonsterAudio('/loop.mp3',{maze:true,onError:error=>errors.push(error)});
+ assert.equal(await audio.resume(),true);await h.release();assert.deepEqual(errors,[]);
+ assert.equal(h.spatialPath('monster'),true);assert.equal(audio.playJumpscare(),true);assert.equal(h.spatialPath('scream'),false);audio.dispose();
+});
