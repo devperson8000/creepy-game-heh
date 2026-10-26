@@ -5,10 +5,16 @@ export function createRun(seed,{playerCount=1,halloween=false,maze=true,drawerRo
  const rows=drawerRows===1?1:3;
  const drawers=Array.from({length:layout.rooms.length*(layout.halloweenMaze?rows:6)},(_,id)=>({id,opened:false,key:false,taken:false}));
  if(layout.halloweenMaze){
-  const first=Math.floor(drawers.length*.2),band=(drawers.length-first)/4;
-  for(let i=0;i<4;i++){const choices=drawers.slice(first+Math.floor(i*band),first+Math.floor((i+1)*band));choices[Math.floor(rng()*choices.length)].key=true;}
+  const first=Math.floor(layout.rooms.length*.2),band=(layout.rooms.length-first)/4;
+  for(let i=0;i<4;i++){
+   const start=first+Math.floor(i*band),end=first+Math.floor((i+1)*band);
+   const room=start+Math.floor(rng()*(end-start));
+   drawers[room*rows+Math.floor(rng()*rows)].key=true;
+  }
  }else for(const id of shuffled(drawers.map(d=>d.id),rng).slice(0,4))drawers[id].key=true;
- return {seed,layout,drawers,...(halloween?{halloween:{...createHalloweenQuest(seed,layout.rooms.length),maze:!!layout.halloweenMaze,...(layout.halloweenMaze?{drawerRows:rows}:{})}}:{}),code:String(Math.floor(rng()*10000)).padStart(4,'0'),clueRoom:Math.floor(rng()*layout.rooms.length),clueRead:false,carried:new Set(),banked:new Set(),codeAccepted:false,boardsOpen:false,exitOpen:false,hidden:false,phase:'playing',elapsed:0,huntElapsed:0,deaths:0};
+ const code=String(Math.floor(rng()*10000)).padStart(4,'0');
+ const clueRoom=layout.halloweenMaze?Math.floor(rng()*Math.max(1,Math.ceil(layout.rooms.length*.55))):Math.floor(rng()*layout.rooms.length);
+ return {seed,layout,drawers,...(halloween?{halloween:{...createHalloweenQuest(seed,layout.rooms.length),maze:!!layout.halloweenMaze,...(layout.halloweenMaze?{drawerRows:rows}:{})}}:{}),code,clueRoom,clueRead:false,carried:new Set(),banked:new Set(),codeAccepted:false,boardsOpen:false,exitOpen:false,hidden:false,phase:'playing',elapsed:0,huntElapsed:0,deaths:0};
 }
 export function searchDrawer(run,id){const d=run.drawers[id];if(!d||run.phase!=='playing')return false;d.opened=!d.opened;return true;}
 export function takeKey(run,id){const d=run.drawers[id];if(!d?.key||!d.opened||d.taken||run.phase!=='playing')return false;d.taken=true;run.carried.add(id);return true;}

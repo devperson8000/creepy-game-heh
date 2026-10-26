@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createRun} from '../src/game-state.js';import {worldPoint,pathBetween,groundHeight} from '../src/level.js';
-for(const count of [1,2,3,4])test(`Halloween maze ${count} players: larger connected narrow routes and three drawers per room cabinet`,()=>{
+for(const count of [1,2,3,4])test(`Halloween maze ${count} players: balanced connected narrow routes and three drawers per room cabinet`,()=>{
  for(const seed of [42,137,2026,8000]){
   const run=createRun(seed,{halloween:true,playerCount:count}),l=run.layout;
-  assert.ok(l.size>=55);assert.equal(l.halloweenMaze,true);assert.equal(l.corridorWidth,1.8);assert.equal(l.ceilingHeight,2.65);
-  assert.ok(l.rooms.length>=24);assert.equal(run.drawers.length,l.rooms.length*3);assert.equal(run.drawers.filter(d=>d.key).length,4);
+  assert.equal(l.size,count>=4?53:count>=3?49:45);assert.equal(l.halloweenMaze,true);assert.equal(l.corridorWidth,1.8);assert.equal(l.ceilingHeight,2.65);
+  assert.equal(l.rooms.length,count>=4?23:count>=3?20:17);assert.equal(run.drawers.length,l.rooms.length*3);assert.equal(run.drawers.filter(d=>d.key).length,4);
   const lengths=l.rooms.map(room=>pathBetween(l,l.entrance,room).length);assert.ok(Math.max(...lengths)>75);assert.ok(lengths.every(n=>n>0));
   assert.equal(groundHeight(worldPoint(l.entrance),l),-7.2);assert.equal(groundHeight({x:-2.6,z:-29},l),3.6);
   assert.ok(l.closets.length>=12);for(const closet of l.closets)assert.equal(l.grid[closet.z][closet.x],0);

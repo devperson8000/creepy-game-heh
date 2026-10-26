@@ -14,7 +14,7 @@ try{
   await page.click('#lobby-singleplayer');await page.waitForFunction(()=>!!window.monochrome);
   assert.equal(await page.evaluate(()=>!!monochrome.run.halloween),released,'only the trusted server clock may enable a production run');
   assert.equal(await page.evaluate(()=>!!monochrome.world.halloween),released);
-  assert.equal(await page.evaluate(()=>!!monochrome.run.layout.halloweenMaze),released);assert.equal(await page.evaluate(()=>monochrome.run.layout.size),released?55:17);
+  assert.equal(await page.evaluate(()=>!!monochrome.run.layout.halloweenMaze),released);assert.equal(await page.evaluate(()=>monochrome.run.layout.size),released?45:17);
  }
  assert.deepEqual(errors,[]);console.log('PASS production bundle: future device clock and preview query cannot unlock Halloween; exact trusted deadline enables its map/quest; no unrestricted test options.');
 }finally{await browser.close();}

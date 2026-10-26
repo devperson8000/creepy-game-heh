@@ -1,5 +1,5 @@
 import {chromium} from 'playwright';import assert from 'node:assert/strict';import {readFile,mkdir} from 'node:fs/promises';
-const password=await readFile('work/halloween-preview-password.txt','utf8'),base=process.env.GAME_TEST_URL||'http://localhost:5173';
+const password=process.env.HALLOWEEN_TEST_PASSWORD||await readFile('work/halloween-preview-password.txt','utf8'),base=process.env.GAME_TEST_URL||'http://localhost:5173';
 const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']}),page=await browser.newPage({viewport:{width:1150,height:760}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 await page.addInitScript(()=>localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',reducedMotion:true,volume:0})));
 try{
@@ -8,7 +8,7 @@ try{
  await dialog.getByLabel('Password',{exact:true}).fill('incorrect');await dialog.getByRole('button',{name:'Unlock tests'}).click();await page.getByText('Incorrect password. Try again.',{exact:true}).waitFor();assert.equal(await page.locator('#halloween-test-hub').count(),0);
  await dialog.getByLabel('Password',{exact:true}).fill(password);await dialog.getByRole('button',{name:'Unlock tests'}).click();await page.getByRole('button',{name:'Test new gameplay',exact:true}).click();
  const frame=page.frames().find(f=>f!==page.mainFrame());await frame.waitForFunction(()=>!!window.monochrome,{timeout:30000});await frame.waitForFunction(()=>!monochrome.ui.overlay,{timeout:30000});
- const details=await frame.evaluate(()=>({size:monochrome.run.layout.size,drawers:monochrome.run.drawers.length,rooms:monochrome.run.layout.rooms.length,height:monochrome.player.height,grilles:monochrome.world.closets.every(c=>c.physicalGrille)}));assert.ok(details.size>=55);assert.equal(details.drawers,details.rooms*3);assert.equal(details.height,-7.2);assert.equal(details.grilles,true);
+ const details=await frame.evaluate(()=>({size:monochrome.run.layout.size,drawers:monochrome.run.drawers.length,rooms:monochrome.run.layout.rooms.length,height:monochrome.player.height,grilles:monochrome.world.closets.every(c=>c.physicalGrille)}));assert.equal(details.size,45);assert.equal(details.rooms,17);assert.equal(details.drawers,details.rooms*3);assert.equal(details.height,-7.2);assert.equal(details.grilles,true);
  await frame.locator('#stamina').waitFor();await page.getByRole('button',{name:'Next drawer room',exact:true}).click();await frame.waitForTimeout(300);
  await frame.getByText('Search drawer',{exact:true}).waitFor();await frame.locator('canvas').first().click({position:{x:750,y:200}});assert.equal(await frame.evaluate(()=>!!document.pointerLockElement),false);await page.keyboard.down('e');await frame.waitForFunction(()=>monochrome.run.drawers.some(d=>d.opened));await page.keyboard.up('e');
  for(const row of [0,1]){
