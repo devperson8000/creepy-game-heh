@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createUpdateSamples} from '../src/update-samples.js';
-import {updateAmbienceCues} from '../src/halloween-soundscape.js';
+import {createHalloweenSoundscape,updateAmbienceCues} from '../src/halloween-soundscape.js';
 import {NEEDLELIMBS_RECORDED_CUES,NEEDLELIMBS_VOICES} from '../src/needlelimbs-timeline.js';
 function fixture(){
  const starts=[],stops=[],volumes=[];const parameter={setValueAtTime(){},linearRampToValueAtTime(){},setTargetAtTime:v=>volumes.push(v)};
@@ -21,4 +21,24 @@ test('ambient passages have quiet gaps, soften under danger/hiding, and respect 
 });
 test('the stronger Needlelimbs breath follows dialogue and finishes before it leaves cover',()=>{
  const breath=NEEDLELIMBS_RECORDED_CUES.find(c=>c.file==='sfx/needle-breath'),reply=NEEDLELIMBS_VOICES[1];assert.ok(breath.at>=reply.at+3.128);assert.ok(breath.end<8.65);assert.ok(breath.gain<.3&&breath.pan>0);assert.equal(NEEDLELIMBS_RECORDED_CUES.length,2);
+ assert.ok(breath.release>=.25,'the exhale needs a soft tail before withdrawal');assert.ok(breath.attack>=.1);
+});
+test('long-running ambience keeps a full phrase instead of clamping to the last fraction of a clip',async()=>{
+ const f=fixture(),bank=createUpdateSamples(f.context,{files:{room:'room'},fetchAudio:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(1)})});await bank.ready;
+ bank.play('room',{offset:102,duration:12,wrapOffset:true});
+ assert.ok(f.starts[0][1]<=8,'the complete 12-second passage must fit inside the 20-second recording');bank.dispose();
+});
+test('turning mid-passage smoothly moves the active sound without restarting it',async()=>{
+ const f=fixture(),pans=[];f.context.createStereoPanner=()=>({pan:{value:0,setTargetAtTime:(...args)=>pans.push(args)},connect(){},disconnect(){}});
+ const bank=createUpdateSamples(f.context,{files:{room:'room'},fetchAudio:async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(1)})});await bank.ready;bank.play('room',{pan:.4});bank.pan?.('room',-.6);
+ assert.equal(pans.length,1);assert.equal(pans[0][0],-.6);assert.ok(pans[0][2]>=.1);assert.equal(f.starts.length,1);bank.dispose();
+});
+test('paused audio contexts freeze the ambience timeline instead of missing its first passage',async t=>{
+ const f=fixture();f.context.state='suspended';t.mock.method(globalThis,'fetch',async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(1)}));
+ const room=createHalloweenSoundscape(f.context);await room.ready;for(let i=0;i<100;i++)room.update({delta:.2});f.context.state='running';
+ for(let i=0;i<10;i++)room.update({delta:.2});assert.equal(f.starts.length,1);assert.ok(f.starts[0][1]<.3,'unlocking starts the first room passage');room.dispose();
+});
+test('ambience swells ease in slowly and leave headroom when passages overlap',()=>{
+ const cues=updateAmbienceCues(131);assert.equal(cues.length,2);
+ assert.ok(cues.every(c=>c.fade>=1&&c.wrapOffset));assert.ok(cues.reduce((sum,c)=>sum+c.gain*c.duck,0)<.24);
 });

@@ -30,6 +30,6 @@ export function sampleNeedlelimbsTeaser(value){
 }
 
 export const NEEDLELIMBS_RECORDED_CUES=[
- {at:4.65,end:5.25,file:'sfx/needle-breath-heavy',gain:.045,offset:.35,pan:.65,lowpass:2300},
- {at:7.3,end:8.2,file:'sfx/needle-breath',gain:.22,offset:.12,pan:.48,lowpass:4800}
+ {at:4.65,end:5.25,file:'sfx/needle-breath-heavy',gain:.045,offset:.35,pan:.65,lowpass:2300,attack:.12,release:.18},
+ {at:7.3,end:8.45,file:'sfx/needle-breath',gain:.20,offset:.12,pan:.48,lowpass:4200,attack:.12,release:.32}
 ];

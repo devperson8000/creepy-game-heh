@@ -17,7 +17,7 @@ export function createTeaserAudio({voices=TEASER_VOICES,soundCues=TEASER_SOUND_C
    const offset=Math.max(0,time-cue.at)+(cue.offset??0);if(time>=cue.end||offset>=buffer.duration){scheduled.add(i);continue;}
    const source=context.createBufferSource(),gain=context.createGain();source.buffer=buffer;source.loop=cue.file==='monster';gain.gain.value=cue.gain??(cue.file==='monster'?.34:.86);
    let panner,filter;const end=Math.min(Math.max(context.currentTime,anchor+cue.at)+buffer.duration-offset,anchor+cue.end);
-   if(cue.gain!==undefined){const level=cue.gain,begin=Math.max(context.currentTime,anchor+cue.at),fade=Math.min(.09,(end-begin)/3);gain.gain.setValueAtTime(0,begin);gain.gain.linearRampToValueAtTime(level,begin+fade);gain.gain.setValueAtTime(level,end-fade);gain.gain.linearRampToValueAtTime(0,end);}
+   if(cue.gain!==undefined){const level=cue.gain,begin=Math.max(context.currentTime,anchor+cue.at),attack=Math.min(cue.attack??.09,(end-begin)/3),release=Math.min(cue.release??.09,(end-begin)/2);gain.gain.setValueAtTime(0,begin);gain.gain.linearRampToValueAtTime(level,begin+attack);gain.gain.setValueAtTime(level,end-release);gain.gain.linearRampToValueAtTime(0,end);}
    if(cue.lowpass){filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.value=cue.lowpass;source.connect(filter);filter.connect(gain);}else source.connect(gain);
    const metal=cue.file==='monster'?createMetallicTeaserVoice(context,master):null;
    if(cue.pan!==undefined&&context.createStereoPanner){panner=context.createStereoPanner();panner.pan.value=cue.pan;gain.connect(panner);panner.connect(master);}else gain.connect(metal?.input??master);track(source,gain,filter,()=>{metal?.dispose();panner?.disconnect();});
