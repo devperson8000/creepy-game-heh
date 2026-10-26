@@ -88,6 +88,16 @@ export function startCoopGame(container,{client,session}){
  const roster=team.querySelector('ul'),teamStatus=team.querySelector('#coop-status'),nextButton=team.querySelector('#coop-next');
  const rosterRows=new Map();
  function local(){return state.players.get(localId);}
+ const voicePosition=new THREE.Vector3();
+ function updateVoice(presentation=null){
+  const viewCamera=presentation?.camera??camera;viewCamera.getWorldDirection(audioDirection);
+  client.voice?.updateSpatial?.({active:!disconnected&&!recovering,listener:{x:viewCamera.position.x,y:viewCamera.position.y,z:viewCamera.position.z,yaw:Math.atan2(-audioDirection.x,-audioDirection.z),pitch:Math.asin(THREE.MathUtils.clamp(audioDirection.y,-1,1))},players:[...state.players].map(([id,player])=>{
+   const actor=presentation?.actors?.get(id);
+   if(actor){actor.root.getWorldPosition(voicePosition);return {id,x:voicePosition.x,y:voicePosition.y+1.65,z:voicePosition.z};}
+   const pose=id===localId?player:poseBuffers.get(id)?.sample(performance.now()/1000)??player;
+   return {id,x:pose.x,y:(pose.height??0)+1.65,z:pose.z};
+  })});
+ }
  function viewRun(watched=local()){
   const own=local(),huntElapsed=isHost||!hostClock.ready?run.huntElapsed:sampleHuntElapsed(run,{...huntClockStamp,hostNow:hostClock.sample()});
   return {...run,huntElapsed,carried:own?.carried??new Set(),hidden:!!watched?.hidden,teamKeyCount:run.banked.size+[...state.players.values()].reduce((n,p)=>n+p.carried.size,0)};
@@ -188,7 +198,7 @@ export function startCoopGame(container,{client,session}){
   for(const notice of snapshot.notices??[])if(notice.id>lastNotice){if(notice.playerId===localId)ui.toast(notice.message);lastNotice=Math.max(lastNotice,notice.id);}
  }
  const reconnect=document.createElement('aside');reconnect.id='coop-recovery';reconnect.hidden=true;reconnect.setAttribute('role','status');reconnect.innerHTML='<strong>Restoring connection…</strong><p>Stay with your team.</p><button type="button" data-retry>Retry now</button><button type="button" data-leave>Leave session</button>';document.body.append(reconnect);
- function beginRecovery(){if(leaving||disconnected)return;if(!recovering){recovering=true;recoveryAt=performance.now();reconnect.hidden=false;input.clear();drawerRequests.clear();hold=0;holdId=null;latched=false;audio.pause();ambience.pause();arrival.pause?.();experience.pause();finale?.setMuted?.(true);document.exitPointerLock?.();}void attemptRecovery();}
+ function beginRecovery(){if(leaving||disconnected)return;if(!recovering){recovering=true;client.voice?.updateSpatial?.({active:false,players:[]});recoveryAt=performance.now();reconnect.hidden=false;input.clear();drawerRequests.clear();hold=0;holdId=null;latched=false;audio.pause();ambience.pause();arrival.pause?.();experience.pause();finale?.setMuted?.(true);document.exitPointerLock?.();}void attemptRecovery();}
  function attemptRecovery(){if(!recovering||recoveryAttempt||performance.now()<nextRecoveryAt)return;nextRecoveryAt=performance.now()+2000;if(!client.recover){disconnected=true;recovering=false;reconnect.hidden=true;screen('lost');return;}recoveryAttempt=client.recover({resumeOwner:isHost}).catch(()=>{}).finally(()=>{recoveryAttempt=null;});return recoveryAttempt;}
  function recovered(event){if(leaving||disconnected||!event.lobby)return;const lobby=event.lobby,checkpoint=event.snapshot,changed=lobby.ownerId!==session.ownerId||(lobby.ownerEpoch??0)!==session.ownerEpoch;
   if(checkpoint?.state?.seed!==state.seed)return;
@@ -315,10 +325,10 @@ export function startCoopGame(container,{client,session}){
   own=local();questUI.update();
   if(!disconnected&&run.phase==='halloween'){
    inB2=true;audio.pause();ambience.pause();revivePrompts.update({active:false,players:[],own,camera});
-   if(experience.render(delta)){broadcast(wallDelta);return;}
+   if(experience.render(delta)){updateVoice();broadcast(wallDelta);return;}
   }
   if(inB2){inB2=false;experience.finish();void audio.resume();void ambience.resume();input.setView(own.yaw??Math.PI,own.pitch??0);hold=0;holdId=null;latched=false;correction.x=0;correction.z=0;}
-  if(!disconnected&&run.finale&&!finaleFinished){playFinale(now);broadcast(wallDelta);return;}
+  if(!disconnected&&run.finale&&!finaleFinished){playFinale(now);updateVoice(finale?.scene);broadcast(wallDelta);return;}
   if(own.status!==lastStatus){
    if(lastStatus==='alive'&&(own.status==='downed'||own.status==='dead'))startScare();
    if(own.status==='alive'){spectateId=null;if(scaredOrWatching()){ui.hideScreen();void audio.resume();void ambience.resume();}if(torch.on!==own.torch)torch.toggle();}
@@ -375,6 +385,7 @@ export function startCoopGame(container,{client,session}){
    torch.beam.intensity=arrival.elapsed>6.7&&torch.on?torch.power:0;
    if((avatarAsset||arrival.elapsed<6.4)&&arrival.update(document.hidden?wallDelta:delta,camera,own,{muted:audio.muted,volume:gamePreferences().volume})){ui.hideScreen();input.capture();void audio.resume();void ambience.resume();}
   }
+  updateVoice();
   if(!document.hidden&&jumpscare.active){renderer.toneMappingExposure=1;jumpscare.render(renderer);const border=ui.el('jumpscare-border');border.style.opacity=String(jumpscare.borderOpacity);border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);}
   else if(!document.hidden&&(!ui.overlay||arrival.active||renderDirty||lastOverlay!==ui.overlay)){renderer.render(world.scene,camera);renderDirty=false;if(own.status==='alive'&&(!arrival.active||arrival.elapsed>9.5))torch.render(renderer);}
   lastOverlay=ui.overlay;

@@ -1,4 +1,5 @@
 import {bindGameplayChannel} from './peer-gameplay.js';
+import {createProximityVoice,proximityVoiceMix} from './proximity-voice.js';
 // One small WebRTC mesh per accepted lobby, retained through the game transition.
 // Supabase carries signalling only; microphone audio travels over encrypted WebRTC.
 export function createSpeechGate(){
@@ -18,7 +19,7 @@ export function readIceServers(value){
 }
 export function createVoiceChat({client,iceServers=readIceServers(import.meta.env?.VITE_WEBRTC_ICE_SERVERS)}={}){
  const peers=new Map(),speaking=new Map(),meters=new Map(),gameListeners=new Set();
- let members=[],roomId=null,context=null,stream=null,disposed=false,busy=false,notice='',retryAt=0,captureGeneration=0;
+ let members=[],roomId=null,context=null,stream=null,disposed=false,busy=false,notice='',retryAt=0,captureGeneration=0,spatialFrame=null;
  const supported=typeof RTCPeerConnection!=='undefined'&&!!navigator.mediaDevices?.getUserMedia;
  const panel=document.createElement('aside');panel.id='voice-chat';panel.hidden=true;panel.setAttribute('aria-label','Team voice chat');
  panel.innerHTML='<button type="button" id="voice-toggle" aria-pressed="false">Mic off</button><button type="button" id="voice-listen" hidden>Enable voice audio</button><span id="voice-notice" role="status"></span><ul id="voice-roster"></ul>';
@@ -49,11 +50,20 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   meters.set(id,{source,analyser,samples:new Float32Array(analyser.fftSize),gate:createSpeechGate()});
  }
  function unmeter(id){const m=meters.get(id);if(m){m.source.disconnect();m.analyser.disconnect();meters.delete(id);}speaking.delete(id);}
- async function unlock(){
-  try{await context?.resume();}catch{}
-  let blocked=false;await Promise.all([...peers.values()].map(async p=>{if(p.audio.srcObject)try{await p.audio.play();}catch{blocked=true;}}));listen.hidden=!blocked;
+ function positionPeer(p){
+  const position=spatialFrame?.players?.find(player=>player.id===p.id),active=spatialFrame?.active!==false&&p.remoteMuted===false;
+  if(p.spatial)p.spatial.update(spatialFrame?.listener,position,active);
+  else p.audio.volume=proximityVoiceMix(spatialFrame?.listener,position,active).gain;
  }
- function drop(id){const p=peers.get(id);if(!p)return;peers.delete(id);p.pc.onconnectionstatechange=null;p.pc.onicecandidate=null;p.pc.ontrack=null;p.pc.ondatachannel=null;p.gameChannel?.close();p.pc.close();p.audio.pause();p.audio.srcObject=null;p.audio.remove();unmeter(id);}
+ function updateSpatial(frame){spatialFrame=frame;for(const p of peers.values())positionPeer(p);}
+ async function unlock(){
+  if(context?.state==='suspended')listen.hidden=false;
+  try{await context?.resume();}catch{}
+  let blocked=!!context&&context.state!=='running';await Promise.all([...peers.values()].map(async p=>{if(p.audio.srcObject)try{await p.audio.play();}catch{blocked=true;}}));if(!disposed)listen.hidden=!blocked;
+ }
+ const unlockGesture=()=>{if(roomId&&context?.state==='suspended')void unlock();};
+ document.addEventListener('pointerdown',unlockGesture);document.addEventListener('keydown',unlockGesture);
+ function drop(id){const p=peers.get(id);if(!p)return;peers.delete(id);p.spatial?.dispose();p.pc.onconnectionstatechange=null;p.pc.onicecandidate=null;p.pc.ontrack=null;p.pc.ondatachannel=null;p.gameChannel?.close();p.pc.close();p.audio.pause();p.audio.srcObject=null;p.audio.remove();unmeter(id);}
  function enqueue(p,fn){p.queue=p.queue.then(()=>peers.get(p.id)===p&&!disposed?fn():undefined).catch(()=>{if(peers.get(p.id)===p){p.failed=true;notice='Voice connection interrupted. Retrying…';render();}});return p.queue;}
  async function offer(p,restart=false){
   if(p.pc.signalingState!=='stable')return;
@@ -62,7 +72,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
  }
  function peer(id){
   if(peers.has(id))return peers.get(id);
-  const pc=new RTCPeerConnection({iceServers}),audio=document.createElement('audio');audio.autoplay=true;audio.setAttribute('playsinline','');audio.hidden=true;panel.append(audio);
+  const pc=new RTCPeerConnection({iceServers}),audio=document.createElement('audio');audio.autoplay=true;audio.muted=true;audio.volume=0;audio.setAttribute('playsinline','');audio.hidden=true;panel.append(audio);
   const transceiver=pc.addTransceiver('audio',{direction:'sendrecv'});
   const p={id,pc,audio,sender:transceiver.sender,queue:Promise.resolve(),candidates:[],remoteMuted:true,offered:false,failed:false};peers.set(id,p);
   function attach(channel){
@@ -73,7 +83,12 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   if(client.id<id&&pc.createDataChannel)attach(pc.createDataChannel('monochrome-game',{ordered:false,maxRetransmits:0}));
   if(stream)void p.sender.replaceTrack(stream.getAudioTracks()[0]);
   pc.onicecandidate=event=>{if(event.candidate)send(id,{type:'candidate',candidate:event.candidate.toJSON()});};
-  pc.ontrack=event=>{const media=event.streams[0]||new MediaStream([event.track]);audio.srcObject=media;meter(id,media);void unlock();};
+  pc.ontrack=event=>{
+   const media=event.streams[0]||new MediaStream([event.track]);p.spatial?.dispose();p.spatial=null;audio.muted=true;audio.volume=0;audio.srcObject=media;meter(id,media);
+   try{const ctx=audioContext();if(ctx?.createPanner)p.spatial=createProximityVoice(ctx,media);}catch{}
+   // Keep the element playing for WebRTC compatibility, but never duplicate its audio output.
+   audio.muted=!!p.spatial;positionPeer(p);void unlock();
+  };
   pc.onconnectionstatechange=()=>{
    if(pc.connectionState==='failed'){p.failed=true;notice='Voice connection interrupted. Retrying…';render();}
    if(pc.connectionState==='connected'){p.failed=false;notice='';render();}
@@ -92,7 +107,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
  async function signal(id,s){
   if(!roomId||!members.some(m=>m.id===id)||id===client.id||!supported)return;
   const p=peer(id);
-  if(s.type==='state'){p.remoteMuted=s.muted;if(s.muted)speaking.delete(id);render();return;}
+  if(s.type==='state'){p.remoteMuted=s.muted;positionPeer(p);if(s.muted)speaking.delete(id);render();return;}
   if(s.type==='hello'){
    send(id,{type:'state',muted:muted()});
    if(client.id<id)void enqueue(p,async()=>{if(p.pc.signalingState==='have-local-offer')send(id,{type:'offer',sdp:p.pc.localDescription.sdp});else if(!p.offered||p.failed)await offer(p,p.failed);});return;
@@ -133,7 +148,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   finally{busy=false;render();}
  }
  function reset(){
-  roomId=null;members=[];captureGeneration++;stream?.getTracks().forEach(t=>t.stop());stream=null;
+  roomId=null;members=[];spatialFrame=null;captureGeneration++;stream?.getTracks().forEach(t=>t.stop());stream=null;
   for(const id of [...peers.keys()])drop(id);for(const id of [...meters.keys()])unmeter(id);speaking.clear();notice='';render();
  }
  button.addEventListener('click',toggle);listen.addEventListener('click',unlock);
@@ -150,7 +165,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   if(changed)render();
   if(now-retryAt>5000){retryAt=now;for(const [id,p] of peers)if(p.pc.connectionState!=='connected'){send(id,{type:'hello'});if(client.id<id)void enqueue(p,()=>offer(p,true));}}
  },100);
- function dispose(){if(disposed)return;disposed=true;window.removeEventListener('pagehide',onPageHide);reset();clearInterval(timer);unsubscribe();button.removeEventListener('click',toggle);listen.removeEventListener('click',unlock);panel.remove();void context?.close();}
+ function dispose(){if(disposed)return;disposed=true;window.removeEventListener('pagehide',onPageHide);document.removeEventListener('pointerdown',unlockGesture);document.removeEventListener('keydown',unlockGesture);reset();clearInterval(timer);unsubscribe();button.removeEventListener('click',toggle);listen.removeEventListener('click',unlock);panel.remove();void context?.close();}
  const onPageHide=()=>dispose();window.addEventListener('pagehide',onPageHide,{once:true});
- render();return {toggle,mute,dispose,subscribeGameplay(fn){gameListeners.add(fn);return()=>gameListeners.delete(fn);},gameConnected:id=>!!peers.get(id)?.game?.ready,localFingerprint:id=>peers.get(id)?.pc.localDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),remoteFingerprint:id=>peers.get(id)?.pc.remoteDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),sendGameplay:(id,type,payload)=>peers.get(id)?.game?.send(type,payload)??false,isSpeaking:id=>!!speaking.get(id),get muted(){return muted();},get peers(){return peers;}};
+ render();return {toggle,mute,dispose,updateSpatial,subscribeGameplay(fn){gameListeners.add(fn);return()=>gameListeners.delete(fn);},gameConnected:id=>!!peers.get(id)?.game?.ready,localFingerprint:id=>peers.get(id)?.pc.localDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),remoteFingerprint:id=>peers.get(id)?.pc.remoteDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),sendGameplay:(id,type,payload)=>peers.get(id)?.game?.send(type,payload)??false,isSpeaking:id=>!!speaking.get(id),get muted(){return muted();},get peers(){return peers;}};
 }
