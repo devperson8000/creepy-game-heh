@@ -52,6 +52,11 @@ try{
  await guest.waitForFunction(()=>monochrome.client.voice.noiseLevel===2);await host.waitForFunction(id=>monochrome.state.players.get(id).voiceLevel===2,guestId);
  assert.notEqual(await host.evaluate(()=>monochrome.simulation.enemy.mode),'chase','distant conversation remains below hearing range');
  await guest.evaluate(()=>microphoneGain.gain.value=1);await guest.waitForFunction(()=>monochrome.client.voice.noiseLevel===4);
+ await host.waitForFunction(id=>monochrome.state.players.get(id).voiceLevel===4,guestId);
+ // Arrange each hearing phase after its report arrives. An unrestrained patrol
+ // can leave the chosen radius while the database delivers a new voice tier.
+ await host.evaluate(({id,positions})=>{const g=monochrome;Object.assign(g.state.players.get(id),positions.player);Object.assign(g.simulation.enemy,{position:{x:positions.enemy.x,z:positions.enemy.z},mode:'patrol',roamRemaining:0,lastSeen:null,lastHeard:null,path:[],repath:0,idleFor:0,areaTime:0,areaOrigin:{...positions.enemy}});},{id:guestId,positions});
+ await guest.evaluate(p=>Object.assign(monochrome.state.players.get(monochrome.client.id),p),positions.player);
  await host.waitForFunction(()=>monochrome.simulation.enemy.mode==='chase'&&monochrome.simulation.enemy.sensedBy==='sound');
  await guest.waitForFunction(()=>observedEnemies.some(e=>e.mode==='chase'));
  const pursuit=await host.evaluate(id=>{const p=monochrome.state.players.get(id);return{point:monochrome.simulation.enemy.lastHeard,player:{x:p.x,z:p.z},path:monochrome.simulation.enemy.path.length};},guestId);
