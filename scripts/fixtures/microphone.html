@@ -1,0 +1,7 @@
+<!doctype html><html><head><meta charset="UTF-8"><link rel="stylesheet" href="/src/voice-chat.css"></head><body><script type="module">
+import {createVoiceChat} from '/src/voice-chat.js';
+let receive;const client={id:'local',send:()=>true,subscribe(fn){receive=fn;return()=>{};}};
+window.voice=createVoiceChat({client});
+receive({type:'lobby',lobby:{id:'microphone-fixture',members:[{id:'local',name:'You'}]}});
+window.disconnect=()=>receive({type:'disconnected'});
+</script></body></html>

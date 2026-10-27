@@ -62,7 +62,7 @@ export function startCoopGame(container,{client,session}){
  let huntClockStamp=null;
  const avatars=new Map(),noiseSequences=new Map(),poseBuffers=new Map(),enemyBuffer=createPoseBuffer({adaptive:true});let avatarAsset;
  const prediction=createMovementPrediction(state.players.get(localId),world.canMove);
- let peerProofAt=0,proofSnapshotClock=0;
+ let peerProofAt=0,proofSnapshotClock=0,voiceSequence=0;
  const peerFingerprints=new Map();let ownerFingerprint=null,acceptedFingerprint=null;
  // Public voice signalling cannot authenticate game authority. Bind DTLS certificates
  // through authenticated member actions and owner-only database snapshots first.
@@ -249,9 +249,10 @@ export function startCoopGame(container,{client,session}){
   avatarResume=wasHidden&&!document.hidden;wasHidden=document.hidden;
   let own=local();if(!own)return;if(own.hidden!==lastOwnHidden){if(own.hidden)input.setView(world.targets.get(own.closetId)?.hideYaw??Math.PI,0);lastOwnHidden=own.hidden;}
   const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||run.phase!=='playing'||own.status!=='alive'};
+  const voice={voiceSequence:++voiceSequence,voiceLevel:!arrival.active&&!disconnected&&run.phase==='playing'&&own.status==='alive'?(client.voice?.noiseLevel??0):0};
   if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:10000)){disconnected=true;screen('lost');}
   if(isHost){
-   simulation.setInput(localId,command);
+   simulation.setInput(localId,{...command,...voice});
    if(!disconnected){
     let clockPending=clockDelta;
     for(let left=document.hidden?wallDelta:delta;left>0;left-=.2){
@@ -267,7 +268,7 @@ export function startCoopGame(container,{client,session}){
    if(run.phase==='playing')prediction.step(command,delta);
    inputClock+=wallDelta;
    if(inputClock>=.05&&run.phase==='playing'){inputClock%=.05;
-    const packet=prediction.packet(command);
+    const packet={...prediction.packet(command),...voice};
     if(!direct||!client.voice.sendGameplay(session.ownerId,'input',{input:packet}))client.send('input',{input:packet});
    }
   }
@@ -295,7 +296,7 @@ export function startCoopGame(container,{client,session}){
   for(const player of state.players.values())if(player.noiseSequence>(noiseSequences.get(player.id)??0)){
    noiseSequences.set(player.id,player.noiseSequence);
    const close=Math.hypot(player.x-watched.x,player.z-watched.z,player.height-watched.height)<6;
-   if(!ui.overlay&&run.elapsed-player.noiseAt<.45&&close)audio.playNoise(player.noiseType);
+   if(player.noiseType!=='voice'&&!ui.overlay&&run.elapsed-player.noiseAt<.45&&close)audio.playNoise(player.noiseType);
   }
   if(watched.hidden&&watched.closetId){world.targets.get(watched.closetId).mesh.visible=!!world.targets.get(watched.closetId).physicalGrille;}
   for(const closet of world.closets)if(!(watched.hidden&&watched.closetId===closet.id))closet.mesh.visible=true;

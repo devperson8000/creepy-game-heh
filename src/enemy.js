@@ -23,8 +23,8 @@ function heardNoise(enemy,layout,noises){
   const distance=Math.hypot(noise.x-enemy.position.x,noise.z-enemy.position.z);
   // Walls soften noise, but do not magically silence a nearby drawer or sprint.
   const range=noise.radius*.92*(lineOfSight(layout,enemy.position,noise)?1:.65);
-  const strength=1-distance/range;
-  if(strength>=0&&strength>=bestStrength){best=noise;bestStrength=strength;}
+  const strength=1-distance/range,priority=strength+(noise.urgent?2:0);
+  if(strength>=0&&priority>=bestStrength){best=noise;bestStrength=priority;}
  }
  return best;
 }
@@ -102,15 +102,19 @@ export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],naviga
  const direction=Math.atan2(player.x-enemy.position.x,player.z-enemy.position.z);
  const facing=Math.cos(direction-enemy.yaw)>.05;
  const visible=player.height<1.5&&!player.hidden&&distance<SIGHT_RANGE&&(facing||distance<3)&&lineOfSight(layout,enemy.position,player)&&(!navigation.canSee||navigation.canSee(enemy.position,player));
- const sound=enemy.roamRemaining>0?null:heardNoise(enemy,layout,noises);
+ // Urgent screams interrupt roaming, but still require a real audible source.
+ const sound=heardNoise(enemy,layout,enemy.roamRemaining>0?noises.filter(n=>n.urgent):noises);
  if(visible){
   enemy.roamRemaining=0;
   if(enemy.mode!=='chase')enemy.repath=0;
   enemy.mode='chase';enemy.lastSeen={x:player.x,z:player.z};enemy.lostFor=0;enemy.sensedBy='sight';
- }else if(enemy.roamRemaining>0&&enemy.mode!=='chase'){
+ }else if(enemy.roamRemaining>0&&enemy.mode!=='chase'&&!sound){
   enemy.mode='patrol';
  }else if(sound){
-  enemy.lastHeard={x:sound.x,z:sound.z};enemy.sensedBy='sound';enemy.repath=0;enemy.path=[];
+  const changed=!enemy.lastHeard||Math.hypot(sound.x-enemy.lastHeard.x,sound.z-enemy.lastHeard.z)>.65;
+  enemy.lastHeard={x:sound.x,z:sound.z};enemy.sensedBy='sound';
+  if(changed){enemy.repath=0;enemy.path=[];}
+  if(sound.urgent){enemy.roamRemaining=0;enemy.mode='chase';}
   if(enemy.mode==='chase'){enemy.lastSeen={...enemy.lastHeard};enemy.lostFor=0;}
   else enemy.mode='investigate';
  }else if(enemy.mode==='chase'){
@@ -126,7 +130,7 @@ export function tickEnemy(enemy,layout,player,delta,active=true,noises=[],naviga
   }else enemy.areaTime=(enemy.areaTime??0)+delta;
   if(!visible&&(enemy.idleFor>=MAX_IDLE_SECONDS-1e-6||enemy.areaTime>=12))resumeRoaming(enemy,layout,navigation);
   const nowDistance=Math.hypot(player.x-enemy.position.x,player.z-enemy.position.z);
-  return {caught:visible&&nowDistance<(layout.narrowMaze?1:1.35),distance:nowDistance,visible,heard:!!sound};
+  return {caught:visible&&nowDistance<(layout.narrowMaze?1:1.35),distance:nowDistance,visible,heard:!!sound,heardPlayerId:!visible?sound?.playerId:null,heardType:!visible?sound?.type:null};
  }
  if(enemy.mode==='search'){
   enemy.searchRemaining=Math.min(enemy.searchRemaining,MAX_IDLE_SECONDS-(enemy.idleFor??0));

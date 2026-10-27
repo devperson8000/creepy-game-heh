@@ -1,4 +1,6 @@
 import {bindGameplayChannel} from './peer-gameplay.js';
+import {createMicrophoneDetector} from './microphone-noise.js';
+import {gamePreferences,savePreferences} from './preferences.js';
 // One small WebRTC mesh per accepted lobby, retained through the game transition.
 // Supabase carries signalling only; microphone audio travels over encrypted WebRTC.
 export function createSpeechGate(){
@@ -18,14 +20,24 @@ export function readIceServers(value){
 }
 export function createVoiceChat({client,iceServers=readIceServers(import.meta.env?.VITE_WEBRTC_ICE_SERVERS)}={}){
  const peers=new Map(),speaking=new Map(),meters=new Map(),gameListeners=new Set();
+ const microphone=createMicrophoneDetector();let microphoneState={level:0,meter:0},microphoneAt=-Infinity;
  let members=[],roomId=null,context=null,stream=null,disposed=false,busy=false,notice='',retryAt=0,captureGeneration=0;
  const supported=typeof RTCPeerConnection!=='undefined'&&!!navigator.mediaDevices?.getUserMedia;
  const panel=document.createElement('aside');panel.id='voice-chat';panel.hidden=true;panel.setAttribute('aria-label','Team voice chat');
- panel.innerHTML='<button type="button" id="voice-toggle" aria-pressed="false">Mic off</button><button type="button" id="voice-listen" hidden>Enable voice audio</button><span id="voice-notice" role="status"></span><ul id="voice-roster"></ul>';
+ panel.innerHTML='<button type="button" id="voice-toggle" aria-pressed="false">Mic off</button><button type="button" id="voice-listen" hidden>Enable voice audio</button><span id="voice-notice" role="status"></span><div id="voice-noise" hidden><span id="voice-noise-label">Mic: Quiet</span><div id="voice-noise-meter" role="meter" aria-label="Microphone noise level" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0"><i></i></div><small>During the hunt, your voice can give you away.</small></div><details id="voice-calibration"><summary>Mic sensitivity</summary><label for="voice-sensitivity">Noise detection <output id="voice-sensitivity-value"></output></label><input id="voice-sensitivity" type="range" min=".5" max="2" step=".1" aria-label="Microphone noise sensitivity"><small>Lower this if room noise registers. Quiet speech should stay low.</small></details><ul id="voice-roster"></ul>';
  document.body.append(panel);
  const button=panel.querySelector('#voice-toggle'),listen=panel.querySelector('#voice-listen'),status=panel.querySelector('#voice-notice'),roster=panel.querySelector('#voice-roster');
+ const noise=panel.querySelector('#voice-noise'),noiseLabel=panel.querySelector('#voice-noise-label'),noiseMeter=panel.querySelector('#voice-noise-meter'),sensitivity=panel.querySelector('#voice-sensitivity'),sensitivityValue=panel.querySelector('#voice-sensitivity-value');
+ sensitivity.value=gamePreferences().micSensitivity;sensitivityValue.textContent=`${Number(sensitivity.value).toFixed(1)}×`;
+ sensitivity.addEventListener('input',()=>{const prefs=savePreferences({micSensitivity:Number(sensitivity.value)});sensitivityValue.textContent=`${prefs.micSensitivity.toFixed(1)}×`;microphoneState=microphone.reset();renderMicrophone();});
+ function renderMicrophone(){
+  const level=stream?microphoneState.level:0;
+  noise.hidden=!stream;noise.dataset.level=String(level);noiseLabel.textContent=`Mic: ${['Quiet','Soft voice','Talking','Loud','Screaming'][level]}`;
+  noiseMeter.setAttribute('aria-valuenow',String(level));noiseMeter.setAttribute('aria-valuetext',['Quiet','Soft voice','Talking','Loud','Screaming'][level]);noiseMeter.style.setProperty('--mic-level',String(stream?microphoneState.meter:0));
+ }
  function muted(){return !stream;}
  function render(){
+  renderMicrophone();
   panel.hidden=!roomId;button.disabled=busy||!supported;button.setAttribute('aria-pressed',String(!muted()));button.classList.toggle('mic-live',!muted());
   button.textContent=busy?'Opening mic…':!supported?'Voice unavailable':muted()?'Mic off · click to talk':'Mic on · click to mute';
   status.textContent=notice;roster.replaceChildren();
@@ -48,7 +60,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   const source=ctx.createMediaStreamSource(media),analyser=ctx.createAnalyser();analyser.fftSize=512;source.connect(analyser);
   meters.set(id,{source,analyser,samples:new Float32Array(analyser.fftSize),gate:createSpeechGate()});
  }
- function unmeter(id){const m=meters.get(id);if(m){m.source.disconnect();m.analyser.disconnect();meters.delete(id);}speaking.delete(id);}
+ function unmeter(id){const m=meters.get(id);if(m){m.source.disconnect();m.analyser.disconnect();meters.delete(id);}speaking.delete(id);if(id===client.id){microphoneState=microphone.reset();renderMicrophone();}}
  async function unlock(){
   try{await context?.resume();}catch{}
   let blocked=false;await Promise.all([...peers.values()].map(async p=>{if(p.audio.srcObject)try{await p.audio.play();}catch{blocked=true;}}));listen.hidden=!blocked;
@@ -124,7 +136,7 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
   if(stream){await mute();return;}
   busy=true;render();const generation=++captureGeneration;
   try{
-   const media=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+   const media=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:false},video:false});
    if(disposed||generation!==captureGeneration||!roomId){media.getTracks().forEach(t=>t.stop());return;}
    stream=media;const track=media.getAudioTracks()[0];track.onended=()=>{if(stream===media){notice='Microphone disconnected. Turn it on to retry.';void mute();}};
    meter(client.id,media);await audioContext()?.resume();
@@ -146,11 +158,11 @@ export function createVoiceChat({client,iceServers=readIceServers(import.meta.en
  });
  const timer=setInterval(()=>{
   if(!roomId||disposed)return;let changed=false;const now=performance.now();
-  for(const [id,m] of meters){m.analyser.getFloatTimeDomainData(m.samples);const active=m.gate(m.samples,now,id===client.id?!muted():peers.get(id)?.remoteMuted===false);if(!!speaking.get(id)!==active){speaking.set(id,active);changed=true;}}
+  for(const [id,m] of meters){m.analyser.getFloatTimeDomainData(m.samples);const active=m.gate(m.samples,now,id===client.id?!muted():peers.get(id)?.remoteMuted===false);if(!!speaking.get(id)!==active){speaking.set(id,active);changed=true;}if(id===client.id){microphoneState=microphone.sample(m.samples,now,{enabled:!muted()&&context?.state==='running',sensitivity:gamePreferences().micSensitivity});microphoneAt=now;renderMicrophone();}}
   if(changed)render();
   if(now-retryAt>5000){retryAt=now;for(const [id,p] of peers)if(p.pc.connectionState!=='connected'){send(id,{type:'hello'});if(client.id<id)void enqueue(p,()=>offer(p,true));}}
  },100);
  function dispose(){if(disposed)return;disposed=true;window.removeEventListener('pagehide',onPageHide);reset();clearInterval(timer);unsubscribe();button.removeEventListener('click',toggle);listen.removeEventListener('click',unlock);panel.remove();void context?.close();}
  const onPageHide=()=>dispose();window.addEventListener('pagehide',onPageHide,{once:true});
- render();return {toggle,mute,dispose,subscribeGameplay(fn){gameListeners.add(fn);return()=>gameListeners.delete(fn);},gameConnected:id=>!!peers.get(id)?.game?.ready,localFingerprint:id=>peers.get(id)?.pc.localDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),remoteFingerprint:id=>peers.get(id)?.pc.remoteDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),sendGameplay:(id,type,payload)=>peers.get(id)?.game?.send(type,payload)??false,isSpeaking:id=>!!speaking.get(id),get muted(){return muted();},get peers(){return peers;}};
+ render();return {toggle,mute,dispose,subscribeGameplay(fn){gameListeners.add(fn);return()=>gameListeners.delete(fn);},gameConnected:id=>!!peers.get(id)?.game?.ready,localFingerprint:id=>peers.get(id)?.pc.localDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),remoteFingerprint:id=>peers.get(id)?.pc.remoteDescription?.sdp.match(/^a=fingerprint:sha-256 (.+)$/mi)?.[1].replace(/:/g,'').toLowerCase(),sendGameplay:(id,type,payload)=>peers.get(id)?.game?.send(type,payload)??false,isSpeaking:id=>!!speaking.get(id),get noiseLevel(){return stream&&context?.state==='running'&&performance.now()-microphoneAt<=350?microphoneState.level:0;},get muted(){return muted();},get peers(){return peers;}};
 }
