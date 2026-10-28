@@ -60,7 +60,7 @@ export function startHalloweenTestPage({password,onExit}){
  function commandButton(label,command){const b=document.createElement('button');b.textContent=label;b.onclick=()=>send(command);commands.append(b);}
  async function stopFrame(){const previous=frame;frame=null;if(previous){try{previous.contentDocument?.removeEventListener('keydown',fullscreenKey,true);await previous.contentWindow.disposeHalloweenTest?.();}catch{}previous.remove();}}
  async function start(id){
-  if(starting||disposed)return;starting=true;await stopFrame();if(disposed){starting=false;return;}current=id;picker.hidden=true;player.hidden=false;commands.replaceChildren();
+  if(starting||disposed)return;starting=true;await stopFrame();if(disposed){starting=false;return;}current=id;picker.hidden=true;player.hidden=false;player.classList.toggle('launch-test-mode',id.startsWith('launch-'));commands.replaceChildren();
   player.querySelector('nav strong').textContent=cases.find(c=>c[0]===id)[1];status.textContent='Preparing test…';
   if(id.startsWith('launch-')){for(const [label,command]of [['Last 5 minutes','launch:timer:300'],['Last minute','launch:timer:60'],['Last 30 seconds','launch:timer:30'],['Last 10 seconds','launch:timer:10'],['Full briefing','launch:briefing'],['Static / music ending','launch:ending'],['Music / titles','launch:titles']])commandButton(label,command);}
   if(id==='ending'){for(const [label,time]of [['Service passage',4],['Wall crossing',13],['House panic',23],['Floor rescue',31],['Escape outside',37],['Final reveal',47]])commandButton(label,'ending:'+time);for(const count of [1,2,4])commandButton(count===1?'Solo rescue':count+' survivors','ending:cast:'+count);}
