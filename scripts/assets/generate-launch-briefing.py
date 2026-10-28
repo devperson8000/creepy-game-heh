@@ -20,18 +20,18 @@ OUT = ROOT / 'public/audio/launch'
 SOURCE = pathlib.Path('/workspace/attachments/25ce7b43-8ef5-443f-af26-e175054dde3c/John Carpenter - The Shape Hunts Allyson.mp4')
 MODEL = pathlib.Path('/workspace/creepy-game-heh/work/opening-tts')
 LINES = [
-    ('welcome', 2, "Welcome back. We've made a few improvements.", .95),
-    ('pumpkins', 9, 'Mostly pumpkins. The other problems remain.', .95),
-    ('inviting', 18, 'We wanted somewhere warm. Inviting. Somewhere you could bring a friend.', .96),
-    ('friend', 28, "Perhaps a friend you're not particularly attached to.", .95),
-    ('proximity', 36, 'Stay close if you want to hear each other.', .96),
-    ('alternative', 43, 'Although some of you may consider the alternative an improvement.', .96),
-    ('hidden', 53, "There's also something hidden for the observant among you.", .95),
-    ('doors', 61, 'Follow the clues. Keep your reward. And please remember which doors you open.', .96),
-    ('secret', 73, "No. We're not showing them that part.", .96),
-    ('management', 82, 'Finally, management would like to remind you—', .97),
+    ('welcome', 2, "Welcome back. We've made a few improvements.", 1.0),
+    ('pumpkins', 9, 'Mostly pumpkins. The other problems remain.', 1.0),
+    ('inviting', 18, 'We wanted somewhere warm. Inviting. Somewhere you could bring a friend.', 1.0),
+    ('friend', 28, "Perhaps a friend you're not particularly attached to.", 1.0),
+    ('proximity', 36, 'Stay close if you want to hear each other.', 1.0),
+    ('alternative', 43, 'Although some of you may consider the alternative an improvement.', 1.0),
+    ('hidden', 53, "There's also something hidden for the observant among you.", 1.0),
+    ('doors', 61, 'Follow the clues. Keep your reward. And please remember which doors you open.', 1.0),
+    ('secret', 73, "No. We're not showing them that part.", 1.0),
+    ('management', 82, 'Finally, management would like to remind you—', 1.01),
     ('panic', None, 'Oh crap. Cut the cameras', 1.16),
-    ('now', 94, 'NOW!', .96),
+    ('now', 94, 'NOW!', 1.0),
 ]
 
 
@@ -75,7 +75,7 @@ def main():
     clips = []
     with tempfile.TemporaryDirectory(prefix='launch-briefing-') as tmp:
         for name, start, text, speed in LINES:
-            samples, rate = engine.create(text, voice='am_michael', speed=speed, lang='en-us', sentence_pause=.24, clause_pause=.14)
+            samples, rate = engine.create(text, voice='bm_george', speed=speed, lang='en-gb', sentence_pause=.24, clause_pause=.14)
             # Strip model padding, leave a short clean onset, and apply a dry
             # broadcast EQ/limiter. Panic is faster; NOW gets added presence.
             active = np.flatnonzero(np.abs(samples) > .003)
@@ -87,7 +87,7 @@ def main():
                 handle.setsampwidth(2)
                 handle.setframerate(rate)
                 handle.writeframes((np.clip(samples, -1, 1) * 32767).astype('<i2').tobytes())
-            filters = 'highpass=f=70,lowpass=f=11200,loudnorm=I=-17:TP=-2:LRA=7,afade=t=in:d=0.006'
+            filters = 'highpass=f=65,lowpass=f=11000,loudnorm=I=-17:TP=-2:LRA=7,afade=t=in:d=0.012'
             if name == 'now':
                 filters += ',atempo=2,atrim=duration=0.3,afade=t=out:st=0.275:d=0.025,equalizer=f=2100:t=q:w=1:g=3,volume=1.12,alimiter=limit=0.89'
             target = OUT / (name + '.mp3')
@@ -108,7 +108,7 @@ def main():
             handle.setnchannels(1); handle.setsampwidth(2); handle.setframerate(rate)
             handle.writeframes((noise * 32767).astype('<i2').tobytes())
         ffmpeg('-i', wav, '-af', 'highpass=f=480,lowpass=f=7800,volume=0.5', '-c:a', 'libmp3lame', '-b:a', '96k', OUT / 'static.mp3')
-    (OUT / 'dialogue.json').write_text(json.dumps({'voice': 'am_michael', 'clips': clips}, indent=2) + '\n')
+    (OUT / 'dialogue.json').write_text(json.dumps({'voice': 'bm_george', 'character': 'B2 hooded stranger', 'clips': clips}, indent=2) + '\n')
 
 
 if __name__ == '__main__':

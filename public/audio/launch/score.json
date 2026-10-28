@@ -1,6 +1,7 @@
 {
   "url": "/audio/launch/score.m4a",
   "duration": 58.026666666666664,
+  "containerDuration": 58.060045,
   "accents": [
     10.69034,
     12.025306,
@@ -23,6 +24,5 @@
     "firstBassEntryRmsBefore": 0.091,
     "firstBassEntryRmsAfter": 0.451,
     "rmsWindowSeconds": 0.01
-  },
-  "containerDuration": 58.060045
+  }
 }

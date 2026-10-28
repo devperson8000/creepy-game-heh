@@ -4,11 +4,11 @@ import {halloweenRelease} from './halloween-release.js';
 import {sampleCountdownPresentation,countdownReadout,createCountdownFocus,shouldStartBriefing} from './halloween-countdown-state.js';
 import {createCountdownAudio} from './halloween-countdown-audio.js';
 
-export function createCountdownView(card){
+export function createCountdownView(card,{releaseClock=halloweenRelease,onEnter=()=>location.reload(),storage}={}){
  const key=`monochrome.countdown-view.${HALLOWEEN_VERSION}`;
- const filmKey=`monochrome.launch-briefing.${HALLOWEEN_VERSION}`;let filmSeen=false;try{filmSeen=sessionStorage.getItem(filmKey)==='seen';}catch{}
- let seen=false;try{seen=sessionStorage.getItem(key)==='seen';}catch{}
- const gate=createCountdownFocus({seen,onSeen(){try{sessionStorage.setItem(key,'seen');}catch{}}}),audio=createCountdownAudio();
+ const filmKey=`monochrome.launch-briefing.${HALLOWEEN_VERSION}`;let filmSeen=false;try{filmSeen=(storage??sessionStorage).getItem(filmKey)==='seen';}catch{}
+ let seen=false;try{seen=(storage??sessionStorage).getItem(key)==='seen';}catch{}
+ const gate=createCountdownFocus({seen,onSeen(){try{(storage??sessionStorage).setItem(key,'seen');}catch{}}}),audio=createCountdownAudio();
  const view=document.createElement('section');view.id='halloween-timer-view';view.hidden=true;view.className='halloween-timer-view';view.setAttribute('role','dialog');view.setAttribute('aria-modal','true');view.setAttribute('aria-labelledby','halloween-timer-title');
  view.innerHTML=`<div class="halloween-timer-haze" aria-hidden="true"></div><div class="halloween-timer-embers" aria-hidden="true">${Array.from({length:9},(_,i)=>`<i style="--i:${i}"></i>`).join('')}</div>
  <header class="halloween-timer-header"><span>MONOCHROME / HALLOWEEN</span><button type="button" data-countdown-close aria-label="Close fullscreen timer">Close <span aria-hidden="true">×</span></button></header>
@@ -47,29 +47,30 @@ export function createCountdownView(card){
  }
  function preload(){
   if(preloadAttempted)return;preloadAttempted=true;const token=filmGeneration;
-  void loadBriefing().then(module=>{if(!disposed&&token===filmGeneration&&module&&!preloadedAudio&&!film&&!filmLoading)preloadedAudio=module.createLaunchBriefingAudio({volume:()=>gamePreferences().volume});});
+  void loadBriefing().then(module=>{if(!disposed&&token===filmGeneration&&module&&!preloadedAudio&&!film&&!filmLoading){preloadedAudio=module.createLaunchBriefingAudio({volume:()=>gamePreferences().volume});void module.preloadLaunchBriefingSceneAssets();}});
  }
  function endBriefing(){filmGeneration++;filmLoading=false;film?.dispose();film=null;preloadedAudio?.dispose();preloadedAudio=null;content.hidden=false;closeButton.setAttribute('aria-label','Close fullscreen timer');}
  async function startBriefing(){
-  const release=halloweenRelease.sample(),state=sampleCountdownPresentation(release);
+  const release=releaseClock.sample(),state=sampleCountdownPresentation(release);
   if(disposed||film||filmLoading||!state.confirmed||state.phase!=='complete')return;
-  filmSeen=true;try{sessionStorage.setItem(filmKey,'seen');}catch{}
+  filmSeen=true;try{(storage??sessionStorage).setItem(filmKey,'seen');}catch{}
   filmLoading=true;const token=++filmGeneration;gate.open();update();message.textContent='Preparing the briefing…';
   const module=briefModule??await loadBriefing();
   if(disposed||token!==filmGeneration)return;
   filmLoading=false;if(!module){message.textContent='The briefing could not load. You can still enter the update.';return;}
   const prepared=preloadedAudio??module.createLaunchBriefingAudio({volume:()=>gamePreferences().volume});preloadedAudio=null;
   try{
-   film=module.createLaunchBriefingPlayer(view,{audio:prepared,muted:!audio.enabled,onSkip(){endBriefing();update();refresh.focus({preventScroll:true});},onProceed(){close();location.reload();},onMuteChange(value){void audio.setEnabled(!value).then(()=>{if(!disposed)syncSound();});}});
+   film=module.createLaunchBriefingPlayer(view,{audio:prepared,muted:!audio.enabled,onSkip(){endBriefing();update();refresh.focus({preventScroll:true});},onProceed(){close();onEnter();},onMuteChange(value){void audio.setEnabled(!value).then(()=>{if(!disposed)syncSound();});}});
    content.hidden=true;closeButton.setAttribute('aria-label','Close briefing');
   }catch{prepared.dispose();message.textContent='The briefing could not load. You can still enter the update.';}
  }
  for(const button of watchButtons)button.addEventListener('click',startBriefing);
  function close(){endBriefing();gate.close();setOpen(false);}
- function openFullscreen(){gate.open();update();void toggleFullscreen();}
+ function openView({fullscreen=false}={}){gate.open();update();if(fullscreen)void toggleFullscreen();}
+ function openFullscreen(){openView({fullscreen:true});}
  const opener=card.querySelector('[data-countdown-open]');opener.addEventListener('click',openFullscreen);
  view.querySelector('[data-countdown-close]').addEventListener('click',close);expand.addEventListener('click',toggleFullscreen);
- refresh.addEventListener('click',()=>location.reload());
+ refresh.addEventListener('click',onEnter);
  function keys(event){
   if(!open)return;
   if(event.key==='Escape'){event.preventDefault();close();return;}
@@ -81,7 +82,7 @@ export function createCountdownView(card){
  document.addEventListener('keydown',keys);document.addEventListener('fullscreenchange',syncFullscreen);
  function update(){
   if(disposed||!card.isConnected)return;
-  const release=halloweenRelease.sample(),p=sampleCountdownPresentation(release);
+  const release=releaseClock.sample(),p=sampleCountdownPresentation(release);
   if(p.confirmed&&['urgent','final'].includes(p.phase)&&!document.hidden)preload();
   if(card.dataset.countdownPhase!==p.phase)card.dataset.countdownPhase=p.phase;
   const owner=card.closest('.lobby-menu');if(owner)owner.dataset.halloweenCountdown=p.phase;
@@ -106,7 +107,7 @@ export function createCountdownView(card){
  }
  function visibility(){if(!document.hidden&&audio.enabled)void audio.setEnabled(true).then(()=>{if(!disposed)syncSound();update();});update();}
  const timer=setInterval(update,250);document.addEventListener('visibilitychange',visibility);queueMicrotask(update);
- return {dispose(){
+ return {open:openView,dispose(){
   if(disposed)return;disposed=true;clearInterval(timer);document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',keys);document.removeEventListener('fullscreenchange',syncFullscreen);
   opener.removeEventListener('click',openFullscreen);for(const button of soundButtons)button.removeEventListener('click',toggleSound);for(const button of watchButtons)button.removeEventListener('click',startBriefing);
   endBriefing();setOpen(false);audio.dispose();const owner=card.closest('.lobby-menu');if(owner)delete owner.dataset.halloweenCountdown;view.remove();

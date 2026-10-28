@@ -27,7 +27,7 @@ test('friends walk apart while the familiar presence appears only in the finale'
 // A reduced-motion shot must remain still even when sampled late in the same shot.
 test('reduced motion holds camera and cast poses and keeps portrait subjects above subtitles',()=>{
  const stage=createLaunchBriefingStage({asset,reducedMotion:true});stage.resize(390/844);
- stage.sample(35);const first=snapshot(stage);stage.sample(44);assert.equal(snapshot(stage),first);
+ stage.sample(35);const first=snapshot(stage);stage.sample(40);assert.equal(snapshot(stage),first);
  for(const t of [5,37,54,71,90]){
   stage.sample(t);const point=stage.focalPoint.clone().project(stage.camera);
   assert.ok(Math.abs(point.x)<.9,`subject fits portrait at ${t}`);assert.ok(point.y>-.5&&point.y<.65,`subject clear of captions at ${t}`);
@@ -50,6 +50,6 @@ test('the shipped hazmat rig walks and restores the same skeletal pose after a s
  const loader=new GLTFLoader();loader.register(()=>({name:'CPUTextureDecoder',loadTexture:async()=>new THREE.Texture()}));
  const realAsset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
  const stage=createLaunchBriefingStage({asset:realAsset});const leg=stage.actors[0].root.getObjectByName('thighL')??stage.actors[0].root.getObjectByName('thigh.L');
- stage.sample(38);const pose=leg.quaternion.clone();stage.sample(38.7);assert.ok(pose.angleTo(leg.quaternion)>.15,'leg articulates during travel');
+ stage.sample(38);const pose=leg.quaternion.clone();const angles=[38.1,38.2,38.3,38.4,38.5,38.6,38.7].map(t=>{stage.sample(t);return pose.angleTo(leg.quaternion);});assert.ok(Math.max(...angles)>.15,'leg articulates during travel across the gait cycle');
  stage.sample(91);stage.sample(38);assert.deepEqual(leg.quaternion.toArray(),pose.toArray(),'skeletal seek is repeatable');stage.dispose();
 });

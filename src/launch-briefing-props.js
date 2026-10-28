@@ -73,7 +73,7 @@ export function createBriefingProps(){
  for(const x of [-3.5,3.5]){box(basement,x,1.75,-3.8,.28,3.5,.32);box(basement,x,3.15,0,.36,.3,14,metal);}
  box(basement,-.75,.88,-2.1,3.25,.14,1.15,wood);
  for(const x of [-2.1,.6])for(const z of [-2.55,-1.65])box(basement,x,.43,z,.12,.86,.12,wood);
- pumpkin(basement,-1.45,.96,-1.9,.92,-.08);pumpkin(basement,-.45,.96,-2.05,.59,.12);pumpkin(basement,-2.8,0,-1.15,.83,.3);pumpkin(basement,.9,0,-1.9,.55,-.15);candles(basement,.2,.96,-1.9,4);candles(basement,-3.2,0,-2.5,3);
+ pumpkin(basement,-1.45,.96,-1.9,.92,-.08);pumpkin(basement,-2.85,1.08,-3.6,.59,.12);pumpkin(basement,-2.8,0,-1.15,.83,.3);pumpkin(basement,.9,0,-1.9,.55,-.15);candles(basement,.2,.96,-1.9,4);candles(basement,-3.2,0,-2.5,3);
  box(basement,-2.9,.31,-3.6,1.3,.62,1,wood);box(basement,-2.85,.85,-3.6,.95,.45,.8,wood);web(basement,-4.82,3.36,-6.82,2.1);web(basement,4.8,3.36,-6.82,1.6,-Math.PI/2);bunting(basement,-4.8,6.5,3.13);sign(basement,'WELCOME',-.8,2.25,-6.86,2.3,.55);
  point(basement,-1.2,1.4,-1.3,0xff8e30,2.2,6);point(basement,2.5,2.8,-4,0x839e90,12,9);
  const corridor=room(32,6.6,30);corridor.position.z=-6;

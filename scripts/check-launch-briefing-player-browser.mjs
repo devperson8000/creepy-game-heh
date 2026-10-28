@@ -8,7 +8,7 @@ const errors=[];await mkdir('work/launch-player',{recursive:true});
 async function pageAt(at,{width=1440,height=900,fallback=false,failed=false}={}){
  const page=await browser.newPage({viewport:{width,height}});page.on('pageerror',e=>errors.push(e.message));
 
- await page.addInitScript(()=>{window.audioClocks=[];const Original=AudioContext;window.AudioContext=class extends Original{constructor(...args){super(...args);audioClocks.push(this)}createBufferSource(){const s=super.createBufferSource(),start=s.start;s.start=(when,offset=0,...rest)=>{if(s.buffer?.duration>57&&s.buffer.duration<59)window.scoreSource={when,offset};return start.call(s,when,offset,...rest)};return s}};});
+ await page.addInitScript(()=>{window.audioClocks=[];const Original=AudioContext;window.AudioContext=class extends Original{constructor(...args){super(...args);audioClocks.push(this)}createBufferSource(){const s=super.createBufferSource(),start=s.start;s.start=(when,offset=0,...rest)=>{if(s.buffer?.duration>57&&s.buffer.duration<59){window.scoreSource={when,offset};window.scoreStarts=(window.scoreStarts||0)+1;}return start.call(s,when,offset,...rest)};return s}};});
  if(fallback)await page.addInitScript(()=>{const get=HTMLCanvasElement.prototype.getContext;HTMLCanvasElement.prototype.getContext=function(type,...args){return /webgl/.test(type)?null:get.call(this,type,...args)}});
  if(failed)await page.route(/\/audio\/.*\.(mp3|m4a)(?:\?|$)/,r=>r.abort());
  await page.goto(`${base}/scripts/fixtures/launch-briefing.html?at=${at}`);await page.waitForFunction(()=>window.filmReady);return page;
@@ -23,10 +23,10 @@ try{
   console.log(`PASS title ${i+1} at musical accent; render delta ${Math.round((cue.actual-cue.expected)*1000)}ms`);await page.close();
  }
  const paused=await pageAt(100);
- await paused.evaluate(()=>{window.offsetBefore=scoreSource.offset;Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
+ await paused.evaluate(()=>{window.offsetBefore=scoreSource.offset;window.startsBefore=scoreStarts;Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
  await paused.waitForTimeout(400);
  await paused.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
- await paused.waitForFunction(()=>scoreSource.offset>offsetBefore);assert.ok(await paused.evaluate(()=>scoreSource.offset-offsetBefore<.2),'hidden interval must not advance the media position');await paused.close();
+ await paused.waitForFunction(()=>scoreStarts>startsBefore);assert.ok(await paused.evaluate(()=>scoreSource.offset-offsetBefore<.2),'hidden interval must not advance the media position');await paused.close();
  const transition=await pageAt(94);await transition.waitForFunction(()=>player.root.dataset.phase==='static');
  assert.ok(await transition.locator('.launch-briefing-static').evaluate(el=>+el.style.opacity)>.9);
  await transition.waitForFunction(()=>player.root.dataset.phase==='black');assert.equal(await transition.locator('.launch-briefing-static').isVisible(),false);

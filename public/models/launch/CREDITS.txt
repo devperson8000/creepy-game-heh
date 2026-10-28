@@ -1,0 +1,9 @@
+B2 archive keeper — adapted from Low-poly hooded character [rigged, Blender]
+Author: kednar / Pablo Lopez Soriano
+Source: https://opengameart.org/content/low-poly-hooded-character-rigged-blender
+Licence: Creative Commons Attribution-ShareAlike 4.0 International
+https://creativecommons.org/licenses/by-sa/4.0/
+Adaptation by the MONOCHROME project: black cloth/gloves/boots, smooth topology,
+folded mantle and faceless hood interior. Runtime head/hand gestures use its rig.
+The original and adapted model remain under CC BY-SA 4.0; no source endorsement implied.
+Source/conversion: https://github.com/devperson8000/creepy-game-heh/tree/main/docs/assets/b2-keeper

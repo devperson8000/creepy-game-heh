@@ -1,81 +1,82 @@
 {
-  "voice": "am_michael",
+  "voice": "bm_george",
+  "character": "B2 hooded stranger",
   "clips": [
     {
       "id": "welcome",
       "url": "/audio/launch/welcome.mp3",
       "start": 2,
-      "duration": 2.8185416666666665,
+      "duration": 2.779166666666667,
       "text": "Welcome back. We've made a few improvements."
     },
     {
       "id": "pumpkins",
       "url": "/audio/launch/pumpkins.mp3",
       "start": 9,
-      "duration": 3.026,
+      "duration": 2.9704166666666665,
       "text": "Mostly pumpkins. The other problems remain."
     },
     {
       "id": "inviting",
       "url": "/audio/launch/inviting.mp3",
       "start": 18,
-      "duration": 4.3897916666666665,
+      "duration": 4.443375,
       "text": "We wanted somewhere warm. Inviting. Somewhere you could bring a friend."
     },
     {
       "id": "friend",
       "url": "/audio/launch/friend.mp3",
       "start": 28,
-      "duration": 2.978375,
+      "duration": 3.296,
       "text": "Perhaps a friend you're not particularly attached to."
     },
     {
       "id": "proximity",
       "url": "/audio/launch/proximity.mp3",
       "start": 36,
-      "duration": 2.3277916666666667,
+      "duration": 2.484208333333333,
       "text": "Stay close if you want to hear each other."
     },
     {
       "id": "alternative",
       "url": "/audio/launch/alternative.mp3",
       "start": 43,
-      "duration": 3.7720833333333332,
+      "duration": 4.15125,
       "text": "Although some of you may consider the alternative an improvement."
     },
     {
       "id": "hidden",
       "url": "/audio/launch/hidden.mp3",
       "start": 53,
-      "duration": 3.146,
+      "duration": 3.582333333333333,
       "text": "There's also something hidden for the observant among you."
     },
     {
       "id": "doors",
       "url": "/audio/launch/doors.mp3",
       "start": 61,
-      "duration": 5.2455,
+      "duration": 4.980458333333333,
       "text": "Follow the clues. Keep your reward. And please remember which doors you open."
     },
     {
       "id": "secret",
       "url": "/audio/launch/secret.mp3",
       "start": 73,
-      "duration": 1.9877083333333334,
+      "duration": 1.973625,
       "text": "No. We're not showing them that part."
     },
     {
       "id": "management",
       "url": "/audio/launch/management.mp3",
       "start": 82,
-      "duration": 2.664,
+      "duration": 2.895125,
       "text": "Finally, management would like to remind you\u2014"
     },
     {
       "id": "panic",
       "url": "/audio/launch/panic.mp3",
-      "start": 92.67695833333333,
-      "duration": 1.3230416666666667,
+      "start": 92.394,
+      "duration": 1.606,
       "text": "Oh crap. Cut the cameras"
     },
     {

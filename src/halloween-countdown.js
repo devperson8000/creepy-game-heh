@@ -9,7 +9,7 @@ export function countdownParts(now=Date.now()){
  return {days:Math.floor(total/86400),hours:Math.floor(total/3600)%24,minutes:Math.floor(total/60)%60,seconds:total%60,complete:now>=HALLOWEEN_DEADLINE};
 }
 
-export function createHalloweenCountdown(){
+export function createHalloweenCountdown({releaseClock=halloweenRelease,onEnter,storage}={}){
  const root=document.createElement('section');root.className='halloween-countdown';root.setAttribute('aria-label','Halloween update countdown');
  root.innerHTML=`
   <div class="halloween-effects" aria-hidden="true">
@@ -30,7 +30,7 @@ export function createHalloweenCountdown(){
  const values=[...root.querySelectorAll('[data-countdown]')];let timer=null,disposed=false;
  function update(){
   if(disposed)return;
-  const release=halloweenRelease.sample(),parts=countdownParts(release.serverNow??Date.now());const complete=release.released;root.classList.toggle('is-complete',complete);
+  const release=releaseClock.sample(),parts=countdownParts(release.serverNow??Date.now());const complete=release.released;root.classList.toggle('is-complete',complete);
   for(const value of values)value.textContent=String(parts[value.dataset.countdown]).padStart(2,'0');
   clock.setAttribute('aria-label',`${parts.days} days, ${parts.hours} hours, ${parts.minutes} minutes, ${parts.seconds} seconds until the Halloween update`);
   clock.hidden=complete;root.querySelector('.halloween-arrived').hidden=!complete;
@@ -38,7 +38,7 @@ export function createHalloweenCountdown(){
   if(complete){title.textContent='Halloween is live.';root.querySelector('.halloween-arrived').textContent='The archive is waiting. Enter a new run.';clearInterval(timer);}
  }
  timer=setInterval(update,1000);update();
- const focusView=createCountdownView(root);
+ const focusView=createCountdownView(root,{releaseClock,onEnter,storage});
  document.addEventListener('visibilitychange',update);
- return {root,dispose(){disposed=true;focusView.dispose();clearInterval(timer);document.removeEventListener('visibilitychange',update);root.remove();}};
+ return {root,open:focusView.open,dispose(){disposed=true;focusView.dispose();clearInterval(timer);document.removeEventListener('visibilitychange',update);root.remove();}};
 }

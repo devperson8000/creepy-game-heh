@@ -3,18 +3,20 @@ import {gamePreferences,reducedMotion} from './preferences.js';
 import {createBriefingTimeline,STATIC_START} from './launch-briefing-timeline.js';
 import {createLaunchBriefingAudio,LAUNCH_SCORE,LAUNCH_DIALOGUE} from './launch-briefing-audio.js';
 import {createLaunchBriefingScene} from './launch-briefing-scene.js';
+import {sampleBriefingDirection} from './briefing-director.js';
+export {preloadLaunchBriefingSceneAssets} from './launch-briefing-scene.js';
 
 export {createLaunchBriefingAudio};
 export function createLaunchBriefingPlayer(container,{audio=createLaunchBriefingAudio({volume:()=>gamePreferences().volume}),muted=true,startAt=0,onSkip=()=>{},onProceed=()=>{},onMuteChange=()=>{}}={}){
  const timeline=createBriefingTimeline({accents:LAUNCH_SCORE.accents,musicDuration:LAUNCH_SCORE.duration,dialogue:LAUNCH_DIALOGUE});
  const root=document.createElement('div');root.className='launch-briefing';root.dataset.launchBriefing='';
- root.innerHTML=`<div class="launch-briefing-scene"></div><div class="launch-briefing-fallback" hidden><div class="briefing-corridor-lines"></div><span>MONOCHROME / HALLOWEEN</span></div><canvas class="launch-briefing-static" aria-hidden="true"></canvas><div class="launch-outro-glow" aria-hidden="true"></div>
+ root.innerHTML=`<div class="launch-briefing-scene"></div><div class="launch-briefing-fallback" hidden><div class="briefing-corridor-lines"></div><span>MONOCHROME / HALLOWEEN</span></div><div class="launch-scene-transition" aria-hidden="true"></div><canvas class="launch-briefing-static" aria-hidden="true"></canvas><div class="launch-outro-glow" aria-hidden="true"></div>
  <div class="launch-briefing-label"><span>MONOCHROME</span><span>SEASONAL BRIEFING</span></div><p class="launch-briefing-caption" role="status" aria-live="off"></p>
  <div class="launch-briefing-loading" role="status">Preparing the briefing…</div><button type="button" class="launch-enable-voice" data-briefing-unmute>Enable narration</button><button type="button" class="launch-skip" data-briefing-skip>Skip briefing</button>
  <div class="launch-title" aria-label="Halloween has arrived"><strong data-launch-word="0">HALLOWEEN</strong><strong data-launch-word="1">HAS</strong><strong data-launch-word="2">ARRIVED</strong><button type="button" data-briefing-proceed hidden>Enter the Halloween Update <span aria-hidden="true">↗</span></button></div>`;
  container.append(root);
  const sceneHost=root.querySelector('.launch-briefing-scene'),caption=root.querySelector('.launch-briefing-caption'),loading=root.querySelector('.launch-briefing-loading'),staticCanvas=root.querySelector('canvas'),words=[...root.querySelectorAll('[data-launch-word]')],title=root.querySelector('.launch-title'),proceed=root.querySelector('[data-briefing-proceed]'),unmute=root.querySelector('[data-briefing-unmute]');
- let scene=null,disposed=false,started=false,frame=null,fadeStart=null,lastGrain=-1;
+ let scene=null,disposed=false,started=false,frame=null,fadeStart=null,lastGrain=-1,readyTimer=null,cancelSceneWait=null;
  let isMuted=!!muted;const lowMotion=reducedMotion();root.classList.toggle('reduced',lowMotion);
  if(startAt<STATIC_START)try{scene=createLaunchBriefingScene(sceneHost,{reducedMotion:lowMotion});}catch{root.querySelector('.launch-briefing-fallback').hidden=false;}
  const context=staticCanvas.getContext('2d'),grain=context?.createImageData(160,90);staticCanvas.width=160;staticCanvas.height=90;
@@ -26,7 +28,8 @@ export function createLaunchBriefingPlayer(container,{audio=createLaunchBriefing
   context.putImageData(grain,0,0);
  }
  function render(time){
-  const p=timeline.sample(time);root.dataset.phase=p.phase;root.dataset.wordCount=String(p.wordCount);root.dataset.shot=p.shot;
+  const p=timeline.sample(time),direction=sampleBriefingDirection(time,{reducedMotion:lowMotion});root.dataset.phase=p.phase;
+  const transition=root.querySelector('.launch-scene-transition');transition.hidden=p.phase!=='briefing';transition.style.opacity=String(direction.transition);root.dataset.wordCount=String(p.wordCount);root.dataset.shot=p.shot;
   sceneHost.hidden=p.phase!=='briefing';root.querySelector('.launch-briefing-fallback').hidden=p.phase!=='briefing'||!!scene;
   if(p.phase==='briefing'){
    try{scene?.sample(time);}catch{scene?.dispose();scene=null;root.querySelector('.launch-briefing-fallback').hidden=false;}
@@ -55,7 +58,8 @@ export function createLaunchBriefingPlayer(container,{audio=createLaunchBriefing
  unmute.addEventListener('click',()=>{setMuted(false);onMuteChange(false);});
  root.querySelector('[data-briefing-skip]').addEventListener('click',onSkip);
  proceed.addEventListener('click',()=>{if(fadeStart!==null)return;fadeStart=performance.now();proceed.disabled=true;});
- const ready=audio.ready.then(()=>{if(disposed)return;started=true;loading.hidden=true;void audio.start({at:startAt,muted:isMuted});if(document.hidden)audio.pause();});
+ const sceneReady=new Promise(resolve=>{const finish=()=>{clearTimeout(readyTimer);readyTimer=null;resolve();};cancelSceneWait=finish;readyTimer=setTimeout(finish,4500);Promise.resolve(scene?.ready).then(finish,finish);});
+ const ready=Promise.all([audio.ready,sceneReady]).then(()=>{if(disposed)return;started=true;loading.hidden=true;void audio.start({at:startAt,muted:isMuted});if(document.hidden)audio.pause();});
  render(startAt);frame=requestAnimationFrame(tick);
- return {root,ready,setMuted,get muted(){return isMuted;},dispose(){if(disposed)return;disposed=true;cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',visibility);audio.dispose();scene?.dispose();scene=null;root.remove();}};
+ return {root,ready,setMuted,get muted(){return isMuted;},dispose(){if(disposed)return;disposed=true;cancelSceneWait?.();cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',visibility);audio.dispose();scene?.dispose();scene=null;root.remove();}};
 }

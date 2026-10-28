@@ -24,9 +24,9 @@ The score starts at film 96.25 and fades to its normal level over 1.5 seconds, c
 
 ## Narration and cut
 
-All twelve cues are original local Kokoro `am_michael` synthesis: warm, restrained American narration, dry EQ and loudness normalization, separate small MP3 clips. Calm cue starts follow the approved spec at 2, 9, 18, 28, 36, 43, 53, 61, 73 and 82 seconds. No reverb or creature voice processing is added. `public/audio/launch/dialogue.json` records every line and its measured decoded duration.
+All twelve cues are original local Kokoro `bm_george` synthesis: the existing hooded stranger’s restrained British narration, dry EQ and loudness normalization, separate small MP3 clips. Calm cue starts follow the approved spec at 2, 9, 18, 28, 36, 43, 53, 61, 73 and 82 seconds. No reverb or creature voice processing is added. `public/audio/launch/dialogue.json` records every line and its measured decoded duration.
 
-The faster panic prefix “Oh crap. Cut the cameras” starts at 92.6769583333 and lasts 1.3230416667, ending precisely at 94. Separate stressed **“NOW!”** begins at 94 and lasts .300 seconds, intentionally overlapping the first .300 seconds of TV static. It is speeded up and given a little presence for the interruption.
+The faster panic prefix “Oh crap. Cut the cameras” starts at 92.394 and lasts 1.606, ending precisely at 94. Separate stressed **“NOW!”** begins at 94 and lasts .300 seconds, intentionally overlapping the first .300 seconds of TV static. It is speeded up and given a little presence for the interruption.
 
 The familiar original `/audio/monster.mp3` supplies a quiet 2.6-second warning at 88–90.6, with .2-second edge fades and .18 gain. The file is reused as supplied; it is not altered. This is after the 82-second narrator cue and before the final panic prefix.
 

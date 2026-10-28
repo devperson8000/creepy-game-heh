@@ -8,3 +8,5 @@
 .halloween-timer-header{grid-row:1}.halloween-timer-footer{grid-row:3}
 
 .halloween-timer-view>.launch-briefing{position:relative;inset:auto;grid-row:2;grid-column:1;min-height:0}.launch-title button[hidden]{display:block!important;visibility:hidden;pointer-events:none}.launch-briefing-caption{z-index:6}
+
+.launch-scene-transition{position:absolute;inset:0;background:#030403;z-index:2;pointer-events:none}.launch-briefing-scene:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,transparent 38%,#0007 100%);pointer-events:none}.launch-briefing-label{opacity:.7}.launch-title strong[data-launch-word="2"]{text-shadow:0 0 55px #e47c3222}
