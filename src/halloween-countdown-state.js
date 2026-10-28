@@ -15,6 +15,10 @@ export function countdownReadout(seconds){
  return days?`${days}d ${pad(hours)}:${tail}`:total>=3600?`${pad(hours)}:${tail}`:tail;
 }
 
+export function shouldStartBriefing({previousPhase,phase,confirmed,open,visible,seen,releaseAge=0}){
+ return confirmed&&open&&visible&&!seen&&releaseAge<=10&&previousPhase==='final'&&phase==='complete';
+}
+
 // Dismissal survives component/menu recreation. Merely looking at a countdown
 // days beforehand must not consume its once-only automatic focus at launch.
 export function createCountdownFocus({seen=false,onSeen=()=>{}}={}){

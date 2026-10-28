@@ -25,7 +25,7 @@ export function createHalloweenCountdown(){
   </div>
   <p class="halloween-arrived" hidden>The wait is over.</p>
   <p class="halloween-date"><time datetime="2026-10-31T16:00:00+11:00">31 OCT 2026 · 4:00 PM</time><span>SYDNEY · AEDT</span></p>
-  <div class="halloween-countdown-actions"><button type="button" data-countdown-open>Fullscreen timer <span aria-hidden="true">↗</span></button><button type="button" data-countdown-sound aria-pressed="false">Sound off</button></div>`;
+  <div class="halloween-countdown-actions"><button type="button" data-countdown-open>Fullscreen timer <span aria-hidden="true">↗</span></button><button type="button" data-countdown-sound aria-pressed="false">Sound off</button><button type="button" data-briefing-watch hidden>Watch briefing</button></div>`;
  const clock=root.querySelector('.halloween-clock'),title=root.querySelector('.halloween-title');
  const values=[...root.querySelectorAll('[data-countdown]')];let timer=null,disposed=false;
  function update(){
@@ -34,6 +34,7 @@ export function createHalloweenCountdown(){
   for(const value of values)value.textContent=String(parts[value.dataset.countdown]).padStart(2,'0');
   clock.setAttribute('aria-label',`${parts.days} days, ${parts.hours} hours, ${parts.minutes} minutes, ${parts.seconds} seconds until the Halloween update`);
   clock.hidden=complete;root.querySelector('.halloween-arrived').hidden=!complete;
+  root.querySelector('[data-briefing-watch]').hidden=!complete;
   if(complete){title.textContent='Halloween is live.';root.querySelector('.halloween-arrived').textContent='The archive is waiting. Enter a new run.';clearInterval(timer);}
  }
  timer=setInterval(update,1000);update();

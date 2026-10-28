@@ -1,0 +1,6 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:#020403;color:#eee}button{padding:10px;border:1px solid #665e43;border-radius:10px;background:#121710;color:#eee;font-family:system-ui;cursor:pointer}#host{position:fixed;inset:0}.launch-briefing{inset:0!important}</style></head><body><div id="host"></div><script type="module">
+import {createLaunchBriefingPlayer} from '/src/launch-briefing-player.js';
+window.skipped=0;window.proceeded=0;
+window.player=createLaunchBriefingPlayer(document.querySelector('#host'),{startAt:Number(new URLSearchParams(location.search).get('at'))||0,muted:false,onSkip(){window.skipped++;player.dispose()},onProceed(){window.proceeded++;player.dispose()}});
+await player.ready;window.filmReady=true;
+</script></body></html>
