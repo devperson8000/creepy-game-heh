@@ -20,6 +20,8 @@ export function requestHalloweenTestAccess({onAuthorized,onCancel=()=>{}}){
  dialog.showModal();field.focus();return {dispose:()=>dialog.close()};
 }
 const cases=[
+ ['launch-countdown','Countdown launch sequence','Preview the final countdown, fullscreen timer effects and automatic handoff to the real launch briefing.'],
+ ['launch-briefing','Stranger launch briefing','Watch the hooded stranger narrate the polished launch film. Jump to static, music or the title accents.'],
  ['ending','Halloween house ending','Preview the connected service passage, wall crossing, house escape and final reveal. Test solo and team rescue.'],
  ['opening','Opening house introduction','Watch the Halloween house, impossible wall and descent. Uses your motion settings; hold Skip for two seconds.'],
  ['new-gameplay','Test new gameplay','Explore the deep narrow maze, three-drawer cabinets and recessed closets. Test stamina and switch on the hunt.'],
@@ -60,6 +62,7 @@ export function startHalloweenTestPage({password,onExit}){
  async function start(id){
   if(starting||disposed)return;starting=true;await stopFrame();if(disposed){starting=false;return;}current=id;picker.hidden=true;player.hidden=false;commands.replaceChildren();
   player.querySelector('nav strong').textContent=cases.find(c=>c[0]===id)[1];status.textContent='Preparing test…';
+  if(id.startsWith('launch-')){for(const [label,command]of [['Last 5 minutes','launch:timer:300'],['Last minute','launch:timer:60'],['Last 30 seconds','launch:timer:30'],['Last 10 seconds','launch:timer:10'],['Full briefing','launch:briefing'],['Static / music ending','launch:ending'],['Music / titles','launch:titles']])commandButton(label,command);}
   if(id==='ending'){for(const [label,time]of [['Service passage',4],['Wall crossing',13],['House panic',23],['Floor rescue',31],['Escape outside',37],['Final reveal',47]])commandButton(label,'ending:'+time);for(const count of [1,2,4])commandButton(count===1?'Solo rescue':count+' survivors','ending:cast:'+count);}
   if(id==='new-gameplay'){commandButton('Unlock house exit','new:exit');commandButton('Unlock B2 panel','new:b2');}
   if(id==='new-gameplay')for(const [label,action]of [['Next drawer room','drawer'],['Corridor closet','closet'],['Return to stairs','stairs'],['Start hunting','hunt'],['Refill stamina','stamina']])commandButton(label,'new:'+action);
@@ -71,7 +74,7 @@ export function startHalloweenTestPage({password,onExit}){
  function receive(event){
   if(disposed||event.origin!==location.origin||event.source!==frame?.contentWindow)return;
   if(event.data?.type==='halloween-test-ready')frame.contentWindow.postMessage({type:'halloween-test-start',password:accessPassword,scenario:current},location.origin);
-  if(event.data?.type==='halloween-test-running')status.textContent=current==='ending'?'Use the scene buttons to inspect the ending · choose solo, two or four survivors · Replay restarts the film.':current==='opening'?'Watch the introduction · hold Skip or Space for 2 seconds · replay whenever you want.':current==='new-gameplay'?'Drag to look · WASD move · Shift to sprint · Start hunting releases Monochrome.':['map','quest','key','new-gameplay'].includes(current)?'Inspection mode · hunt paused · click the game to look around.':current==='coop'?'Create a lobby for your friends. The host selects the Halloween map for the whole team.':'Drag in the game to look · WASD move · Esc pauses · replay whenever you want.';
+  if(event.data?.type==='halloween-test-running')status.textContent=current?.startsWith('launch-')?'Preview uses the exact release timer and film · enable Sound for narration and music · choose a scene above or replay.':current==='ending'?'Use the scene buttons to inspect the ending · choose solo, two or four survivors · Replay restarts the film.':current==='opening'?'Watch the introduction · hold Skip or Space for 2 seconds · replay whenever you want.':current==='new-gameplay'?'Drag to look · WASD move · Shift to sprint · Start hunting releases Monochrome.':['map','quest','key','new-gameplay'].includes(current)?'Inspection mode · hunt paused · click the game to look around.':current==='coop'?'Create a lobby for your friends. The host selects the Halloween map for the whole team.':'Drag in the game to look · WASD move · Esc pauses · replay whenever you want.';
   if(event.data?.type==='halloween-test-finished')status.textContent='Test finished. Replay it or choose another test.';
   if(event.data?.type==='halloween-test-error')status.textContent='The test could not start. Replay to try again.';
  }

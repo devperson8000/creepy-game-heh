@@ -31,3 +31,5 @@ Halloween update sound pass (26 October 2026 Sydney): Mixkit Sound Effects Free 
 - `sfx/monitor-static.mp3`: “Broken radio frequency signal”, Mixkit 2563. Brief archive-monitor interference.
 
 Sources: https://mixkit.co/free-sound-effects/horror/ and https://mixkit.co/free-sound-effects/monster/. Conversion: high-pass 70 Hz, low-pass 9 kHz, -20 LUFS / -3 dBTP, mono 24 kHz / 80 kbps MP3. Playback adds scene-specific attenuation, filtering and short fades; no voice imitation. These samples load only in enabled Halloween gameplay or the authorized Halloween teaser/test scenes. The ordinary public map release is unchanged.
+
+Launch briefing narration also uses the same synthetic `bm_george` stranger voice and B2 dialogue mastering settings; its measured launch script and media are shared with the production launch briefing.

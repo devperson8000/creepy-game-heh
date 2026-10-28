@@ -75,7 +75,8 @@ try {
     try{
      if(!await authorizeHalloweenTest(event.data.password,AbortSignal.timeout(8000))){post('halloween-test-error');return;}
      if(stopped)return;previewAuthorized=true;started=true;const selected=event.data.scenario;
-     if(selected==='coop'){testMenu=makeMenu();void testMenu.openMultiplayer();}
+     if(selected.startsWith('launch-')){const {startLaunchBriefingPreview}=await import('./launch-briefing-preview.js');if(stopped)return;replay=startLaunchBriefingPreview(document.querySelector('#scene'),{scenario:selected,onComplete:()=>post('halloween-test-finished')});}
+     else if(selected==='coop'){testMenu=makeMenu();void testMenu.openMultiplayer();}
      else if(selected==='ending'){replay=await startHalloweenEndingPreview(document.querySelector('#scene'),{onComplete:()=>post('halloween-test-finished')});window.monochromeEnding=replay;}
      else if(selected==='opening')replay=playOpeningBeforeMenu({container:document.querySelector('#scene'),createFilm:createOpeningFilm,reducedMotion:reducedMotion(),onComplete:()=>post('halloween-test-finished')});
      else if(selected==='teaser')replay=startHalloweenReplay(document.querySelector('#scene'),{updatedTeaser:true,onExit:()=>post('halloween-test-finished')});
