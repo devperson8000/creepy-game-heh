@@ -26,7 +26,8 @@
     "test:browser:drawers": "node scripts/check-drawers-browser.mjs",
     "test:browser:coop-drawers": "node scripts/check-coop-drawers-browser.mjs",
     "test:browser:microphone": "node scripts/check-microphone-browser.mjs",
-    "test:browser:coop-microphone": "node scripts/check-coop-microphone-browser.mjs"
+    "test:browser:coop-microphone": "node scripts/check-coop-microphone-browser.mjs",
+    "test:browser:countdown": "node scripts/check-countdown-animation-browser.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",

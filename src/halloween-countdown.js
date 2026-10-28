@@ -2,6 +2,7 @@
 // regardless of the visitor's timezone, and never roll it into another year.
 import {HALLOWEEN_DEADLINE} from './halloween-release-time.js';
 import {halloweenRelease} from './halloween-release.js';
+import {createCountdownView} from './halloween-countdown-view.js';
 export {HALLOWEEN_DEADLINE};
 export function countdownParts(now=Date.now()){
  const total=Math.max(0,Math.ceil((HALLOWEEN_DEADLINE-now)/1000));
@@ -23,7 +24,8 @@ export function createHalloweenCountdown(){
    ${['days','hours','minutes','seconds'].map(unit=>`<div class="halloween-unit"><strong data-countdown="${unit}">00</strong><span>${unit}</span></div>`).join('')}
   </div>
   <p class="halloween-arrived" hidden>The wait is over.</p>
-  <p class="halloween-date"><time datetime="2026-10-31T16:00:00+11:00">31 OCT 2026 · 4:00 PM</time><span>SYDNEY · AEDT</span></p>`;
+  <p class="halloween-date"><time datetime="2026-10-31T16:00:00+11:00">31 OCT 2026 · 4:00 PM</time><span>SYDNEY · AEDT</span></p>
+  <div class="halloween-countdown-actions"><button type="button" data-countdown-open>Fullscreen timer <span aria-hidden="true">↗</span></button><button type="button" data-countdown-sound aria-pressed="false">Sound off</button></div>`;
  const clock=root.querySelector('.halloween-clock'),title=root.querySelector('.halloween-title');
  const values=[...root.querySelectorAll('[data-countdown]')];let timer=null,disposed=false;
  function update(){
@@ -35,6 +37,7 @@ export function createHalloweenCountdown(){
   if(complete){title.textContent='Halloween is live.';root.querySelector('.halloween-arrived').textContent='The archive is waiting. Enter a new run.';clearInterval(timer);}
  }
  timer=setInterval(update,1000);update();
+ const focusView=createCountdownView(root);
  document.addEventListener('visibilitychange',update);
- return {root,dispose(){disposed=true;clearInterval(timer);document.removeEventListener('visibilitychange',update);root.remove();}};
+ return {root,dispose(){disposed=true;focusView.dispose();clearInterval(timer);document.removeEventListener('visibilitychange',update);root.remove();}};
 }

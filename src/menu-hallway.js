@@ -52,7 +52,7 @@ export function startMenuHallway(container) {
  });observer.observe(container);
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),dt=Math.min((now-previous)/1000,.25);previous=now;
-  if(document.hidden||container.closest('.in-waiting-room'))return;
+  if(document.hidden||container.closest('.in-waiting-room')||document.body.classList.contains('halloween-timer-open'))return;
   elapsed+=dt;
   if(!reducedMotion()&&elapsed>=next&&!event){
    event={start:elapsed,direction:Math.random()<.5?-1:1,z:Math.random()<.65?-6.5:-19.5};
