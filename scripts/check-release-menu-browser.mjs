@@ -12,10 +12,12 @@ async function cleanMenu(){
  assert.equal(await page.locator('body').evaluate(el=>el.classList.contains('study-mode')||el.classList.contains('two-tab-mode')),false);
 }
 async function checkCountdownLayout(){
- const layout=await page.evaluate(()=>{const h=document.querySelector('.halloween-countdown').getBoundingClientRect(),m=document.querySelector('.map-countdown').getBoundingClientRect(),copy=document.querySelector('.halloween-countdown').textContent;return {halloweenBottom:h.bottom,mapTop:m.top,teases:/Hidden Halloween Key|B2 archive|Follow the invitation/i.test(copy),overflow:document.documentElement.scrollWidth>innerWidth};});
- assert.equal(layout.teases,false,'Halloween feature teasers must stay out of the map release menu');
- assert.ok(layout.mapTop>=layout.halloweenBottom-1,`release cards overlap: ${JSON.stringify(layout)}`);
- assert.equal(layout.overflow,false,'countdown cards must fit the viewport width');
+ const layout=await page.evaluate(()=>{const card=document.querySelector('.halloween-countdown'),h=card.getBoundingClientRect(),buttons=document.querySelector('.lobby-mode-options').getBoundingClientRect();return {removed:!document.querySelector('.map-countdown'),width:h.width,font:parseFloat(getComputedStyle(card.querySelector('strong')).fontSize),overlap:h.left<buttons.right&&h.right>buttons.left&&h.top<buttons.bottom&&h.bottom>buttons.top,overflow:document.querySelector('#lobby-menu').scrollWidth>document.querySelector('#lobby-menu').clientWidth};});
+ assert.equal(layout.removed,true,'finished map announcement must be removed');
+ assert.equal(layout.overlap,false,'Halloween countdown must not cover mode buttons');
+ assert.equal(layout.overflow,false,'Halloween countdown must fit the viewport width');
+ assert.ok(layout.font>=30,'countdown digits remain prominent');
+ if(page.viewportSize().width>=1280)assert.ok(layout.width>=500,'desktop countdown is enlarged');
 }
 try{
  for(const query of ['', '?mode=study','?mode=coop-test','?mode=coop-test&role=guest&session=test-1234','?mode=finale']){await page.goto(base+'/'+query);await cleanMenu();console.log('Clean menu:',query||'/');}

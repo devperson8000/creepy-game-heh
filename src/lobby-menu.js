@@ -1,4 +1,3 @@
-import {createMapCountdown} from './map-countdown.js';
 import {createHalloweenCountdown} from './halloween-countdown.js';
 import {startMenuHallway} from './menu-hallway.js';
 import {createWaitingRoom} from './waiting-room.js';
@@ -44,7 +43,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
  let screen = 'mode', playerName = initialPlayerName ?? storedName(), lobbyName = '', client = null, unsubscribe = null;
  let network = 'idle', lobbies = [], room = null, pendingLobby = null, actionPending = false;
  let message = '', isError = false, disposed = false, generation = 0;
- let waiting=null,waitingId=null,countdown=null,mapCountdown=null;
+ let waiting=null,waitingId=null,countdown=null;
  function releaseWaiting(){waiting?.dispose();waiting=null;waitingId=null;root.classList.remove('in-waiting-room','terminal-open');}
 
  function button(label, id, run, {primary = false, disabled = false, small = false} = {}) {
@@ -106,8 +105,8 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
   multiplayer.classList.add('lobby-mode-card');
   multiplayer.append(element('span', 'lobby-mode-number', '02 / SHARED DESCENT'), element('strong', '', 'Multiplayer'), element('span', 'lobby-mode-detail', '2–4 players · Private entry · Host approval'), element('span', 'lobby-mode-arrow'));
   options.append(solo, multiplayer);
-  countdown=createHalloweenCountdown();mapCountdown=createMapCountdown();
-  content.append(intro, options, countdown.root,mapCountdown.root);
+  countdown=createHalloweenCountdown();
+  content.append(intro, options, countdown.root);
  }
 
  function sessionPanel() {
@@ -259,7 +258,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
   const active = root.contains(document.activeElement) ? document.activeElement : null;
   const focusedId = active?.id;
   const selection = active?.tagName === 'INPUT' ? [active.selectionStart, active.selectionEnd] : null;
-  mapCountdown?.dispose();mapCountdown=null;countdown?.dispose();countdown=null;
+  countdown?.dispose();countdown=null;
   content.replaceChildren();
   root.dataset.screen = screen;
   if (screen === 'mode') modeScreen();
@@ -369,7 +368,7 @@ export function createLobbyMenu({onSingleplayer = () => {}, onMultiplayer = () =
   if (disposed) return;
   disposed = true;
   menuHallway?.dispose();
-  mapCountdown?.dispose();mapCountdown=null;countdown?.dispose();
+  countdown?.dispose();
   releaseWaiting();
   if (keepClient) { generation++; unsubscribe?.(); unsubscribe = null; }
   else releaseClient();
