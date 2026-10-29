@@ -18,4 +18,8 @@ The runtime schedule derives dialogue timing from decoded clip durations; the so
 
 Independent final code review found no actionable blockers and independently passed 34 focused tests. The subsequent tester-readiness fix passed its targeted browser regression and the complete private suite.
 
-Production commit/deployment verification is recorded after publishing.
+## Published verification
+
+Main film commit `e72070db13bc44ada4060287022863cf9bc74a82` is READY as deployment `dpl_Fau8CoeRevuwUU9nhQFWE2TfmSFP` on `creepy-game-heh.vercel.app`. Private film commit `44bebe6fe917268a828f524dc17d5bb69db6380a` is READY as preview deployment `dpl_4V1SZifWHaaVHSUHoypdhfeaJuac` on `monochrome-halloween-tests.vercel.app`; the private branch was not promoted to production.
+
+Live public-game isolation and the complete countdown browser pass. Live private password/countdown/direct-film/buildup trace/static/music/titles/replay/back checks pass, as does embedded title/control safety in short landscape and narrow phones. Main root explicit suite passed 325/325 after fast-forward (isolated checkout's additional source-discovery test accounts for 326 there). Shared-file hash check remains 49/49. The subsequent documentation commit records these already-verified code deployments.

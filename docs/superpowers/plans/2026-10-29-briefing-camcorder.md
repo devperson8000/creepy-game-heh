@@ -32,4 +32,4 @@
 ### Task3: Verify/publish
 - [x] Sync exact shared assets/modules/tests to protected tester; verify hashes and authorization.
 - [x] Full suites/builds, independent review and any regression fixes.
-- [ ] Publish main and tester; verify deployed commits and live countdown/preview/main isolation/layout.
+- [x] Publish main and tester; verify deployed commits and live countdown/preview/main isolation/layout.
