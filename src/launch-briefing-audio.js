@@ -1,14 +1,15 @@
 import score from '../public/audio/launch/score.json' with { type: 'json' };
-import dialogue from '../public/audio/launch/dialogue.json' with { type: 'json' };
+import {BRIEFING_DIALOGUE,STATIC_START,STATIC_FADE_START,STATIC_END,MUSIC_START,MUSIC_FADE,WARNING_START,WARNING_DURATION,SPRINT_START,MONOCHROME_HINTS,SCORE_OFFSET} from './briefing-schedule.js';
 
 export const LAUNCH_SCORE = score;
-export const LAUNCH_DIALOGUE = dialogue.clips;
+export const LAUNCH_DIALOGUE = BRIEFING_DIALOGUE;
 
-const MUSIC_START = 96.25;
-const NOISE = { id: 'static', url: '/audio/launch/static.mp3', start: 94, duration: 2.1 };
-const SONG = { id: 'score', url: score.url, start: MUSIC_START, duration: score.duration };
-const WARNING = { id: 'monster', url: '/audio/monster.mp3', start: 88, duration: 2.6 };
-const TRACKS = [...LAUNCH_DIALOGUE, WARNING, NOISE, SONG];
+const NOISE = {id:'static',url:'/audio/launch/static.mp3',start:STATIC_START,duration:STATIC_END-STATIC_START};
+const SONG = {id:'score',url:score.url,start:MUSIC_START,duration:score.duration-SCORE_OFFSET,sourceOffset:SCORE_OFFSET};
+const WARNING = {id:'monster',url:'/audio/launch/monochrome-cue.mp3',start:WARNING_START,duration:WARNING_DURATION};
+const BED = {id:'bed',url:'/audio/launch/camcorder-bed.mp3',start:0,duration:STATIC_START,loop:true};
+const HINTS=MONOCHROME_HINTS.filter(c=>c.kind==='crossing'||c.kind==='sound').map((c,i)=>({id:'hint-'+i,url:'/audio/launch/monochrome-cue.mp3',start:c.at,duration:c.duration,sourceOffset:0}));
+const TRACKS=[...LAUNCH_DIALOGUE,...HINTS,WARNING,NOISE,SONG,BED];
 const clamp = value => Math.max(0, Math.min(1, Number(value) || 0));
 
 /** One owned clock and graph. Construct only inside the gated lazy briefing. */
@@ -67,7 +68,7 @@ export function createLaunchBriefingAudio({
 
   const ready = (async () => {
     if (!context) { settled = true; return; }
-    let loadTimer;
+    let loadTimer;const loads=new Map();
     const cancelled = new Promise(resolve => {
       abort.signal.addEventListener('abort', resolve, { once: true });
       loadTimer = setTimeout(() => abort.abort(), 8000);
@@ -77,9 +78,8 @@ export function createLaunchBriefingAudio({
       await Promise.race([
         Promise.all(TRACKS.map(async track => {
           try {
-            const response = await fetchAudio(track.url, abort.signal);
-            if (!response.ok || disposed || abort.signal.aborted) return;
-            const decoded = await context.decodeAudioData(await response.arrayBuffer());
+            if(!loads.has(track.url))loads.set(track.url,(async()=>{const response=await fetchAudio(track.url,abort.signal);if(!response.ok||disposed||abort.signal.aborted)return null;return context.decodeAudioData(await response.arrayBuffer());})());
+            const decoded=await loads.get(track.url);if(!decoded)return;
             if (!disposed && acceptingLoads && !abort.signal.aborted) buffers.set(track.id, decoded);
           } catch { /* Individual missing clips never block film/subtitles. */ }
         })),
@@ -92,11 +92,13 @@ export function createLaunchBriefingAudio({
   })();
 
   function envelope(track) {
-    if (track.id === 'monster') return [[88, 0], [88.2, .18], [90.4, .18], [90.6, 0]];
-    if (track.id === 'static') return [[94, .24], [95.2, .24], [96.1, 0]];
+    if(track.id==='monster')return [[WARNING_START,0],[WARNING_START+.2,.025],[SPRINT_START,.025],[SPRINT_START+.3,.16],[STATIC_START-.06,.16],[STATIC_START,0]];
+    if(track.id.startsWith('hint-'))return [[track.start,0],[track.start+.1,.015],[track.start+track.duration-.12,.015],[track.start+track.duration,0]];
+    if(track.id==='bed')return [[0,0],[.35,.5],[LAUNCH_DIALOGUE.find(c=>c.id==='panic').start,.5],[STATIC_START,0]];
+    if(track.id==='static')return [[STATIC_START,.24],[STATIC_FADE_START,.24],[STATIC_END,0]];
     if (track.id === 'score') {
-      const end = MUSIC_START + score.duration;
-      return [[MUSIC_START, 0], [MUSIC_START + 1.5, .8], [end - 2, .8], [end, 0]];
+      const end = MUSIC_START + score.duration-SCORE_OFFSET;
+      return [[MUSIC_START, 0], [MUSIC_START + MUSIC_FADE, .8], [end - 2, .8], [end, 0]];
     }
     return [[track.start, 1]];
   }
@@ -127,13 +129,13 @@ export function createLaunchBriefingAudio({
     for (const track of TRACKS) {
       const buffer = buffers.get(track.id);
       if (!buffer) continue;
-      const offset = Math.max(0, elapsed - track.start);
-      const end = track.start + Math.min(track.duration, buffer.duration);
+      const sourceOffset=track.sourceOffset??0,progress=Math.max(0,elapsed-track.start),offset=track.loop?progress%buffer.duration:progress+sourceOffset;
+      const end=track.start+(track.loop?track.duration:Math.min(track.duration,buffer.duration-sourceOffset));
       if (elapsed >= end) continue;
       const duration = end - Math.max(track.start, elapsed);
       let source, gain, owned;
       try {
-        source = context.createBufferSource(); source.buffer = buffer;
+        source = context.createBufferSource(); source.buffer = buffer;source.loop=!!track.loop;
         gain = context.createGain(); source.connect(gain); gain.connect(master);
         automate(gain.gain, track, elapsed, clock);
         owned = { source, gain }; active.add(owned);

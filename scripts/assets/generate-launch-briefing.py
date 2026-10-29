@@ -30,6 +30,7 @@ LINES = [
     ('doors', 61, 'Follow the clues. Keep your reward. And please remember which doors you open.', 1.0),
     ('secret', 73, "No. We're not showing them that part.", 1.0),
     ('management', 82, 'Finally, management would like to remind you—', 1.01),
+    ('whats-that', 90.7, "What's that?", .94),
     ('panic', None, 'Oh crap. Cut the cameras', 1.16),
     ('now', 94, 'NOW!', 1.0),
 ]
@@ -55,14 +56,16 @@ def main():
         'url': '/audio/launch/score.m4a',
         'duration': len(pcm) / 44100,
         'containerDuration': float(metadata['duration']),
-        'accents': [10.690340, 12.025306, 13.382222],
+        'accents': [10.691701, 21.358458, 32.024218],
+        'playbackOffset': 8.75,
         'sourceSha256': hashlib.sha256(SOURCE.read_bytes()).hexdigest(),
         'extractedSha256': hashlib.sha256((OUT / 'score.m4a').read_bytes()).hexdigest(),
         'sourceName': SOURCE.name,
         'codec': 'aac', 'sampleRate': 44100, 'channels': 2,
         'extraction': 'ffmpeg -map 0:a:0 -c:a copy -vn -movflags +faststart',
         'analysis': {'method': 'positive log-magnitude spectral flux; 1024-sample Hann; hop44; centre corrected',
-                     'flux': [23.566, 12.321, 7.584],
+                     'flux': [32.488, 29.993, 24.943],
+                     'selection': 'Three separated sustained synth/bass vroom swells, not intervening drum hits',
                      'firstBassEntryRmsBefore': .091, 'firstBassEntryRmsAfter': .451,
                      'rmsWindowSeconds': .01},
     }
@@ -88,6 +91,7 @@ def main():
                 handle.setframerate(rate)
                 handle.writeframes((np.clip(samples, -1, 1) * 32767).astype('<i2').tobytes())
             filters = 'highpass=f=65,lowpass=f=11000,loudnorm=I=-17:TP=-2:LRA=7,afade=t=in:d=0.012'
+            if name=='whats-that': filters=filters.replace('I=-17','I=-18')
             if name == 'now':
                 filters += ',atempo=2,atrim=duration=0.3,afade=t=out:st=0.275:d=0.025,equalizer=f=2100:t=q:w=1:g=3,volume=1.12,alimiter=limit=0.89'
             target = OUT / (name + '.mp3')
@@ -108,6 +112,8 @@ def main():
             handle.setnchannels(1); handle.setsampwidth(2); handle.setframerate(rate)
             handle.writeframes((noise * 32767).astype('<i2').tobytes())
         ffmpeg('-i', wav, '-af', 'highpass=f=480,lowpass=f=7800,volume=0.5', '-c:a', 'libmp3lame', '-b:a', '96k', OUT / 'static.mp3')
+    ffmpeg('-i', ROOT / 'public/audio/monster.mp3', '-t','6.5','-c:a','copy',OUT / 'monochrome-cue.mp3')
+    ffmpeg('-f','lavfi','-i','anoisesrc=color=white:amplitude=0.08:seed=3110:duration=8:sample_rate=24000','-f','lavfi','-i','sine=frequency=100:duration=8:sample_rate=24000','-filter_complex','[0:a]highpass=f=500,lowpass=f=3200,volume=0.16[n];[1:a]volume=0.04[h];[n][h]amix=inputs=2:normalize=0[out]','-map','[out]','-ac','1','-ar','24000','-c:a','libmp3lame','-b:a','96k',OUT / 'camcorder-bed.mp3')
     (OUT / 'dialogue.json').write_text(json.dumps({'voice': 'bm_george', 'character': 'B2 hooded stranger', 'clips': clips}, indent=2) + '\n')
 
 

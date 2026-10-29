@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>html,body{margin:0;background:#000;color:#eee}#host{position:fixed;inset:0}.launch-briefing{inset:0!important}button{padding:10px;border:1px solid #665e43;border-radius:9px;background:#121710;color:#eee;cursor:pointer}</style></head><body><div id="host"></div><script type="module">
+import {createLaunchBriefingPlayer} from '/src/launch-briefing-player.js';
+const clock={time:Number(new URLSearchParams(location.search).get('at'))||0,ready:Promise.resolve(),start(){},pause(){},resume(){},setMuted(){},setVolume(){},update(){},dispose(){}};
+window.player=createLaunchBriefingPlayer(document.querySelector('#host'),{audio:clock,startAt:clock.time,muted:false});await player.ready;window.filmReady=true;window.seek=t=>{clock.time=t};
+</script></body></html>

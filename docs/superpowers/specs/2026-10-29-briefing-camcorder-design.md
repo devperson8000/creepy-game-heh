@@ -1,0 +1,17 @@
+# Tighter found-footage launch briefing
+
+User asks to remove long empty/silent stretches, keep only brief pauses, and reproduce the reference camera treatment (not the creature): genuine4:3 tape framing,24mm wide-angle optics, micro-shake, chromatic aberration, lens bloom, analog noise,15% desaturation, yellow-green midtones and pixelated retro timestamp. Continue implementation/publishing without further approval under existing instructions.
+
+Compact the existing stranger voice clips using decoded durations and mostly0.55–0.75s pauses. Preserve one1.2s clue-door breath and a short familiar-monster warning before panic. Use a quiet looping fluorescent/tape bed. Keep the same recorded voices and music source; seek the score to8.75s, leaving about1.94s to its first real accent instead of10.69s. NOW still cuts instantly to static, which fades fully to a short black gap, then music fades in before the measured title accents. Generate all runtime boundaries from one schedule.
+
+Keep scene authoring positions via a piecewise mapping from compact playback to the existing camera/actor edit. This keeps natural gait/travel in sync. Frame the whole film in a contained4:3 aperture, preserve readable controls/captions, and use a fixed36mm gate/24mm lens (vertical FOV58.72° at4:3). Add deterministic handheld motion and a single bounded-resolution HDR post pass for real color-channel fringing, threshold bloom, tape grain/scanlines,15% desaturation and yellow-green midtone grading. Draw a bitmap timestamp/REC HUD inside the aperture. Reduced motion freezes shake/noise and holds each shot; title cues remain instant and clean.
+
+Reuse the shared player/schedule/effects in the protected Halloween tests. Add new shared files to the hash-verified sync manifest and replace hardcoded preview/browser times with schedule constants. Main gameplay, release deadline, narrator identity, original monster and password authorization are outside scope.
+
+## User steering: three swells and Monochrome buildup
+
+The three words land on the distinct sustained “vroom” swells at source10.691701,21.358458,32.024218s; they are not the adjacent drum hits originally selected. Keep the actual music playback between swells. With8.75s source seek the first word follows music by1.94s; next words are about10.67s apart.
+
+Thread light flutter, two fast distant crossings and faint original-monster snippets through the regular briefing. The narrator visibly glances toward each warning, briefly restrains his hands, then returns to presenting. Use real crosshall openings for the fleeting runs so he does not cross solid walls. At the final corridor reveal Monochrome is completely stationary, with visible distant eyes and extremely quiet voice. The stranger asks “What's that?” in his existing voice. Only after the question ends does Monochrome sprint directly toward the camera; panic starts0.12s into the charge and NOW cuts to static. Keep the two actors' paths separated.
+
+Current duration-derived timing: final reveal40.455958; question43.055958; charge44.258583; NOW/static45.984583; music47.354583. This is about46s of briefing instead of94s, with warnings/action filling the purposeful final suspense beat. Footage render is bounded to720×540/30fps, with subtle grain and still reduced-motion frames. A packet-preserved6.5s monster excerpt avoids repeatedly decoding the120s original in the launch player; source waveform and game asset are untouched.

@@ -1,16 +1,17 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createBriefingTimeline,MUSIC_START,STATIC_START} from '../src/launch-briefing-timeline.js';
+import {createBriefingTimeline,MUSIC_START,STATIC_START,STATIC_FADE_START,STATIC_END} from '../src/launch-briefing-timeline.js';
+import {MUSIC_FADE} from '../src/briefing-schedule.js';
 const config={accents:[10.68,12.01,13.35],musicDuration:58.06,dialogue:[{id:'welcome',start:2,duration:3,text:'Welcome back.'}]};
 
 test('the camera cut, static fade, silence and music happen in the approved order',()=>{
  const timeline=createBriefingTimeline(config);
- assert.equal(timeline.sample(93.999).phase,'briefing');assert.equal(timeline.sample(STATIC_START).phase,'static');
- assert.equal(timeline.sample(94).staticOpacity,1);assert.equal(timeline.sample(95.2).staticOpacity,1);
- const fade=timeline.sample(95.65);assert.ok(Math.abs(fade.staticOpacity-.5)<1e-8);assert.equal(fade.musicGain,0);
- for(const time of [96.1,96.2]){const s=timeline.sample(time);assert.equal(s.phase,'black');assert.equal(s.staticOpacity,0);assert.equal(s.musicGain,0);}
+ assert.equal(timeline.sample(STATIC_START-.001).phase,'briefing');assert.equal(timeline.sample(STATIC_START).phase,'static');
+ assert.equal(timeline.sample(STATIC_START).staticOpacity,1);assert.equal(timeline.sample(STATIC_FADE_START).staticOpacity,1);
+ const fade=timeline.sample((STATIC_FADE_START+STATIC_END)/2);assert.ok(Math.abs(fade.staticOpacity-.5)<1e-8);assert.equal(fade.musicGain,0);
+ for(const time of [STATIC_END,STATIC_END+.05]){const s=timeline.sample(time);assert.equal(s.phase,'black');assert.equal(s.staticOpacity,0);assert.equal(s.musicGain,0);}
  assert.equal(timeline.sample(MUSIC_START).phase,'outro');assert.equal(timeline.sample(MUSIC_START).musicGain,0);
- assert.ok(Math.abs(timeline.sample(MUSIC_START+.75).musicGain-.5)<1e-8);assert.equal(timeline.sample(MUSIC_START+1.5).musicGain,1);
+ assert.ok(Math.abs(timeline.sample(MUSIC_START+MUSIC_FADE/2).musicGain-.5)<1e-8);assert.equal(timeline.sample(MUSIC_START+MUSIC_FADE).musicGain,1);
 });
 test('the three title words appear on exact musical accents and retain prior words',()=>{
  const timeline=createBriefingTimeline(config);
@@ -34,6 +35,11 @@ test('sampling is deterministic, handles invalid time, and cannot be configured 
 });
 
 test('the stressed NOW remains subtitled over the initial static cut',()=>{
- const timeline=createBriefingTimeline({...config,dialogue:[{start:94,duration:.3,text:'NOW!'}]});
- assert.equal(timeline.sample(94).subtitle,'NOW!');assert.equal(timeline.sample(94.299).subtitle,'NOW!');assert.equal(timeline.sample(94.301).subtitle,'');
+ const timeline=createBriefingTimeline({...config,dialogue:[{start:STATIC_START,duration:.3,text:'NOW!'}]});
+ assert.equal(timeline.sample(STATIC_START).subtitle,'NOW!');assert.equal(timeline.sample(STATIC_START+.299).subtitle,'NOW!');assert.equal(timeline.sample(STATIC_START+.301).subtitle,'');
+});
+
+test('a score seek must leave time for its fade before the first title swell',()=>{
+ for(const musicOffset of [-1,NaN,10,60])assert.throws(()=>createBriefingTimeline({...config,musicOffset}),/accent/i);
+ const timeline=createBriefingTimeline({...config,musicOffset:8.75});assert.equal(timeline.sample(MUSIC_START+config.accents[0]-8.75).wordCount,1);assert.equal(timeline.sample(MUSIC_START+config.accents[2]-8.75+2).canProceed,true);
 });

@@ -4,18 +4,20 @@ import {createBriefingTimeline,STATIC_START} from './launch-briefing-timeline.js
 import {createLaunchBriefingAudio,LAUNCH_SCORE,LAUNCH_DIALOGUE} from './launch-briefing-audio.js';
 import {createLaunchBriefingScene} from './launch-briefing-scene.js';
 import {sampleBriefingDirection} from './briefing-director.js';
+import {createCamcorderHud} from './camcorder-hud.js';
 export {preloadLaunchBriefingSceneAssets} from './launch-briefing-scene.js';
 
 export {createLaunchBriefingAudio};
 export function createLaunchBriefingPlayer(container,{audio=createLaunchBriefingAudio({volume:()=>gamePreferences().volume}),muted=true,startAt=0,onSkip=()=>{},onProceed=()=>{},onMuteChange=()=>{}}={}){
- const timeline=createBriefingTimeline({accents:LAUNCH_SCORE.accents,musicDuration:LAUNCH_SCORE.duration,dialogue:LAUNCH_DIALOGUE});
+ const timeline=createBriefingTimeline({accents:LAUNCH_SCORE.accents,musicDuration:LAUNCH_SCORE.duration,musicOffset:LAUNCH_SCORE.playbackOffset,dialogue:LAUNCH_DIALOGUE});
  const root=document.createElement('div');root.className='launch-briefing';root.dataset.launchBriefing='';
- root.innerHTML=`<div class="launch-briefing-scene"></div><div class="launch-briefing-fallback" hidden><div class="briefing-corridor-lines"></div><span>MONOCHROME / HALLOWEEN</span></div><div class="launch-scene-transition" aria-hidden="true"></div><canvas class="launch-briefing-static" aria-hidden="true"></canvas><div class="launch-outro-glow" aria-hidden="true"></div>
+ root.innerHTML=`<div class="launch-film-frame"><div class="launch-briefing-scene"></div><div class="launch-briefing-fallback" hidden><div class="briefing-corridor-lines"></div><span>MONOCHROME / HALLOWEEN</span></div><div class="launch-scene-transition" aria-hidden="true"></div><canvas class="launch-briefing-static" aria-hidden="true"></canvas><div class="launch-outro-glow" aria-hidden="true"></div><canvas class="camcorder-hud" aria-hidden="true"></canvas></div>
  <div class="launch-briefing-label"><span>MONOCHROME</span><span>SEASONAL BRIEFING</span></div><p class="launch-briefing-caption" role="status" aria-live="off"></p>
  <div class="launch-briefing-loading" role="status">Preparing the briefing…</div><button type="button" class="launch-enable-voice" data-briefing-unmute>Enable narration</button><button type="button" class="launch-skip" data-briefing-skip>Skip briefing</button>
  <div class="launch-title" aria-label="Halloween has arrived"><strong data-launch-word="0">HALLOWEEN</strong><strong data-launch-word="1">HAS</strong><strong data-launch-word="2">ARRIVED</strong><button type="button" data-briefing-proceed hidden>Enter the Halloween Update <span aria-hidden="true">↗</span></button></div>`;
- container.append(root);
- const sceneHost=root.querySelector('.launch-briefing-scene'),caption=root.querySelector('.launch-briefing-caption'),loading=root.querySelector('.launch-briefing-loading'),staticCanvas=root.querySelector('canvas'),words=[...root.querySelectorAll('[data-launch-word]')],title=root.querySelector('.launch-title'),proceed=root.querySelector('[data-briefing-proceed]'),unmute=root.querySelector('[data-briefing-unmute]');
+ root.querySelector('.launch-film-frame').append(root.querySelector('.launch-title'));container.append(root);
+ const hud=createCamcorderHud(root.querySelector('.camcorder-hud'));
+ const sceneHost=root.querySelector('.launch-briefing-scene'),caption=root.querySelector('.launch-briefing-caption'),loading=root.querySelector('.launch-briefing-loading'),staticCanvas=root.querySelector('.launch-briefing-static'),words=[...root.querySelectorAll('[data-launch-word]')],title=root.querySelector('.launch-title'),proceed=root.querySelector('[data-briefing-proceed]'),unmute=root.querySelector('[data-briefing-unmute]');
  let scene=null,disposed=false,started=false,frame=null,fadeStart=null,lastGrain=-1,readyTimer=null,cancelSceneWait=null;
  let isMuted=!!muted;const lowMotion=reducedMotion();root.classList.toggle('reduced',lowMotion);
  if(startAt<STATIC_START)try{scene=createLaunchBriefingScene(sceneHost,{reducedMotion:lowMotion});}catch{root.querySelector('.launch-briefing-fallback').hidden=false;}
@@ -29,16 +31,17 @@ export function createLaunchBriefingPlayer(container,{audio=createLaunchBriefing
  }
  function render(time){
   const p=timeline.sample(time),direction=sampleBriefingDirection(time,{reducedMotion:lowMotion});root.dataset.phase=p.phase;
-  const transition=root.querySelector('.launch-scene-transition');transition.hidden=p.phase!=='briefing';transition.style.opacity=String(direction.transition);root.dataset.wordCount=String(p.wordCount);root.dataset.shot=p.shot;
+  const hudCanvas=root.querySelector('.camcorder-hud');hudCanvas.hidden=p.phase!=='briefing';if(!hudCanvas.hidden)hud.sample(time,{reducedMotion:lowMotion});
+  const transition=root.querySelector('.launch-scene-transition');transition.hidden=p.phase!=='briefing';transition.style.opacity=String(direction.transition);root.dataset.wordCount=String(p.wordCount);root.dataset.shot=direction.shot;root.dataset.monochromeBeat=direction.monochrome.kind;
   sceneHost.hidden=p.phase!=='briefing';root.querySelector('.launch-briefing-fallback').hidden=p.phase!=='briefing'||!!scene;
   if(p.phase==='briefing'){
    try{scene?.sample(time);}catch{scene?.dispose();scene=null;root.querySelector('.launch-briefing-fallback').hidden=false;}
   }else if(scene){scene.dispose();scene=null;}
-  staticCanvas.hidden=p.phase!=='static';staticCanvas.style.opacity=String(p.staticOpacity);if(p.phase==='static')drawStatic(time);
+  staticCanvas.hidden=!['static','outro','complete'].includes(p.phase);staticCanvas.style.opacity=String(p.phase==='static'?p.staticOpacity:.055);if(!staticCanvas.hidden)drawStatic(time);
   if(caption.textContent!==p.subtitle)caption.textContent=p.subtitle;
-  caption.hidden=!p.subtitle;root.querySelector('.launch-briefing-label').hidden=p.phase!=='briefing';
+  caption.hidden=!p.subtitle;root.querySelector('.launch-briefing-label').hidden=true;
   title.hidden=!['outro','complete'].includes(p.phase);root.querySelector('.launch-outro-glow').hidden=title.hidden;
-  root.style.setProperty('--launch-score',String(Math.min(1,p.scoreTime/LAUNCH_SCORE.accents[0])));
+  root.style.setProperty('--launch-score',String(Math.min(1,(p.scoreTime-LAUNCH_SCORE.playbackOffset)/(LAUNCH_SCORE.accents[0]-LAUNCH_SCORE.playbackOffset))));
   for(let i=0;i<words.length;i++){words[i].classList.toggle('visible',i<p.wordCount);words[i].classList.toggle('landed',!lowMotion&&i===p.wordCount-1&&p.impact>0);}
   proceed.hidden=!p.canProceed;unmute.hidden=!isMuted||p.phase!=='briefing';
   root.querySelector('[data-briefing-skip]').hidden=p.canProceed;
@@ -61,5 +64,5 @@ export function createLaunchBriefingPlayer(container,{audio=createLaunchBriefing
  const sceneReady=new Promise(resolve=>{const finish=()=>{clearTimeout(readyTimer);readyTimer=null;resolve();};cancelSceneWait=finish;readyTimer=setTimeout(finish,4500);Promise.resolve(scene?.ready).then(finish,finish);});
  const ready=Promise.all([audio.ready,sceneReady]).then(()=>{if(disposed)return;started=true;loading.hidden=true;void audio.start({at:startAt,muted:isMuted});if(document.hidden)audio.pause();});
  render(startAt);frame=requestAnimationFrame(tick);
- return {root,ready,setMuted,get muted(){return isMuted;},dispose(){if(disposed)return;disposed=true;cancelSceneWait?.();cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',visibility);audio.dispose();scene?.dispose();scene=null;root.remove();}};
+ return {root,ready,setMuted,get muted(){return isMuted;},dispose(){if(disposed)return;disposed=true;cancelSceneWait?.();cancelAnimationFrame(frame);document.removeEventListener('visibilitychange',visibility);audio.dispose();hud.dispose();scene?.dispose();scene=null;root.remove();}};
 }

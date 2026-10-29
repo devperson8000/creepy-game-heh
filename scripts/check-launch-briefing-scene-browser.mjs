@@ -5,7 +5,7 @@ const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless
 const errors=[];await mkdir('work/launch-briefing-scene',{recursive:true});
 try{
  for(const [name,width,height] of [['desktop',1440,900],['phone',390,844],['ultrawide',2560,1080]]){
-  const page=await browser.newPage({viewport:{width,height}});page.on('pageerror',error=>errors.push(error.message));
+  const page=await browser.newPage({viewport:{width,height}});page.on('pageerror',error=>errors.push(error.message));page.on('console',m=>{if(/Shader Error|VALIDATE_STATUS|Error linking/.test(m.text()))errors.push(m.text());});
   await page.route('**/@vite/client',route=>route.fulfill({contentType:'application/javascript',body:''}));
   await page.goto(`${process.env.GAME_TEST_URL||'http://localhost:5197'}/scripts/fixtures/launch-briefing-scene.html`);await page.waitForFunction(()=>window.filmReady);assert.equal(await page.evaluate(()=>film.sample(4).hostImported),true);
   for(const t of (process.env.BRIEFING_SCENE_FAST?[37]:[7,12,23,29,37,45,55,64,72,76,83,86,90,93])){await page.evaluate(t=>film.sample(t),t);if(!process.env.BRIEFING_SCENE_FAST)await page.screenshot({path:`work/launch-briefing-scene/${name}-${t}.png`});}
