@@ -6,4 +6,4 @@ This build uses the same 49 shared launch-film modules/assets/tests as main. It 
 
 The shared rendered-film checks cover real 4:3/24mm framing and post shader, responsive titles/stamp, model gait/eyes, planted question → charge, reduced motion, failed/late models, resource cleanup and source-clock word timing on the three separated score swells. Main isolated suite passes 326/326; independent final review passed 34 focused tests without actionable findings.
 
-Production commit/deployment verification is recorded after publishing.
+Private film commit `44bebe6fe917268a828f524dc17d5bb69db6380a` is READY as preview deployment `dpl_4V1SZifWHaaVHSUHoypdhfeaJuac`, with alias `monochrome-halloween-tests.vercel.app`. The branch remains a preview; no tester was promoted to the public game. Live authorized countdown/direct-film, stationary → question → charge trace, static/music/titles, replay/back cleanup and short-landscape/narrow-phone layout checks pass. The subsequent documentation commit records this verified code deployment.
