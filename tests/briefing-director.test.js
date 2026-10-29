@@ -1,5 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {sampleBriefingDirection} from '../src/briefing-director.js';
+import {sampleBriefingDirection as sample} from '../src/briefing-director.js';
+import {filmTimeAt} from '../src/briefing-schedule.js';
+const sampleBriefingDirection=(t,options)=>sample(filmTimeAt(t),options);
 test('stranger hosts the welcome, dry asides and closing panic around the gameplay glimpses',()=>{
  for(const t of [3,11,29,44,75,83,93])assert.equal(sampleBriefingDirection(t).hostVisible,true,`host at ${t}`);
  for(const t of [20,37,55,64,71])assert.equal(sampleBriefingDirection(t).hostVisible,false,`cutaway at ${t}`);

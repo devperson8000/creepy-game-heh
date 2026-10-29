@@ -3,9 +3,9 @@
   "duration": 58.026666666666664,
   "containerDuration": 58.060045,
   "accents": [
-    10.69034,
-    12.025306,
-    13.382222
+    10.691701,
+    21.358458,
+    32.024218
   ],
   "sourceSha256": "cae10d156b5b4d2530b73a2f80d2ecc7f51ba5fd53461e52e8d631f83b065fa2",
   "extractedSha256": "2c0b7c89d70c5143774f997ff7352b12ac09421d4ef7c3885281d2f5abada073",
@@ -15,14 +15,21 @@
   "channels": 2,
   "extraction": "ffmpeg -map 0:a:0 -c:a copy -vn -movflags +faststart",
   "analysis": {
-    "method": "positive log-magnitude spectral flux; 1024-sample Hann; hop44; centre corrected",
+    "method": "1024-sample Hann STFT,44-sample hop; positive log spectral flux at each sustained30-600Hz energy rise.",
     "flux": [
-      23.566,
-      12.321,
-      7.584
+      32.488,
+      29.993,
+      24.943
     ],
     "firstBassEntryRmsBefore": 0.091,
     "firstBassEntryRmsAfter": 0.451,
-    "rmsWindowSeconds": 0.01
-  }
+    "rmsWindowSeconds": 0.01,
+    "selection": "Three separated sustained bass/synth vroom swells, not the intervening drum attacks.",
+    "swellDurationSeconds": [
+      3.0,
+      3.0,
+      3.0
+    ]
+  },
+  "playbackOffset": 8.75
 }

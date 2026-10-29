@@ -3,6 +3,7 @@
 import {createHalloweenCountdown} from './halloween-countdown.js';
 import {HALLOWEEN_DEADLINE} from './halloween-release-time.js';
 import {createLaunchBriefingPlayer} from './launch-briefing-player.js';
+import {STATIC_START,MUSIC_START,WARNING_START,SPRINT_START} from './briefing-schedule.js';
 export function startLaunchBriefingPreview(container,{scenario='launch-briefing',onComplete=()=>{}}={}){
  const root=document.createElement('div');root.className='launch-private-preview';Object.assign(root.style,{position:'fixed',inset:'0',background:'#080706',overflow:'auto',zIndex:'200'});container.append(root);
  let current=null,disposed=false,finished=false;
@@ -28,6 +29,7 @@ export function startLaunchBriefingPreview(container,{scenario='launch-briefing'
  return {command(value){
   if(disposed||typeof value!=='string')return false;
   const match=/^launch:timer:(300|60|30|10)$/.exec(value);if(match){countdown(Number(match[1]));return true;}
-  if(value==='launch:briefing'){briefing();return true;}if(value==='launch:ending'){briefing(92);return true;}if(value==='launch:titles'){briefing(96.25);return true;}return false;
+  if(value==='launch:buildup'){briefing(WARNING_START-.4);return true;}if(value==='launch:charge'){briefing(SPRINT_START-.25);return true;}
+  if(value==='launch:briefing'){briefing();return true;}if(value==='launch:ending'){briefing(STATIC_START-2);return true;}if(value==='launch:titles'){briefing(MUSIC_START);return true;}return false;
  },dispose(){if(disposed)return;disposed=true;clear();root.remove();}};
 }

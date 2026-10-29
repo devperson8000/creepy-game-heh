@@ -73,6 +73,13 @@
       "text": "Finally, management would like to remind you\u2014"
     },
     {
+      "id": "whats-that",
+      "url": "/audio/launch/whats-that.mp3",
+      "start": 90.7,
+      "duration": 0.982625,
+      "text": "What's that?"
+    },
+    {
       "id": "panic",
       "url": "/audio/launch/panic.mp3",
       "start": 92.394,

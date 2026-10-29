@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {readFile} from 'node:fs/promises';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
-import {createLaunchBriefingStage} from '../src/launch-briefing-scene.js';
+import {createLaunchBriefingStage as createStage} from '../src/launch-briefing-scene.js';
+import {filmTimeAt,WARNING_START,QUESTION_START,SPRINT_START,STATIC_START} from '../src/briefing-schedule.js';
+function createLaunchBriefingStage(options){const stage=createStage(options),sample=stage.sample;stage.sample=t=>sample(Number.isFinite(t)?filmTimeAt(t):t);return stage;}
 const asset={scene:new THREE.Group(),animations:[]};
 const snapshot=stage=>JSON.stringify({camera:stage.camera.position.toArray(),rotation:stage.camera.quaternion.toArray(),actors:stage.actors.map(a=>a.root.position.toArray()),lights:stage.lights.map(l=>l.intensity),creature:[stage.creature.root.visible,...stage.creature.root.position.toArray()]});
 // A seek must re-establish transforms and lighting without accumulating state.
@@ -18,7 +20,7 @@ test('absolute sampling restores every shot after seeking through the finale',()
  assert.equal(stage.sample(94).complete,true);assert.equal(stage.sample(NaN).elapsed,0);stage.dispose();
 });
 // Moving suits must actually separate, and Monochrome must wait until the closing beat.
-test('friends walk apart while the familiar presence appears only in the finale',()=>{
+test('friends walk apart and selected quiet shots do not reveal Monochrome',()=>{
  const stage=createLaunchBriefingStage({asset});stage.sample(35);const near=stage.actors[0].root.position.distanceTo(stage.actors[1].root.position);
  stage.sample(45);assert.ok(stage.actors[0].root.position.distanceTo(stage.actors[1].root.position)>near+4);
  for(const t of [0,16,34,50,70,80]){stage.sample(t);assert.equal(stage.creature.root.visible,false);}
@@ -52,4 +54,10 @@ test('the shipped hazmat rig walks and restores the same skeletal pose after a s
  const stage=createLaunchBriefingStage({asset:realAsset});const leg=stage.actors[0].root.getObjectByName('thighL')??stage.actors[0].root.getObjectByName('thigh.L');
  stage.sample(38);const pose=leg.quaternion.clone();const angles=[38.1,38.2,38.3,38.4,38.5,38.6,38.7].map(t=>{stage.sample(t);return pose.angleTo(leg.quaternion);});assert.ok(Math.max(...angles)>.15,'leg articulates during travel across the gait cycle');
  stage.sample(91);stage.sample(38);assert.deepEqual(leg.quaternion.toArray(),pose.toArray(),'skeletal seek is repeatable');stage.dispose();
+});
+
+test('actual creature rig stays planted for the question and runs only after it finishes',()=>{
+ const stage=createStage();stage.sample(WARNING_START+.4);const before=stage.creature.root.position.clone(),leg=stage.creature.legs[0].quaternion.clone();
+ stage.sample(QUESTION_START+.2);assert.deepEqual(stage.creature.root.position.toArray(),before.toArray());assert.deepEqual(stage.creature.legs[0].quaternion.toArray(),leg.toArray());
+ stage.sample(SPRINT_START+.3);assert.ok(stage.creature.root.position.z>before.z+2);assert.ok(leg.angleTo(stage.creature.legs[0].quaternion)>.1);stage.dispose();
 });

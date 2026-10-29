@@ -10,3 +10,9 @@
 .halloween-timer-view>.launch-briefing{position:relative;inset:auto;grid-row:2;grid-column:1;min-height:0}.launch-title button[hidden]{display:block!important;visibility:hidden;pointer-events:none}.launch-briefing-caption{z-index:6}
 
 .launch-scene-transition{position:absolute;inset:0;background:#030403;z-index:2;pointer-events:none}.launch-briefing-scene:after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 50% 46%,transparent 38%,#0007 100%);pointer-events:none}.launch-briefing-label{opacity:.7}.launch-title strong[data-launch-word="2"]{text-shadow:0 0 55px #e47c3222}
+
+/* Contained tape aperture: never crop footage to the window. */
+.launch-briefing{container-type:size;background:#000}.launch-film-frame{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(100%,133.333333cqh);height:min(100%,75cqw);background:#030403;overflow:hidden;container-type:size}.camcorder-hud{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;pointer-events:none;z-index:3;opacity:.86}.launch-briefing-label{display:none!important}.launch-briefing-scene:after{display:none}.launch-briefing-fallback{filter:saturate(.85) sepia(.12)}
+.launch-film-frame .launch-title{padding:clamp(10px,3cqh,28px);gap:clamp(3px,1.5cqh,10px)}.launch-film-frame .launch-title strong{font-size:clamp(18px,min(10cqw,16cqh),100px)}.launch-film-frame .launch-title strong[data-launch-word="1"]{font-size:clamp(12px,min(4.5cqw,8cqh),32px);margin:0}.launch-film-frame .launch-title button{font-size:clamp(9px,2.7cqw,12px);min-height:clamp(32px,9cqh,48px);margin-top:clamp(6px,3cqh,20px);padding:8px 14px;max-width:90%;white-space:normal}
+
+.launch-briefing .launch-skip{right:12px}

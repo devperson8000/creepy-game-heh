@@ -64,9 +64,9 @@ export function createBriefingProps(){
   const points=[];for(let i=0;i<=18;i++){const x=-width/2+i/18*width;points.push([x,y-.27*Math.sin(i/18*Math.PI),z]);}
   tube(parent,points,.009,black);for(let i=0;i<14;i++){const x=-width/2+(i+.5)/14*width,py=y-.27*Math.sin((i+.5)/14*Math.PI);polygon(parent,[[-.11,0],[.11,0],[0,-.29]],i%2?black:orange,x,py,z);}
  }
- function room(offset,width=9,depth=12){const group=new T.Group();group.position.x=offset;root.add(group);
-  box(group,0,-.12,0,width,.24,depth,floor);box(group,0,3.55,0,width,.2,depth);box(group,-width/2,1.75,0,.2,3.5,depth);box(group,width/2,1.75,0,.2,3.5,depth);box(group,0,1.75,-depth/2,width,3.5,.2);
-  for(const side of [-1,1]){box(group,side*(width/2-.15),.18,0,.08,.32,depth,metal);tube(group,[[side*(width/2-.22),3.02,depth/2],[side*(width/2-.22),3.02,-depth/2]],.07,rust);}
+ function room(offset,width=9,depth=12,crosshall=false){const group=new T.Group();group.position.x=offset;root.add(group);
+  box(group,0,-.12,0,width,.24,depth,floor);box(group,0,3.55,0,width,.2,depth);if(crosshall){for(const side of [-1,1]){box(group,side*width/2,1.75,-14.25,.2,3.5,1.5);box(group,side*width/2,1.75,1.95,.2,3.5,26.1);}}else{box(group,-width/2,1.75,0,.2,3.5,depth);box(group,width/2,1.75,0,.2,3.5,depth);}box(group,0,1.75,-depth/2,width,3.5,.2);
+  for(const side of [-1,1]){if(crosshall){box(group,side*(width/2-.15),.18,-14.25,.08,.32,1.5,metal);box(group,side*(width/2-.15),.18,1.95,.08,.32,26.1,metal);}else box(group,side*(width/2-.15),.18,0,.08,.32,depth,metal);tube(group,[[side*(width/2-.22),3.02,depth/2],[side*(width/2-.22),3.02,-depth/2]],.07,rust);}
   return group;
  }
  const basement=room(0,10,14);
@@ -76,14 +76,15 @@ export function createBriefingProps(){
  pumpkin(basement,-1.45,.96,-1.9,.92,-.08);pumpkin(basement,-2.85,1.08,-3.6,.59,.12);pumpkin(basement,-2.8,0,-1.15,.83,.3);pumpkin(basement,.9,0,-1.9,.55,-.15);candles(basement,.2,.96,-1.9,4);candles(basement,-3.2,0,-2.5,3);
  box(basement,-2.9,.31,-3.6,1.3,.62,1,wood);box(basement,-2.85,.85,-3.6,.95,.45,.8,wood);web(basement,-4.82,3.36,-6.82,2.1);web(basement,4.8,3.36,-6.82,1.6,-Math.PI/2);bunting(basement,-4.8,6.5,3.13);sign(basement,'WELCOME',-.8,2.25,-6.86,2.3,.55);
  point(basement,-1.2,1.4,-1.3,0xff8e30,2.2,6);point(basement,2.5,2.8,-4,0x839e90,12,9);
- const corridor=room(32,6.6,30);corridor.position.z=-6;
+ const corridor=room(32,6.6,30,true);corridor.position.z=-6;
  for(let i=0;i<6;i++){
   const z=7-i*4.5;
-  for(const side of [-1,1]){box(corridor,side*3.04,1.7,z,.24,3.4,.24,metal);box(corridor,side*3.18,1.17,z-1.3,.07,2.3,1.25,wood);box(corridor,side*3.11,2.45,z-1.3,.13,.11,1.45,metal);}
+  for(const side of [-1,1]){box(corridor,side*3.04,1.7,z,.24,3.4,.24,metal);if(i!==4){box(corridor,side*3.18,1.17,z-1.3,.07,2.3,1.25,wood);box(corridor,side*3.11,2.45,z-1.3,.13,.11,1.45,metal);}}
   box(corridor,0,3.22,z,6.35,.22,.22,metal);box(corridor,0,3.35,z,.7,.06,.32,black);const fixtureMaterial=glow.clone();materials.add(fixtureMaterial);box(corridor,0,3.31,z,.52,.035,.21,fixtureMaterial);
   const light=point(corridor,0,3.05,z,0xc8cfac,20,7);light.userData.corridorIndex=i;light.userData.fixtureMaterial=fixtureMaterial;
   if(i%2===0){pumpkin(corridor,-2.6,0,z-.8,.7,.5);candles(corridor,2.65,0,z-.8,3,false);web(corridor,-3.08,3.28,z+.1,1.1);bunting(corridor,z,5.8,2.96);}
  }
+ for(const side of [-1,1]){box(corridor,side*5.1,-.12,-12.3,3.6,.24,2.4,floor);box(corridor,side*5.1,3.55,-12.3,3.6,.2,2.4);for(const z of [-13.5,-11.1])box(corridor,side*5.1,1.75,z,3.6,3.5,.2);box(corridor,side*7,1.75,-12.3,.2,3.5,2.4,black);}
  sign(corridor,'B1',0,2.25,-14.86,1,.45);point(corridor,-2.35,.85,5.8,0xff8533,6,5);point(corridor,2.3,1.7,-6,0x719d99,6,6);
  const clues=room(64,7,9);
  box(clues,0,.82,-1.6,3.7,.15,1.4,wood);for(const x of [-1.5,1.5])for(const z of [-2.1,-1.1])box(clues,x,.4,z,.1,.8,.1,wood);
@@ -107,6 +108,6 @@ export function createBriefingProps(){
  for(const angle of [-.35,.35]){const brace=box(sealed,0,1.3,-4.08,2.8,.13,.11,rust);brace.rotation.z=angle;}
  tube(sealed,[[-1.38,2.2,-3.96],[-.7,1.6,-3.95],[0,1.23,-3.96],[.75,1.6,-3.95],[1.38,2.2,-3.96]],.026,metal);
  box(sealed,.12,1.14,-3.9,.19,.23,.09,rust);candles(sealed,-1.9,0,-3.2,2);web(sealed,-3.04,3.36,-4.35,1.7);point(sealed,0,2.6,-2.4,0x95b4a6,15,7);point(sealed,-2,.5,-3,0xff963c,3,3);
- const dustGeo=geometry(new T.BufferGeometry()),dust=[];for(let i=0;i<260;i++)dust.push((random()-.5)*6,random()*3.2,-15+random()*28);dustGeo.setAttribute('position',new T.Float32BufferAttribute(dust,3));const dustMat=new T.PointsMaterial({color:0xb9b69a,size:.017,transparent:true,opacity:.19,depthWrite:false});materials.add(dustMat);const motes=new T.Points(dustGeo,dustMat);corridor.add(motes);
+ const dustGeo=geometry(new T.BufferGeometry()),dust=[];for(let i=0;i<260;i++)dust.push((random()-.5)*6,random()*3.2,-15+random()*28);dustGeo.setAttribute('position',new T.Float32BufferAttribute(dust,3));const dustMat=new T.PointsMaterial({color:0xb9b69a,size:.014,transparent:true,opacity:.055,depthWrite:false});materials.add(dustMat);const motes=new T.Points(dustGeo,dustMat);corridor.add(motes);
  return {root,basement,corridor,clues,sealed,lights,flames,keyGroup,dispose(){root.removeFromParent();for(const l of lights)l.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}};
 }
