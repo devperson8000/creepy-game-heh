@@ -6,7 +6,7 @@ export function objectiveFor(run){
  if(run.banked.size===4&&run.codeAccepted)return run.halloween?'House service exit unlocked · return upstairs':'Open the elevator and step inside';
  if(run.banked.size===4)return run.clueRead?(run.halloween?'Enter the recorded code at the service panel':'Enter the recorded code at the elevator'):'Find the four-digit clue downstairs';
  if((run.teamKeyCount??run.carried.size+run.banked.size)>=4)return run.halloween?'Return upstairs · bank all four keys':'Return to the elevator · bank all four keys';
- return run.layout?.halloweenMaze?'Search the small rooms · four keys + one number':'Search furniture · four keys + one number';
+ return run.layout?.narrowMaze?'Search the small rooms · four keys + one number':'Search furniture · four keys + one number';
 }
 export function createGameUI(){
  const root=document.createElement('div');root.id='game-ui';root.innerHTML=`
@@ -67,7 +67,7 @@ export function createGameUI(){
    const flash=age<.18||age>=.36&&age<.54?1:age<.36?.12:1;
    warning.style.opacity=String((reducedMotion()?1:flash)*Math.min(1,(HUNT_WARNING_SECONDS-age)/1.4));
   }
-  el('floor-name').textContent=run.layout?.halloweenMaze?(run.hidden?'INSIDE A CLOSET':player.z<=-25?'B1 SERVICE HUB':player.z<run.layout.stairs.bottomZ?'RETURN STAIRS':'BASEMENT B1'):run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
+  el('floor-name').textContent=run.layout?.narrowMaze?(run.hidden?'INSIDE A CLOSET':player.z<=-25?'B1 SERVICE HUB':player.z<run.layout.stairs.bottomZ?'RETURN STAIRS':'BASEMENT B1'):run.hidden?'INSIDE A CLOSET':player.height>3.4?'ELEVATOR LOBBY':player.height>.2?'RETURN STAIRS':'BASEMENT B1';
   const objective=objectiveFor(run);if(objective!==lastObjective){text('current-objective',objective);if(lastObjective&&!overlay)highlight(el('current-objective'));lastObjective=objective;}
   el('keypad-title').previousElementSibling.textContent=run.halloween?'HOUSE SERVICE / SECURITY':'ELEVATOR / SECURITY';
   const keys=run.banked.size+run.carried.size;if(keys>previousKeys&&!overlay)highlight(el('key-lights'));previousKeys=keys;
@@ -79,8 +79,8 @@ export function createGameUI(){
   crosshair?.classList.toggle('has-target',!!target&&!overlay);const interactionState=target&&!overlay?(hold>0?'holding':'ready'):'none';if(root.dataset.interacting!==interactionState)root.dataset.interacting=interactionState;
   el('interaction').hidden=!target||!!overlay;el('interaction-label').textContent=target?.label||'';el('hold-fill').style.width=`${Math.max(0,Math.min(1,hold))*100}%`;
   el('hold-fill').parentElement.setAttribute('aria-valuenow',String(Math.round(Math.max(0,Math.min(1,hold))*100)));
-  el('hide-mask').hidden=!run.hidden||!!run.layout?.halloweenMaze;
-  const stamina=el('stamina'),value=Math.max(0,Math.min(1,player.stamina??1));stamina.hidden=!run.layout?.halloweenMaze||!!overlay;stamina.classList.toggle('is-exhausted',!!player.exhausted);el('stamina-fill').style.transform=`scaleX(${value})`;el('stamina-percent').textContent=`${Math.round(value*100)}%`;el('stamina-label').textContent=player.exhausted?'CATCH YOUR BREATH':'STAMINA';stamina.querySelector('[role=progressbar]').setAttribute('aria-valuenow',String(Math.round(value*100)));document.body.classList.toggle('in-closet',run.hidden);
+  el('hide-mask').hidden=!run.hidden||!!run.layout?.narrowMaze;
+  const stamina=el('stamina'),value=Math.max(0,Math.min(1,player.stamina??1));stamina.hidden=!run.layout?.narrowMaze||!!overlay;stamina.classList.toggle('is-exhausted',!!player.exhausted);el('stamina-fill').style.transform=`scaleX(${value})`;el('stamina-percent').textContent=`${Math.round(value*100)}%`;el('stamina-label').textContent=player.exhausted?'CATCH YOUR BREATH':'STAMINA';stamina.querySelector('[role=progressbar]').setAttribute('aria-valuenow',String(Math.round(value*100)));document.body.classList.toggle('in-closet',run.hidden);
   if(performance.now()>toastUntil)el('toast').classList.remove('show');
  }
  root.addEventListener('keydown',event=>{

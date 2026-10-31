@@ -52,11 +52,12 @@ export function createOpeningAudio(){
  ];
  function resume(){if(disposed)return;try{init();if(context&&!muted)void context.resume().then(()=>syncVoice(last)).catch(()=>{});}catch{/* Visual playback does not depend on autoplay permission. */}}
  function pause(){if(context?.state==='running')void context.suspend().catch(()=>{});}
+ function setEnabled(value){if(disposed)return;init();muted=!value;if(master)master.gain.value=muted?0:gamePreferences().volume*.65;if(!muted)resume();}
  return {ready,update(frame){const t=frame.time;if(t<last){last=t;return;}
   for(const [at,play]of cues)if(last<at&&t>=at)play();
   if(t<8&&Math.floor(last/.42)!==Math.floor(t/.42)){const note=[196,246.94,293.66,246.94][Math.floor(t/.42)%4];burst({frequency:note,endFrequency:note,duration:.3,volume:.014,tone:true});}
   const walking=t<20||(t>28.8&&t<38);if(walking&&Math.floor(last/.58)!==Math.floor(t/.58))burst({frequency:t<8?1000:270,duration:.13,volume:t<8?.06:.09});
   syncVoice(t);
   if(wind)wind.filter.frequency.value=1600*(.3+.7*frame.light);last=t;
- },resume,pause,toggle(){if(disposed)return;const wasEnabled=!muted&&context?.state==='running';init();muted=wasEnabled;if(master)master.gain.value=muted?0:gamePreferences().volume*.65;if(!muted)resume();},get enabled(){return !muted&&context?.state==='running';},dispose(){if(disposed)return;disposed=true;abort.abort();for(const s of sources){try{s.stop();}catch{}s.disconnect();}sources.clear();voices.clear();spoken.clear();activeVoice=null;reverb?.disconnect();room?.disconnect();master?.disconnect();if(context)void context.close().catch(()=>{});context=null;}};
+ },resume,pause,setEnabled,toggle(){if(disposed)return;const wasEnabled=!muted&&context?.state==='running';init();muted=wasEnabled;if(master)master.gain.value=muted?0:gamePreferences().volume*.65;if(!muted)resume();},get enabled(){return !muted&&context?.state==='running';},dispose(){if(disposed)return;disposed=true;abort.abort();for(const s of sources){try{s.stop();}catch{}s.disconnect();}sources.clear();voices.clear();spoken.clear();activeVoice=null;reverb?.disconnect();room?.disconnect();master?.disconnect();if(context)void context.close().catch(()=>{});context=null;}};
 }

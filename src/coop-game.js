@@ -1,4 +1,4 @@
-import {restoreCoopAuthority,acceptsAuthority} from './coop-recovery.js';
+import {createCoopRound,restoreCoopAuthority,acceptsAuthority} from './coop-recovery.js';
 import {createHalloweenEndingPlayer} from './halloween-ending-player.js';
 import {halloweenTargetInfo,canMoveB2} from './halloween-state.js';
 import {createHalloweenExperience,createHalloweenQuestUI} from './halloween-experience.js';
@@ -11,7 +11,7 @@ import {createFinaleClock,FINALE_DURATION} from './finale-state.js';
 import {gamePreferences,createRenderQuality} from './preferences.js';
 import {createRoomAmbience} from './room-ambience.js';
 import * as THREE from 'three';
-import {createCoopState,applyCoopSnapshot,REVIVE_WINDOW_SECONDS} from './coop-state.js';
+import {applyCoopSnapshot,REVIVE_WINDOW_SECONDS} from './coop-state.js';
 import {createCoopSimulation} from './coop-simulation.js';
 import {createWorld} from './world.js';
 import {createCreature,applyIdle,applyRunning,createCreatureMotion} from './creature.js';
@@ -30,15 +30,13 @@ import {createArrival} from './arrival.js';
 export function startCoopGame(container,{client,session}){
  const ambience=createRoomAmbience({halloween:session.halloween===true});
  const arrival=createArrival({halloween:session.halloween===true,isMuted:()=>audio.muted});
- const savedRun=session.checkpoint?.state?.run;const state=createCoopState(session.seed,session.players,{halloween:savedRun?!!savedRun.halloween:session.halloween===true,maze:savedRun?.halloween?.maze??session.maze!==false,drawerRows:savedRun?.halloween?.drawerRows??session.drawerRows,initialPlayerCount:savedRun?.initialPlayerCount??session.players.length}),run=state.run;
- state.ownerId=session.ownerId;
- const localId=client.id;session.ownerEpoch??=0;let isHost=localId===session.ownerId;state.ownerEpoch=session.ownerEpoch;
- if(session.checkpoint){restoreCoopAuthority(state,session.checkpoint,{members:session.players,ownerId:session.ownerId,epoch:session.ownerEpoch,rebase:isHost});arrival.dispose();}
+ const localId=client.id;session.ownerEpoch??=0;let isHost=localId===session.ownerId;
+ const state=createCoopRound(session,{localId}),run=state.run;if(session.checkpoint)arrival.dispose();
  if(!state.players.has(localId))throw new Error('You are not a member of this round.');
  const world=createWorld(run),groundHeight=world.groundHeight??legacyGroundHeight,ui=createGameUI(),revivePrompts=createRevivePrompts(ui.root);
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.4));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;container.append(renderer.domElement);
  const quality=createRenderQuality(renderer,{pixelRatio:Math.min(devicePixelRatio,1.4)});
- const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
+ const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();if(run.layout.narrowMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(mesh=>{if(mesh.isMesh){mesh.userData.actor=true;world.rayMeshes.push(mesh);}});
  const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
  const audio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,metallic:false,onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
@@ -61,7 +59,7 @@ export function startCoopGame(container,{client,session}){
   const first=raycaster.intersectObjects(solids(),false)[0];
   return !first||first.object.userData.interactId===target.id||first.distance>length-.08;
  };
- const b1CanMove=world.canMove;world.canMove=(x,z)=>run.phase==='halloween'?canMoveB2(x,z):b1CanMove(x,z);world.canMove.gameplay=()=>run.layout.halloweenMaze&&run.phase!=='halloween'?'maze':'legacy';world.canMove.groundHeight=p=>run.phase==='halloween'?0:groundHeight(p);
+ const b1CanMove=world.canMove;world.canMove=(x,z)=>run.phase==='halloween'?canMoveB2(x,z):b1CanMove(x,z);world.canMove.gameplay=()=>run.layout.narrowMaze&&run.phase!=='halloween'?'maze':'legacy';world.canMove.groundHeight=p=>run.phase==='halloween'?0:groundHeight(p);
  let simulation=isHost?createCoopSimulation(state,world,{checkpoint:session.checkpoint}):null;
  const drawerRequests=createDrawerRequests({send:action=>client.send('action',{action})});
  let enemyView=session.checkpoint?.enemy??{position:{...(simulation?.enemy.position??{x:13,z:13})},yaw:Math.PI,mode:'patrol',moving:false,silent:false,reveal:0};
@@ -71,7 +69,7 @@ export function startCoopGame(container,{client,session}){
  let recovering=false,recoveryAt=0,nextRecoveryAt=0,recoveryAttempt=null;
  const avatars=new Map(),noiseSequences=new Map(),poseBuffers=new Map(),enemyBuffer=createPoseBuffer({adaptive:true});let avatarAsset;
  const prediction=createMovementPrediction(state.players.get(localId),world.canMove);
- let peerProofAt=0,proofSnapshotClock=0;
+ let peerProofAt=0,proofSnapshotClock=0,voiceSequence=0;
  const peerFingerprints=new Map();let ownerFingerprint=null,acceptedFingerprint=null;
  // Public voice signalling cannot authenticate game authority. Bind DTLS certificates
  // through authenticated member actions and owner-only database snapshots first.
@@ -89,6 +87,7 @@ export function startCoopGame(container,{client,session}){
  function local(){return state.players.get(localId);}
  const voicePosition=new THREE.Vector3();
  function updateVoice(presentation=null){
+  if(!run.halloween){client.voice?.updateSpatial?.(null);return;}
   const viewCamera=presentation?.camera??camera;viewCamera.getWorldDirection(audioDirection);
   client.voice?.updateSpatial?.({active:!disconnected&&!recovering,listener:{x:viewCamera.position.x,y:viewCamera.position.y,z:viewCamera.position.z,yaw:Math.atan2(-audioDirection.x,-audioDirection.z),pitch:Math.asin(THREE.MathUtils.clamp(audioDirection.y,-1,1))},players:[...state.players].map(([id,player])=>{
    const actor=presentation?.actors?.get(id);
@@ -297,10 +296,11 @@ export function startCoopGame(container,{client,session}){
   let own=local();if(!own)return;
   if(own.hidden!==lastOwnHidden){if(own.hidden)input.setView(world.targets.get(own.closetId)?.hideYaw??Math.PI,0);lastOwnHidden=own.hidden;}
   const command={...input.movement,yaw:input.yaw,pitch:input.pitch,sprint:input.sprint,torch:torch.on,paused:!!ui.overlay||disconnected||!(run.phase==='playing'||run.phase==='halloween'&&run.halloween.visit.stage==='archive')||own.status!=='alive'};
+  const voice={voiceSequence:++voiceSequence,voiceLevel:!arrival.active&&!disconnected&&run.phase==='playing'&&own.status==='alive'?(client.voice?.noiseLevel??0):0};
   if(!isHost&&!disconnected&&now-lastSnapshotAt>(latestSequence<0?20000:2000))beginRecovery();
   if(recovering){if(now-recoveryAt>95000){recovering=false;disconnected=true;reconnect.hidden=true;screen('lost');}else void attemptRecovery();return;}
   if(isHost){
-   simulation.setInput(localId,command);
+   simulation.setInput(localId,{...command,...voice});
    if(!disconnected){
     let clockPending=clockDelta;
     for(let left=document.hidden?wallDelta:delta;left>0;left-=.2){
@@ -316,7 +316,7 @@ export function startCoopGame(container,{client,session}){
    if(run.phase==='playing'||run.phase==='halloween')prediction.step(command,delta);
    inputClock+=wallDelta;
    if(inputClock>=.05&&(run.phase==='playing'||run.phase==='halloween')){inputClock%=.05;
-    const packet=prediction.packet(command);
+    const packet={...prediction.packet(command),...voice};
     if(!direct||!client.voice.sendGameplay(session.ownerId,'input',{input:packet}))client.send('input',{input:packet});
    }
   }
@@ -349,7 +349,7 @@ export function startCoopGame(container,{client,session}){
   for(const player of state.players.values())if(player.noiseSequence>(noiseSequences.get(player.id)??0)){
    noiseSequences.set(player.id,player.noiseSequence);
    const close=Math.hypot(player.x-watched.x,player.z-watched.z,player.height-watched.height)<6;
-   if(!ui.overlay&&run.elapsed-player.noiseAt<.45&&close)audio.playNoise(player.noiseType);
+   if(player.noiseType!=='voice'&&!ui.overlay&&run.elapsed-player.noiseAt<.45&&close)audio.playNoise(player.noiseType);
   }
   if(watched.hidden&&watched.closetId){world.targets.get(watched.closetId).mesh.visible=!!world.targets.get(watched.closetId).physicalGrille;}
   for(const closet of world.closets)if(!(watched.hidden&&watched.closetId===closet.id))closet.mesh.visible=true;

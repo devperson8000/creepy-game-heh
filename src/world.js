@@ -18,7 +18,7 @@ function texture(){
  const t=new THREE.CanvasTexture(canvas);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
 }
 export function createWorld(run){
- if(run.layout.halloweenMaze)return createMazeWorld(run);
+ if(run.layout.narrowMaze)return createMazeWorld(run);
  const size=run.layout.size??SIZE,span=size*CELL;
  const firstCell=worldPoint({x:0,z:0}),lastCell=worldPoint({x:size-1,z:size-1});
  const center={x:(firstCell.x+lastCell.x)/2,z:(firstCell.z+lastCell.z)/2};
@@ -127,7 +127,7 @@ export function createWorld(run){
   fixture(p.x,4.15,p.z,18);
  }
  const wallNotes=createWallNotes(run.layout);scene.add(...wallNotes);
- const halloween=createHalloweenWorld(scene,run,targets,rayMeshes);
+ const halloween=run.halloween?createHalloweenWorld(scene,run,targets,rayMeshes):undefined;
  const clueRoom=worldPoint(run.layout.rooms[run.clueRoom]);
  box(1.6,.08,.72,clueRoom.x,.9,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x-.65,.45,clueRoom.z+2.3,wood);box(.08,.9,.6,clueRoom.x+.65,.45,clueRoom.z+2.3,wood);collider(clueRoom.x,clueRoom.z+2.3,1.6,.72);
  box(.84,.37,.04,clueRoom.x,1.25,clueRoom.z+2.42,wood);box(.045,.35,.045,clueRoom.x,1.08,clueRoom.z+2.4,wood);

@@ -8,6 +8,7 @@ import {groundHeight as legacyGroundHeight,moveInWorld,lineOfSight} from './leve
 import {coopInteract,downPlayer,expireDowned,markEscaped,removeCoopPlayer,serializeCoopState} from './coop-state.js';
 import {createRemoteMovement} from './coop-motion.js';
 import {footstepNoise,interactionNoise} from './player-noise.js';
+import {voiceNoise} from './microphone-noise.js';
 
 function observedPosition(player){
  // Seeing someone enter a cabinet reveals its entrance, not their concealed body.
@@ -36,7 +37,7 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
  const enemy=createEnemy(state.run.layout),ambush=createAmbush(state.seed,{chance:ambushChance});
  const remoteMovement=new Map(),remoteAt=new Map();
  const drawerRequests=new Map();
- const inputs=new Map(),footsteps=new Map(),noisyUntil=new Map(),notices=[];
+ const inputs=new Map(),footsteps=new Map(),voices=new Map(),noisyUntil=new Map(),notices=[];
  let pendingNoise=[],sequence=checkpoint?.sequence??0,noticeId=checkpoint?.notices?.at(-1)?.id??0,ambushResult={silent:false,triggered:false,targetId:null},reveal=0;
  let huntClockAt=now(),clockIsRunning=false;
  const navigation=world.enemyNavigation??{};
@@ -46,14 +47,20 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
  function tell(playerId,message){notices.push({id:++noticeId,playerId,message});if(notices.length>24)notices.shift();}
  function setInput(id,input){
   if(!['playing','halloween'].includes(state.run.phase)||!state.players.has(id)||!input||!['forward','right','yaw','pitch'].every(k=>Number.isFinite(input[k])))return false;
+  const hasVoice=Object.hasOwn(input,'voiceLevel')||Object.hasOwn(input,'voiceSequence');
+  if(hasVoice&&(!Number.isInteger(input.voiceLevel)||input.voiceLevel<0||input.voiceLevel>4||!Number.isSafeInteger(input.voiceSequence)||input.voiceSequence<=0))return false;
+  function acceptVoice(){
+   const previous=voices.get(id);
+   if(hasVoice&&input.voiceSequence>(previous?.sequence??0))voices.set(id,{level:input.voiceLevel,sequence:input.voiceSequence,at:state.run.elapsed,nextAt:input.voiceLevel!==previous?.level?state.run.elapsed:previous.nextAt});
+  }
   if(Array.isArray(input.commands)){
    if(!remoteMovement.has(id))remoteMovement.set(id,createRemoteMovement(state.players.get(id),world.canMove));
    if(!remoteMovement.get(id).receive(input))return false;
-   remoteAt.set(id,state.run.elapsed);return true;
+   remoteAt.set(id,state.run.elapsed);acceptVoice();return true;
   }
   if(state.run.elapsed-(remoteAt.get(id)??-Infinity)<.65)return false;
   remoteMovement.delete(id);
-  inputs.set(id,{forward:Math.max(-1,Math.min(1,input.forward)),right:Math.max(-1,Math.min(1,input.right)),yaw:input.yaw,pitch:Math.max(-1.3,Math.min(1.3,input.pitch)),sprint:!!input.sprint,torch:!!input.torch,paused:!!input.paused,at:state.run.elapsed});return true;
+  inputs.set(id,{forward:Math.max(-1,Math.min(1,input.forward)),right:Math.max(-1,Math.min(1,input.right)),yaw:input.yaw,pitch:Math.max(-1.3,Math.min(1.3,input.pitch)),sprint:!!input.sprint,torch:!!input.torch,paused:!!input.paused,at:state.run.elapsed});acceptVoice();return true;
  }
  function emit(player,noise){
   if(!noise)return;noise.playerId=player.id;player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noisyUntil.set(player.id,state.run.elapsed+.9);
@@ -136,15 +143,27 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
     emit(player,footstepNoise(footsteps.get(player.id),moved,player.sprint,player));
     if(state.run.elapsed>(noisyUntil.get(player.id)??0))player.noise='Quiet';
    }
+   for(const player of state.players.values()){
+    const report=voices.get(player.id);
+    player.voiceLevel=hunting&&player.status==='alive'&&player.height<1.5&&report&&state.run.elapsed-report.at<=.65?report.level:0;
+    if(player.voiceLevel&&state.run.elapsed>=report.nextAt){emit(player,voiceNoise(player.voiceLevel,player));report.nextAt=state.run.elapsed+.25;}
+   }
    const target=chooseMonsterTarget(enemy,state,navigation);
    if(target){
     enemy.targetId=target.id;
     ambushResult=tickAmbush(ambush,{enemy,layout:state.run.layout,player:target,delta:step,active:hunting,navigation});
     if(ambushResult.triggered)reveal++;
-    tickEnemy(enemy,state.run.layout,observedPosition(target),step,hunting,pendingNoise,navigation);
+    const perception=tickEnemy(enemy,state.run.layout,observedPosition(target),step,hunting,pendingNoise,navigation);
+    if(perception.heardPlayerId&&perception.heardType==='voice'){
+     const heard=state.players.get(perception.heardPlayerId);
+     if(heard?.status==='alive'){
+      enemy.targetId=heard.id;
+      if(heard.hidden&&heard.closetExit)heard.hideWitnessed=true;
+     }
+    }
     if(hunting)for(const player of state.players.values()){
      const observed=observedPosition(player),d=Math.hypot(observed.x-enemy.position.x,observed.z-enemy.position.z);
-     if(d<(player.hidden?1.8:state.run.layout.halloweenMaze?1:1.35)&&visible(enemy,state,player,navigation))downPlayer(state,player.id,state.run.elapsed);
+     if(d<(player.hidden?1.8:state.run.layout.narrowMaze?1:1.35)&&visible(enemy,state,player,navigation))downPlayer(state,player.id,state.run.elapsed);
     }
    }
    pendingNoise=[];expireDowned(state,state.run.elapsed);
@@ -154,6 +173,6 @@ export function createCoopSimulation(state,world,{ambushChance=.12,now=()=>Date.
  }
  function enemySnapshot(){return {position:{...enemy.position},yaw:enemy.yaw,mode:enemy.mode,active:huntActive(state.run),moving:enemy.path.length>0,targetId:enemy.targetId,silent:ambushResult.silent,silentTargetId:ambushResult.targetId,reveal};}
  function snapshot(){return {sequence:++sequence,state:serializeCoopState(state),enemy:enemySnapshot(),huntClock:{hostAt:huntClockAt,running:clockIsRunning&&state.run.phase==='playing'},notices:[...notices],recovery:{enemy:savedEnemy(),ambush:{...ambush}}};}
- function removePlayer(id){inputs.delete(id);remoteMovement.delete(id);remoteAt.delete(id);footsteps.delete(id);noisyUntil.delete(id);removeCoopPlayer(state,id);}
+ function removePlayer(id){inputs.delete(id);remoteMovement.delete(id);remoteAt.delete(id);footsteps.delete(id);voices.delete(id);noisyUntil.delete(id);removeCoopPlayer(state,id);}
  return {state,enemy,setInput,interact,advance,snapshot,enemySnapshot,removePlayer};
 }

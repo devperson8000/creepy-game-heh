@@ -33,5 +33,5 @@ export function createOpeningFilm(container){
  // Warm the locally authored sets and decode the small voice clips before time starts.
  set.street.visible=set.house.visible=set.passage.visible=true;
  const ready=Promise.all([renderer.compileAsync(scene,camera),audio.ready]).then(()=>{if(disposed)return;audio.resume();});
- return {ready,render,pause:()=>audio.pause(),resume:()=>audio.resume(),toggleSound:()=>audio.toggle(),get soundEnabled(){return audio.enabled;},dispose(){if(disposed)return;disposed=true;observer.disconnect();audio.dispose();hands.dispose();set.dispose();renderer.dispose();renderer.domElement.remove();}};
+ return {ready,render,pause:()=>audio.pause(),resume:()=>audio.resume(),toggleSound:()=>audio.toggle(),setSoundEnabled:value=>audio.setEnabled(value),get soundEnabled(){return audio.enabled;},dispose(){if(disposed)return;disposed=true;observer.disconnect();audio.dispose();hands.dispose();set.dispose();renderer.dispose();renderer.domElement.remove();}};
 }

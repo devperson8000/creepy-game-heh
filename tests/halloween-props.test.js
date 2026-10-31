@@ -42,3 +42,7 @@ test('the actual opening house uses the shared pumpkins and hanging party decora
   const props=factory({aged:true}),reference=props.pumpkin(),actual=models.find(o=>o.userData.halloweenProp==='pumpkin');assert.deepEqual(actual.body.geometry.attributes.position.array,reference.body.geometry.attributes.position.array);set.update(16);set.dispose();props.dispose();
  }finally{if(previous===undefined)delete globalThis.document;else globalThis.document=previous;}
 });
+
+test('static Halloween dressing batches repeated metal, bulbs and bones within a small draw budget',()=>{
+ const props=factory();for(const [model,budget]of [[props.stringLights({width:2,count:12}),5],[props.lantern(),8],[props.skeleton(),6],[props.wreath(),4]]){let draws=0;model.traverse(o=>draws+=Number(!!o.isMesh));assert.ok(draws<=budget,`${model.name} uses ${draws} draws; budget ${budget}`);}props.dispose();
+});

@@ -1,7 +1,7 @@
-const DEFAULTS={sensitivity:1,brightness:1,volume:.8,quality:'auto',reducedMotion:false};
+const DEFAULTS={sensitivity:1,micSensitivity:1,brightness:1,volume:.8,quality:'auto',reducedMotion:false};
 const bound=(value,min,max,fallback)=>Number.isFinite(value)?Math.max(min,Math.min(max,value)):fallback;
 export function sanitizePreferences(value={}){
- return {sensitivity:bound(value.sensitivity,.35,2,1),brightness:bound(value.brightness,.7,1.4,1),volume:bound(value.volume,0,1,.8),quality:['auto','high','balanced','low'].includes(value.quality)?value.quality:'auto',reducedMotion:value.reducedMotion===true};
+ return {sensitivity:bound(value.sensitivity,.35,2,1),micSensitivity:bound(value.micSensitivity,.5,2,1),brightness:bound(value.brightness,.7,1.4,1),volume:bound(value.volume,0,1,.8),quality:['auto','high','balanced','low'].includes(value.quality)?value.quality:'auto',reducedMotion:value.reducedMotion===true};
 }
 let preferences;
 export function gamePreferences(){

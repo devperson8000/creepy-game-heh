@@ -30,7 +30,8 @@ test('Halloween detection, muffled hearing, pursuit movement and catches match t
  for(const expected of normal.enemyCases){
   const {spec}=expected,layout={halloweenMaze:true,grid:Array.from({length:25},()=>Array(25).fill(1)),rooms:[{x:8,z:8}],entrance:{x:8,z:8}};if(spec.wall)layout.grid[9][8]=0;
   const enemy=createEnemy(layout);enemy.yaw=0;const p={x:0,z:spec.distance,height:-7.2,hidden:!!spec.hidden};
-  const result=tickEnemy(enemy,layout,p,.05,true,spec.radius?[{...p,radius:spec.radius}]:[]);
+  const {heardPlayerId,heardType,...result}=tickEnemy(enemy,layout,p,.05,true,spec.radius?[{...p,radius:spec.radius}]:[]);
+  assert.equal(heardPlayerId??null,null);assert.equal(heardType??null,null);
   assert.deepEqual({result,mode:enemy.mode,position:enemy.position},{result:expected.result,mode:expected.mode,position:expected.position},spec.name);
  }
 });

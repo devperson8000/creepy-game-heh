@@ -71,7 +71,7 @@ export function createHalloweenProps({aged=false}={}){
   for(const x of [-.109,.109]){const pane=mesh(g,geometry('lantern-side',()=>new THREE.PlaneGeometry(.14,.28)),glass,[x,.2,0]);pane.rotation.y=Math.PI/2;}
   mesh(g,geometry('lantern-cap',()=>new THREE.ConeGeometry(.17,.095,4).rotateY(Math.PI/4)),iron,[0,.414,0],[1,1,.82]);
   const ring=mesh(g,geometry('lantern-ring',()=>new THREE.TorusGeometry(.054,.009,6,20)),iron,[0,.503,0]);ring.rotation.y=.1;
-  candle(g,0,0,.2);g.lightPoint=new THREE.Vector3(0,.255,0);g.seal=ball(g,0,.12,.111,.035,.035,.01,material('wax-seal',0x863c24));return g;
+  candle(g,0,0,.2);batch(g,'lantern-iron',iron,()=>true);batch(g,'lantern-glass-panels',glass,()=>true);batch(g,'lantern-wax',wax,()=>true);g.lightPoint=new THREE.Vector3(0,.255,0);g.seal=ball(g,0,.12,.111,.035,.035,.01,material('wax-seal',0x863c24));return g;
  }
  function web({size=1,flip=1}={}){
   const g=group('web',size);g.scale.x*=flip;
@@ -89,7 +89,7 @@ export function createHalloweenProps({aged=false}={}){
  function stringLights({width=2,count=9,sag=.09}={}){
   const g=group('string-lights');wire(g,width,count,sag);
   for(let i=0;i<count;i++){const t=(i+.5)/count,x=-width/2+t*width,y=-Math.sin(t*Math.PI)*sag;box(g,.022,.033,.022,x,y-.013,0,ink);ball(g,x,y-.046,0,.024,.034,.024,i%4===0?material('dead-bulb',0x624326):glow);}
-  g.lightPoint=new THREE.Vector3(0,-.08,0);return g;
+  batch(g,`bulb-sockets-${width}-${count}-${sag}`,ink,()=>true);batch(g,`lit-bulbs-${width}-${count}-${sag}`,glow,()=>true);const dead=materials.get('dead-bulb');if(dead)batch(g,`dead-bulbs-${width}-${count}-${sag}`,dead,()=>true);g.lightPoint=new THREE.Vector3(0,-.08,0);return g;
  }
  function bats({scale=1}={}){
   const g=group('bats',scale),geo=shape('bat',[[-.5,.23],[-.3,.08],[-.13,-.02],[-.065,.15],[0,.09],[.065,.15],[.13,-.02],[.3,.08],[.5,.23],[.37,-.16],[.22,-.09],[.09,-.22],[0,-.29],[-.09,-.22],[-.22,-.09],[-.37,-.16]]);
@@ -97,7 +97,7 @@ export function createHalloweenProps({aged=false}={}){
  }
  function wreath({scale=1}={}){
   const g=group('wreath',scale);mesh(g,geometry('wreath',()=>new THREE.TorusGeometry(.24,.046,8,32)),material('wreath-orange',0x945322));
-  for(let i=0;i<12;i++){const a=i/12*Math.PI*2,leaf=ball(g,Math.cos(a)*.24,Math.sin(a)*.24,.018,.035,.069,.02,i%3?stem:blackCard);leaf.rotation.z=a-.5;}return g;
+  for(let i=0;i<12;i++){const a=i/12*Math.PI*2,leaf=ball(g,Math.cos(a)*.24,Math.sin(a)*.24,.018,.035,.069,.02,i%3?stem:blackCard);leaf.rotation.z=a-.5;}batch(g,'wreath-leaves',stem,()=>true);batch(g,'wreath-dark-leaves',blackCard,()=>true);return g;
  }
  function skeleton({scale=1}={}){
   const g=group('skeleton',scale);rod(g,[0,.47,-.04],[0,.96,-.04],.023);ball(g,0,.47,-.025,.13,.065,.075,bone);
@@ -109,7 +109,7 @@ export function createHalloweenProps({aged=false}={}){
    const hip=[side*.075,.47,-.02],knee=[side*.13,.25,.03],ankle=[side*.1,.06,.11];rod(g,hip,knee,.025);rod(g,knee,ankle,.021);ball(g,...knee,.034,.035,.034,bone);ball(g,side*.1,.035,.16,.045,.029,.083,bone);
    const shoulder=[side*.14,.86,0],elbow=[side*.22,side<0?.65:.71,.04],hand=[side<0?-.10:.15,side<0?.56:.75,.18];rod(g,shoulder,elbow,.022);rod(g,elbow,hand,.017);ball(g,...elbow,.028,.028,.028,bone);ball(g,...hand,.028,.025,.019,bone);
   }
-  g.letter=box(g,.185,.125,.013,.12,.755,.201,letter);g.letter.rotation.z=-.1;g.seal=ball(g,.145,.753,.215,.023,.023,.008,material('wax-seal',0x863c24));return g;
+  g.letter=box(g,.185,.125,.013,.12,.755,.201,letter);g.letter.rotation.z=-.1;g.seal=ball(g,.145,.753,.215,.023,.023,.008,material('wax-seal',0x863c24));batch(g,'skeleton-bones',bone,()=>true);batch(g,'skeleton-recesses',ink,()=>true);return g;
  }
  function update(time,{reducedMotion=false}={}){
   if(disposed)return;const t=Number.isFinite(time)?time:0;

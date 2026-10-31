@@ -20,7 +20,7 @@ export function createMazeLayout(seed,{playerCount=1}={}){
   if(rooms.length>=roomCount)break;if(adjacent(p.x,p.z).length!==1||rooms.some(r=>Math.hypot(r.x-p.x,r.z-p.z)<4))continue;
   const [dx,dz]=adjacent(p.x,p.z)[0];grid[p.z][p.x]=1;rooms.push({...p,normal:{x:dx,z:dz},door:{x:p.x+dx,z:p.z+dz}});
  }
- const layout={grid,rooms,entrance,seed,size,halloween:true,halloweenMaze:true,mazeStart:6,floorHeight:-7.2,ceilingHeight:2.65,corridorWidth:1.8,stairs:{x:-2.6,topZ:-25,bottomZ:-2.6,width:1.65,topHeight:3.6,bottomHeight:-7.2}};
+ const layout={grid,rooms,entrance,seed,size,narrowMaze:true,halloween:true,halloweenMaze:true,mazeStart:6,floorHeight:-7.2,ceilingHeight:2.65,corridorWidth:1.8,stairs:{x:-2.6,topZ:-25,bottomZ:-2.6,width:1.65,topHeight:3.6,bottomHeight:-7.2}};
  rooms.sort((a,b)=>pathBetween(layout,entrance,a).length-pathBetween(layout,entrance,b).length);
  const closets=[],atEnd=p=>{const n=adjacent(p.x,p.z)[0];return n?adjacent(p.x+n[0],p.z+n[1]).length===1:false;};
  for(const p of candidates().sort((a,b)=>Number(atEnd(b))-Number(atEnd(a)))){

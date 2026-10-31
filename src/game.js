@@ -24,16 +24,16 @@ import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {createSoundOcclusion} from './sound-occlusion.js';
 import {createArrival} from './arrival.js';
 
-export function startGame(container,{seed,autostart=false,halloween=false}={}){
+export function startGame(container,{seed,autostart=false,halloween=false,mapUpdate=false}={}){
  const ambience=createRoomAmbience({halloween});
  const arrival=autostart?createArrival({halloween,isMuted:()=>monsterAudio.muted}):null;
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
- const run=createRun(seed,{halloween}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
+ const run=createRun(seed,{halloween,mapUpdate}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,metallic:false,onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
  const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.6));renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.95;
  container.appendChild(renderer.domElement);
  const quality=createRenderQuality(renderer);
- const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.halloweenMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
+ const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.narrowMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
  const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();

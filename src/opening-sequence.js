@@ -54,7 +54,7 @@ export function playOpeningBeforeMenu({container,onComplete,createFilm=null,redu
  document.body.append(root);
  const caption=root.querySelector('.opening-caption');
  const skip=root.querySelector('.opening-skip'),sound=root.querySelector('.opening-audio'),status=root.querySelector('.opening-status'),title=root.querySelector('.opening-title'),shade=root.querySelector('.opening-shade'),date=root.querySelector('.opening-date');
- const clock=createOpeningClock(finish,{reducedMotion});
+ const clock=createOpeningClock(finish,{reducedMotion});sound.disabled=!ready;
  function disposeFilm(){const current=film;film=null;current?.dispose();}
  function beginHold(source){if(!holds.size)holdStart=performance.now();holds.add(source);skip.classList.add('is-holding');}
  function clearHold(){holds.clear();clock.update(0,{holding:false});skip.classList.remove('is-holding');}
@@ -64,8 +64,8 @@ export function playOpeningBeforeMenu({container,onComplete,createFilm=null,redu
   onComplete();setTimeout(()=>veil.remove(),1100);
  }
  function unlock(event){if(event?.target===sound)return;film?.resume?.();setTimeout(()=>{if(!disposed&&!finished)syncSound();},50);}
- function syncSound(){sound.textContent=film?.soundEnabled?'Sound on':'Enable sound';sound.setAttribute('aria-label',film?.soundEnabled?'Mute introduction sound':'Enable introduction sound');sound.setAttribute('aria-pressed',String(!!film?.soundEnabled));}
- sound.onclick=()=>{film?.toggleSound?.();setTimeout(syncSound,50);};
+ function syncSound(){sound.disabled=!ready;sound.textContent=film?.soundEnabled?'Sound on':'Enable sound';sound.setAttribute('aria-label',film?.soundEnabled?'Mute introduction sound':'Enable introduction sound');sound.setAttribute('aria-pressed',String(!!film?.soundEnabled));}
+ sound.onclick=()=>{const enabled=sound.getAttribute('aria-pressed')!=='true';if(film?.setSoundEnabled)film.setSoundEnabled(enabled);else film?.toggleSound?.();setTimeout(syncSound,50);};
  function keyDown(event){if(event.code!=='Space'&&event.code!=='Escape')return;if(event.code==='Space'&&event.target===sound)return;event.preventDefault();if(clock.elapsed>=OPENING_TITLE_AT)return;beginHold(event.code);unlock();}
  function keyUp(event){if(holds.has(event.code)){event.preventDefault();holds.delete(event.code);}if(!holds.size)skip.classList.remove('is-holding');}
  skip.onpointerdown=event=>{if(event.button!==0)return;event.preventDefault();skip.setPointerCapture(event.pointerId);beginHold('pointer');unlock();};
