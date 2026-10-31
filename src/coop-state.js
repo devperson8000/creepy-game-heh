@@ -8,7 +8,7 @@ const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z,(a.height??0)-(b.height??0));
 const position=t=>t?.position;
 const playing=(s,p)=>s.run.phase==='playing'&&p?.status==='alive';
 
-export function createCoopState(seed,members,{mapUpdate=false}={}){
+export function createCoopState(seed,members,{halloween=false,mapUpdate=false,maze=true,drawerRows=3,initialPlayerCount=members?.length??1}={}){
  if(!Array.isArray(members)||members.length<1||members.length>4)throw new RangeError('A co-op team needs one to four players');
  const players=new Map(),slots=new Set();
  for(const member of members)if(typeof member!=='string'&&member.slot!==undefined){
@@ -19,9 +19,9 @@ export function createCoopState(seed,members,{mapUpdate=false}={}){
   const id=typeof member==='string'?member:member.id;
   if(typeof id!=='string'||!id||players.has(id))throw new TypeError('Player IDs must be unique nonempty strings');
   const slot=typeof member!=='string'&&member.slot!==undefined?member.slot:[0,1,2,3].find(value=>!slots.has(value));slots.add(slot);
-  players.set(id,{id,name:typeof member==='string'?member:member.name??id,slot,x:-2.6+(slot%2)*.65,z:-30.8+Math.floor(slot/2)*.65,height:3.6,yaw:Math.PI,pitch:0,torch:true,status:'alive',hidden:false,closetId:null,carried:new Set(),downedUntil:null,invulnerableUntil:0});
+  players.set(id,{id,name:typeof member==='string'?member:member.name??id,slot,x:-2.6+(slot%2)*.65,z:-30.8+Math.floor(slot/2)*.65,height:3.6,yaw:Math.PI,pitch:0,torch:true,status:'alive',hidden:false,closetId:null,carried:new Set(),downedUntil:null,invulnerableUntil:0,...(halloween?{stamina:1,staminaRest:0,exhausted:false}:{})});
  });
- return {seed,ownerId:players.keys().next().value,run:{...createRun(seed,{playerCount:members.length,mapUpdate}),initialPlayerCount:members.length},players,closets:new Map()};
+ return {seed,ownerId:players.keys().next().value,run:{...createRun(seed,{playerCount:Math.max(members.length,Math.min(4,initialPlayerCount)),halloween,mapUpdate,maze,drawerRows}),initialPlayerCount:Math.max(members.length,Math.min(4,initialPlayerCount))},players,closets:new Map()};
 }
 
 function releaseCloset(state,player){
@@ -73,12 +73,13 @@ export function coopInteract(state,playerId,action,{targets=new Map(),canSee,now
    const count=player.carried.size;for(const id of player.carried)run.banked.add(id);player.carried.clear();return {ok:true,type:'locks',count};
   }
   case 'keypad':return enterCode(run,action.code)?{ok:true,type:'keypad'}:fail('wrong-code');
-  case 'elevator':return openExit(run)?{ok:true,type:'elevator'}:fail('locked');
+  case 'escape':return run.halloween&&run.banked.size===4&&run.codeAccepted?{ok:true,type:'escape'}:fail('locked');
+  case 'elevator':return !run.halloween&&openExit(run)?{ok:true,type:'elevator'}:fail('locked');
   case 'closet':{
    if(state.closets.has(target.id))return fail('occupied');
    if(!target.hide||!target.exit||distance({...target.hide,height:at.height??0},at)>2.6||distance({...target.exit,height:at.height??0},at)>2.6)return fail('invalid-closet');
    state.closets.set(target.id,playerId);player.hidden=true;player.closetId=target.id;player.closetExit={...target.exit};
-   player.x=target.hide.x;player.z=target.hide.z;player.height=target.hide.height??player.height;return {ok:true,type:'closet'};
+   if(target.hideYaw!==undefined){player.yaw=target.hideYaw;player.pitch=0;}player.x=target.hide.x;player.z=target.hide.z;player.height=target.hide.height??player.height;return {ok:true,type:'closet'};
   }
   default:return fail('invalid-action');
  }
@@ -103,7 +104,7 @@ export function expireDowned(state,now=state.run.elapsed){
 }
 export function markEscaped(state,playerId){
  const player=state.players.get(playerId);
- if(!playing(state,player)||!state.run.exitOpen||player.z>=-33.6)return false;
+ if(state.run.halloween||!playing(state,player)||!state.run.exitOpen||player.z>=-33.6)return false;
  releaseCloset(state,player);player.status='escaped';updateOutcome(state);return true;
 }
 export function removeCoopPlayer(state,playerId){

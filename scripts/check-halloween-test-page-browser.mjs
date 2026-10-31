@@ -1,0 +1,43 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+const password=process.env.HALLOWEEN_TEST_PASSWORD||await readFile('work/halloween-preview-password.txt','utf8');
+const browser=await chromium.launch({executablePath:process.env.BROWSER_EXECUTABLE||'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']}),page=await browser.newPage({viewport:{width:1100,height:800}}),errors=[];
+page.on('pageerror',e=>errors.push(e.message));
+await page.addInitScript(()=>{try{localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',reducedMotion:true}));}catch{}});
+try{
+ await page.goto((process.env.GAME_TEST_URL||'http://localhost:5173')+'/testhalloween');
+ const dialog=page.getByRole('dialog',{name:'Halloween test access'});await dialog.waitFor();
+ await dialog.getByLabel('Password',{exact:true}).fill('wrong');await dialog.getByRole('button',{name:'Unlock tests'}).click();
+ await dialog.getByText('Incorrect password. Try again.').waitFor();assert.equal(await page.locator('#halloween-test-hub').count(),0);
+ await dialog.getByLabel('Password',{exact:true}).fill(password);await dialog.getByRole('button',{name:'Unlock tests'}).click();await page.locator('#halloween-test-hub').waitFor();
+ assert.equal(await page.getByRole('button',{name:'Halloween key reveal',exact:true}).count(),1);
+ for(const width of [1100,390,320]){await page.setViewportSize({width,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
+ await page.setViewportSize({width:1100,height:800});
+ console.log('Testing: Halloween key reveal');await page.getByRole('button',{name:'Halloween key reveal',exact:true}).click();
+ const frame=page.frameLocator('#halloween-test-frame');await frame.locator('#game-ui').waitFor({state:'attached',timeout:30000});
+ await page.waitForFunction(()=>document.querySelector('#halloween-test-frame')?.contentWindow.monochrome?.run.halloween.key===true,null,{timeout:10000});
+ const game=()=>page.frames().find(f=>f!==page.mainFrame());
+ assert.equal(await game().evaluate(()=>monochrome.run.banked.size),0);
+ await game().waitForFunction(()=>monochrome.world.targets.get('halloween:chest').mesh.parent.children.some(c=>c.isGroup&&c.rotation.x<-.05));
+ await page.getByRole('button',{name:'Replay test',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#halloween-test-frame')?.contentWindow.monochrome?.run.halloween.key===true,null,{timeout:30000});
+ await page.evaluate(()=>document.querySelector('iframe')?.contentDocument.exitPointerLock?.());await page.waitForFunction(()=>!document.querySelector('iframe')?.contentDocument.pointerLockElement);await page.getByRole('button',{name:'Back to tests',exact:true}).click();assert.equal(await page.locator('iframe').count(),0);
+ console.log('Testing: Quest items');await page.getByRole('button',{name:'Quest items',exact:true}).click();await frame.locator('#game-ui').waitFor({state:'attached'});
+ await page.getByRole('button',{name:'Seal 2',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#halloween-test-frame').contentWindow.monochrome?.run.halloween.stage===2);
+ for(const [label,stage]of [['Invitation',0],['Seal 1',1],['Seal 2',2],['Seal 3',3],['Key chest',4]]){
+  await page.getByRole('button',{name:label,exact:true}).click();await game().waitForFunction(stage=>monochrome.run.halloween.stage===stage,stage);await game().locator('canvas').first().focus();await page.keyboard.down('e');await game().waitForFunction(stage=>monochrome.run.halloween.stage===stage+1,stage,{timeout:6000});await page.keyboard.up('e');
+ }
+ assert.equal(await game().evaluate(()=>monochrome.run.halloween.key),true);
+ await page.evaluate(()=>document.querySelector('iframe')?.contentDocument.exitPointerLock?.());await page.waitForFunction(()=>!document.querySelector('iframe')?.contentDocument.pointerLockElement);await page.getByRole('button',{name:'Back to tests',exact:true}).click();
+ console.log('Testing: B2 encounter');await page.getByRole('button',{name:'B2 encounter',exact:true}).click();await frame.locator('.b2-overlay:not([hidden])').waitFor({timeout:30000});
+ await page.waitForFunction(()=>document.querySelector('#halloween-test-frame')?.contentWindow.monochrome?.run.halloween.visit?.stage==='conversation',null,{timeout:15000});
+ await page.evaluate(()=>document.querySelector('iframe')?.contentDocument.exitPointerLock?.());await page.waitForFunction(()=>!document.querySelector('iframe')?.contentDocument.pointerLockElement);await page.getByRole('button',{name:'Back to tests',exact:true}).click();console.log('Testing: Return elevator');await page.getByRole('button',{name:'Return elevator',exact:true}).click();
+ await page.waitForFunction(()=>document.querySelector('#halloween-test-frame')?.contentWindow.monochrome?.run.halloween.visit?.stage==='return',null,{timeout:30000});
+ await page.waitForFunction(()=>document.querySelector('#halloween-test-frame')?.contentWindow.monochrome?.run.phase==='playing',null,{timeout:10000});
+ await page.evaluate(()=>document.querySelector('iframe')?.contentDocument.exitPointerLock?.());await page.waitForFunction(()=>!document.querySelector('iframe')?.contentDocument.pointerLockElement);await page.getByRole('button',{name:'Back to tests',exact:true}).click();console.log('Testing: Decorated map');await page.getByRole('button',{name:'Decorated map',exact:true}).click();await page.waitForFunction(()=>!!document.querySelector('#halloween-test-frame')?.contentWindow.monochrome,null,{timeout:30000});
+ const first=await game().evaluate(()=>({...monochrome.player}));await page.getByRole('button',{name:'Next decorated room',exact:true}).click();await game().waitForFunction(first=>Math.hypot(monochrome.player.x-first.x,monochrome.player.z-first.z)>1,first);
+ await page.evaluate(()=>document.querySelector('iframe')?.contentDocument.exitPointerLock?.());await page.waitForFunction(()=>!document.querySelector('iframe')?.contentDocument.pointerLockElement);await page.getByRole('button',{name:'Back to tests',exact:true}).click();console.log('Testing: Full Halloween gameplay');await page.getByRole('button',{name:'Full Halloween gameplay',exact:true}).click();await page.waitForFunction(()=>!!document.querySelector('#halloween-test-frame')?.contentWindow.monochrome?.arrival?.active,null,{timeout:30000});assert.equal(await game().evaluate(()=>monochrome.run.halloween.stage),0);
+ await page.evaluate(()=>document.querySelector('iframe')?.contentDocument.exitPointerLock?.());await page.waitForFunction(()=>!document.querySelector('iframe')?.contentDocument.pointerLockElement);await page.getByRole('button',{name:'Back to tests',exact:true}).click();console.log('Testing: Monochrome II teaser');await page.getByRole('button',{name:'Monochrome II teaser',exact:true}).click();await frame.locator('.b2-overlay:not([hidden])').waitFor();
+ await page.evaluate(()=>document.querySelector('iframe')?.contentDocument.exitPointerLock?.());await page.waitForFunction(()=>!document.querySelector('iframe')?.contentDocument.pointerLockElement);await page.getByRole('button',{name:'Back to tests',exact:true}).click();await page.getByRole('button',{name:'Return to main menu',exact:true}).click();await page.locator('#lobby-singleplayer').waitFor();
+ assert.equal(await page.locator('iframe').count(),0);await page.click('#lobby-singleplayer');await page.waitForFunction(()=>!!window.monochrome);assert.equal(await page.evaluate(()=>!!monochrome.run.halloween),false,'testing must not unlock normal runs before release');assert.deepEqual(errors,[]);console.log('PASS password rejection/unlock; responsive test hub; real key reveal without searching; quest shortcuts; automatic B2 encounter; return elevator; iframe teardown and menu return.');
+}finally{await browser.close();}

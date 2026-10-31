@@ -1,18 +1,20 @@
+import {createHalloweenQuest} from './halloween-state.js';
 import {createLayout,randomSource,shuffled} from './level.js';
-export function createRun(seed,{playerCount=1,mapUpdate=false}={}){
- const rng=randomSource(seed^0x72ab56),layout=createLayout(seed,{playerCount,mapUpdate});
- const drawers=Array.from({length:layout.rooms.length*(mapUpdate?3:6)},(_,id)=>({id,opened:false,key:false,taken:false}));
- if(mapUpdate){
+export function createRun(seed,{playerCount=1,halloween=false,maze=true,drawerRows=3,mapUpdate=false}={}){
+ const rng=randomSource(seed^0x72ab56),layout=createLayout(seed,{playerCount,halloween,maze,mapUpdate});
+ const rows=!halloween&&mapUpdate?3:drawerRows===1?1:3;
+ const drawers=Array.from({length:layout.rooms.length*(layout.narrowMaze?rows:6)},(_,id)=>({id,opened:false,key:false,taken:false}));
+ if(layout.narrowMaze){
   const first=Math.floor(layout.rooms.length*.2),band=(layout.rooms.length-first)/4;
   for(let i=0;i<4;i++){
    const start=first+Math.floor(i*band),end=first+Math.floor((i+1)*band);
    const room=start+Math.floor(rng()*(end-start));
-   drawers[room*3+Math.floor(rng()*3)].key=true;
+   drawers[room*rows+Math.floor(rng()*rows)].key=true;
   }
  }else for(const id of shuffled(drawers.map(d=>d.id),rng).slice(0,4))drawers[id].key=true;
  const code=String(Math.floor(rng()*10000)).padStart(4,'0');
- const clueRoom=mapUpdate?Math.floor(rng()*Math.max(1,Math.ceil(layout.rooms.length*.55))):Math.floor(rng()*layout.rooms.length);
- return {seed,layout,drawers,mapUpdate,code,clueRoom,clueRead:false,carried:new Set(),banked:new Set(),codeAccepted:false,boardsOpen:false,exitOpen:false,hidden:false,phase:'playing',elapsed:0,huntElapsed:0,deaths:0};
+ const clueRoom=layout.narrowMaze?Math.floor(rng()*Math.max(1,Math.ceil(layout.rooms.length*.55))):Math.floor(rng()*layout.rooms.length);
+ return {seed,layout,drawers,mapUpdate,...(halloween?{halloween:{...createHalloweenQuest(seed,layout.rooms.length),maze:!!layout.halloweenMaze,...(layout.halloweenMaze?{drawerRows:rows}:{})}}:{}),code,clueRoom,clueRead:false,carried:new Set(),banked:new Set(),codeAccepted:false,boardsOpen:false,exitOpen:false,hidden:false,phase:'playing',elapsed:0,huntElapsed:0,deaths:0};
 }
 export function searchDrawer(run,id){const d=run.drawers[id];if(!d||run.phase!=='playing')return false;d.opened=!d.opened;return true;}
 export function takeKey(run,id){const d=run.drawers[id];if(!d?.key||!d.opened||d.taken||run.phase!=='playing')return false;d.taken=true;run.carried.add(id);return true;}

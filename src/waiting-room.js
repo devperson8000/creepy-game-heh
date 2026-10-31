@@ -56,6 +56,10 @@ export function createWaitingRoom(container,{client,room,onTerminal=()=>{}}){
   if(!terminal)for(let left=dt;left>0;left-=.025)Object.assign(own,moveInWorld(own,input,own.yaw,Math.min(.025,left),world.canMove,2.5));
   own.moving=Math.hypot(own.x-before.x,own.z-before.z)>.001;
   camera.position.set(own.x,1.65,own.z);camera.rotation.set(own.pitch,own.yaw,0,'YXZ');
+  client.voice?.updateSpatial?.({listener:{x:own.x,y:1.65,z:own.z,yaw:own.yaw,pitch:own.pitch},players:current.members.map(member=>{
+   const pose=member.id===client.id?own:poses.get(member.id)?.sample(now/1000)??world.spawn(member.slot);
+   return {id:member.id,x:pose.x,y:(pose.height??0)+1.65,z:pose.z};
+  })});
   if(sendClock>.12){sendClock=0;client.send('waitingPose',{pose:own});}
   if(asset)for(const member of current.members){
    if(member.id===client.id)continue;
@@ -66,6 +70,6 @@ export function createWaitingRoom(container,{client,room,onTerminal=()=>{}}){
   if(asset)hint.textContent=terminal?'Press Esc to return to the room':Math.hypot(own.x-world.terminalPosition.x,own.z-world.terminalPosition.z)<3?'E · Open lobby terminal':current.requests?.length?'New join request · Open terminal with Esc':'Decontamination complete · Prepare for descent';
   if(!document.hidden){renderer.render(world.scene,camera);torch.render(renderer);}
  });
- function dispose(){if(disposed)return;disposed=true;ambience.dispose();abort.abort();unsubscribe();renderer.setAnimationLoop(null);if(document.pointerLockElement===renderer.domElement)document.exitPointerLock?.();for(const avatar of avatars.values())avatar.dispose();world.dispose();torch.beam.shadow.map?.dispose();renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();hints.remove();}
+ function dispose(){if(disposed)return;disposed=true;client.voice?.updateSpatial?.({active:false,players:[]});ambience.dispose();abort.abort();unsubscribe();renderer.setAnimationLoop(null);if(document.pointerLockElement===renderer.domElement)document.exitPointerLock?.();for(const avatar of avatars.values())avatar.dispose();world.dispose();torch.beam.shadow.map?.dispose();renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove();hints.remove();}
  return {setRoom,dispose,world,camera,renderer,avatars,own};
 }

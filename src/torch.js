@@ -1,14 +1,26 @@
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 
-export function createTorch(scene,camera){
+// Read the rendered camera, even when interaction is disabled (reviving or spectating).
+export function sampleTorchSurface({camera,raycaster,meshes,hidden=false}){
+ if(hidden)return {distance:.55,hit:null};
+ camera.updateMatrixWorld();raycaster.setFromCamera(new THREE.Vector2(),camera);raycaster.far=2.5;
+ const hit=raycaster.intersectObjects(meshes.filter(mesh=>{
+  if(mesh.userData.actor||mesh.userData.drawerPart)return false;
+  for(let parent=mesh;parent;parent=parent.parent)if(!parent.visible)return false;
+  return true;
+ }),false)[0];
+ return {distance:hit?.distance??Infinity,hit};
+}
+
+export function createTorch(scene,camera,{halloween=false}={}){
  scene.add(camera);
  const reactive=new Map();
  // Signs, keys and the creature need to reflect the beam instead of being
  // permanently unlit surfaces. Ceiling tubes retain their own power control.
  scene.traverse(mesh=>{
-  if(!mesh.isMesh||mesh.userData.ceilingLight||mesh.material.transparent)return;
-  mesh.castShadow=true;
+  if(!mesh.isMesh||mesh.userData.ceilingLight||mesh.userData.flame||mesh.material.transparent)return;
+  if(!mesh.userData.halloweenDetail)mesh.castShadow=true;
   if(!mesh.material.isMeshBasicMaterial)return;
   const original=mesh.material;
   if(!reactive.has(original)){
@@ -19,7 +31,8 @@ export function createTorch(scene,camera){
   }
   mesh.material=reactive.get(original);
  });
- const beam=new THREE.SpotLight(0xe4e9dc,140,24,.58,1,1.5);
+ const basePower=halloween?85:140;let power=basePower;
+ const beam=new THREE.SpotLight(0xe4e9dc,basePower,24,.58,1,1.5);
  beam.position.set(0,-.035,-.025);beam.castShadow=true;
  beam.shadow.mapSize.set(512,512);beam.shadow.camera.near=.05;beam.shadow.camera.far=24;beam.shadow.bias=-.00015;beam.shadow.normalBias=.015;
  const aim=new THREE.Object3D();aim.position.set(0,0,-20);camera.add(beam,aim);beam.target=aim;
@@ -48,11 +61,13 @@ export function createTorch(scene,camera){
  for(const x of [-.06,.06]){const bolt=new THREE.Mesh(new THREE.SphereGeometry(.007,8,6),metal);bolt.position.set(x,.036,-.11);model.add(bolt);}
  const seam=new THREE.Mesh(new THREE.TorusGeometry(.071,.004,6,24),glove);seam.rotation.x=Math.PI/2-.55;seam.position.set(.014,-.14,.125);model.add(seam);
  let on=true,exposure=.95,motion=0,swayX=0,swayY=0,lastYaw=null,lastPitch=null;
- function toggle(){on=!on;beam.intensity=on?140:0;lens.material.color.setHex(on?0xcbd5c7:0x171b1a);return on;}
- function update({ceilingPower=1,time=0,moving=false,sprinting=false,hold=0,delta=1/60}={}){
+ function toggle(){on=!on;beam.intensity=on?power:0;lens.material.color.setHex(on?0xcbd5c7:0x171b1a);return on;}
+ function update({ceilingPower=1,time=0,moving=false,sprinting=false,hold=0,delta=1/60,surfaceDistance=Infinity}={}){
   exposure=.95*(on?1:ceilingPower);
   for(const material of reactive.values()){material.emissive.copy(material.color);material.emissiveIntensity=.35*ceilingPower;}
   const reduced=reducedMotion(),dt=Math.max(0,Math.min(.1,delta)),blend=1-Math.exp(-dt*12),yaw=camera.rotation.y,pitch=camera.rotation.x;
+  const distance=Number.isFinite(surfaceDistance)?Math.max(0,surfaceDistance):Infinity,target=basePower*(halloween?THREE.MathUtils.clamp((distance/2.5)**1.5,.14,1):1);
+  power+=(target-power)*blend;beam.intensity=on?power:0;
   motion+=(Number(moving&&!reduced)-motion)*blend;
   const turn=lastYaw===null?0:Math.atan2(Math.sin(yaw-lastYaw),Math.cos(yaw-lastYaw));
   const tilt=lastPitch===null?0:pitch-lastPitch;lastYaw=yaw;lastPitch=pitch;
@@ -68,5 +83,5 @@ export function createTorch(scene,camera){
   viewCamera.projectionMatrix.copy(camera.projectionMatrix);viewCamera.projectionMatrixInverse.copy(camera.projectionMatrixInverse);
   const autoClear=renderer.autoClear;renderer.autoClear=false;renderer.clearDepth();renderer.render(viewScene,viewCamera);renderer.autoClear=autoClear;
  }
- return {beam,model,update,toggle,render,get on(){return on;},get exposure(){return exposure;}};
+ return {beam,model,update,toggle,render,get on(){return on;},get power(){return power;},get exposure(){return exposure;}};
 }

@@ -11,7 +11,3 @@ Archive: a short interference accent at the monitor switch and rare quiet static
 Five official WAV sources converted offline to local mono MP3s, with source IDs, hashes, licence and conversion details retained. Total additional media is approximately 1.9 MB. No external audio host is contacted by players.
 
 Validation: full test suite, production build, browser decode/playback of all five clips, normal-game isolation, pause/stop cleanup, and shared teaser replay checks. Deploy only the Halloween feature/test branch.
-
-## Main sound-pack publication
-
-The user explicitly requested pushing these sounds to main. Main carries the five approved assets and the shared sample-bank/soundscape helpers; normal gameplay still uses createRoomAmbience() with halloween=false, so it never fetches the update samples. Complete B2/Needlelimbs cue integration remains active on the Halloween tester branch and will ship with that update. No other seasonal gameplay, model, intro or teaser is added to the current public game by this sound-pack commit.

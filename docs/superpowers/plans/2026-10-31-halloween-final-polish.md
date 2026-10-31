@@ -25,13 +25,13 @@
 - [x] Run release/countdown tests and build, commit/push both, confirm live API is unreleased with new deadline.
 
 ### Task 2: Asset audit and polish
-- [ ] Inventory update models/materials/audio/scenes, read existing audit and run baseline tests.
-- [ ] Render opening, map, key panel, B2/monitor, teaser, ending and launch film; record concrete defects and polish targets.
-- [ ] Implement material/light/geometry/animation/UI refinements in existing modules, with regression tests for behavioral defects.
-- [ ] Verify referenced assets exist, public/private final feature consistency, rendered layouts and scene cleanup.
+- [x] Inventory update models/materials/audio/scenes, read existing audit and run baseline tests.
+- [x] Render opening, map, key panel, B2/monitor, teaser, ending and launch film; record concrete defects and polish targets.
+- [x] Implement material/light/geometry/animation/UI refinements in existing modules, with regression tests for behavioral defects.
+- [x] Verify referenced assets exist, public/private final feature consistency, rendered layouts and scene cleanup.
 
 ### Task 3: Complete release verification
-- [ ] Integrate existing seasonal feature modules into the public release gate; preserve current map/microphone hunt and private route boundary. Add explicit before/at-deadline public production-flow tests.
-- [ ] Run full appropriate suites/builds and relevant browser flows; independent final review and regression fixes.
+- [x] Integrate existing seasonal feature modules into the public release gate; preserve current map/microphone hunt and private route boundary. Add explicit before/at-deadline public production-flow tests.
+- [x] Run full appropriate suites/builds and relevant browser flows; independent final review and regression fixes.
 - [ ] Publish only authorized release code and protected tests; verify live commit IDs, deadline, assets and session gates.
 - [ ] Record verification and report material limitations accurately.

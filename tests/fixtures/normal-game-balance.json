@@ -1,0 +1,565 @@
+{
+  "sourceCommit": "e777a7c1bc2a2498dbc0481ca535f59ce8262208",
+  "movement": {
+    "walk": 4.6,
+    "sprint": 6.2,
+    "sprintSeconds": 8,
+    "recoveryDelay": 1.1,
+    "recoverySeconds": 6,
+    "restartAt": 0.25
+  },
+  "monsterSpeed": {
+    "patrol": 3.2,
+    "investigate": 4.6,
+    "chase": 6.2
+  },
+  "sightRange": 16,
+  "maxIdleSeconds": 2,
+  "huntStartSeconds": 90,
+  "cases": [
+    {
+      "seed": 1,
+      "playerCount": 1,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "39761dde352b167f3bea59d6679517aa487d744ca508da7c30f1b931d0a5e70a",
+      "keys": [
+        13,
+        23,
+        34,
+        50
+      ],
+      "code": "7800",
+      "clueRoom": 0,
+      "spawn": {
+        "x": 80.60000000000001,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 42,
+      "playerCount": 1,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "a8e4fe4e94b1ad317601fefaf9bb93ff4bb384ab6746922a8d2bba2a2edf88a6",
+      "keys": [
+        17,
+        26,
+        31,
+        46
+      ],
+      "code": "5242",
+      "clueRoom": 6,
+      "spawn": {
+        "x": 36.4,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 137,
+      "playerCount": 1,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "92d9cfd382d7f407021cb7b4567da19c37dbaf7bef7f3ad80900351ef46ed626",
+      "keys": [
+        15,
+        26,
+        32,
+        45
+      ],
+      "code": "8508",
+      "clueRoom": 0,
+      "spawn": {
+        "x": 23.400000000000002,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 2026,
+      "playerCount": 1,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "45c747bb818f1e556c50fc1c0d41a597fdd2524180decb46cf65a75160ac6996",
+      "keys": [
+        14,
+        25,
+        38,
+        47
+      ],
+      "code": "3262",
+      "clueRoom": 2,
+      "spawn": {
+        "x": 36.4,
+        "z": 83.2
+      }
+    },
+    {
+      "seed": 8000,
+      "playerCount": 1,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "f98b8e8766f630c30d7113f86250ee00de559ef562a83bd280914a97d25300e2",
+      "keys": [
+        17,
+        25,
+        30,
+        43
+      ],
+      "code": "1970",
+      "clueRoom": 6,
+      "spawn": {
+        "x": -7.800000000000001,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 1,
+      "playerCount": 2,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "9f47e039a869e33ca08765364d281d3223056f97cc013e7ccf126d5c940088a2",
+      "keys": [
+        13,
+        23,
+        34,
+        50
+      ],
+      "code": "7800",
+      "clueRoom": 0,
+      "spawn": {
+        "x": 80.60000000000001,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 42,
+      "playerCount": 2,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "421653f21e9a5cd680dd7ae6125e597bd55f7ba994b015136edc36c79870d728",
+      "keys": [
+        17,
+        26,
+        31,
+        46
+      ],
+      "code": "5242",
+      "clueRoom": 6,
+      "spawn": {
+        "x": 36.4,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 137,
+      "playerCount": 2,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "4938a285d104bb70d612e4fb9e21fec988a3fe1964ba8556e26ceb5efec73d7a",
+      "keys": [
+        15,
+        26,
+        32,
+        45
+      ],
+      "code": "8508",
+      "clueRoom": 0,
+      "spawn": {
+        "x": 23.400000000000002,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 2026,
+      "playerCount": 2,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "f2fcee939038deb270ec2e4cefc7f9f3b8c2f038d55324a7497101fe87f545ed",
+      "keys": [
+        14,
+        25,
+        38,
+        47
+      ],
+      "code": "3262",
+      "clueRoom": 2,
+      "spawn": {
+        "x": 36.4,
+        "z": 83.2
+      }
+    },
+    {
+      "seed": 8000,
+      "playerCount": 2,
+      "size": 45,
+      "rooms": 17,
+      "topologyHash": "5dc52fc9ab254c23456e05c39fb6ccb2cad538dce513d9f63ec4c28fca807da9",
+      "keys": [
+        17,
+        25,
+        30,
+        43
+      ],
+      "code": "1970",
+      "clueRoom": 6,
+      "spawn": {
+        "x": -7.800000000000001,
+        "z": 88.4
+      }
+    },
+    {
+      "seed": 1,
+      "playerCount": 3,
+      "size": 49,
+      "rooms": 20,
+      "topologyHash": "a94357b7f51a32bcddcaee85d54f11a6f5f57788e39881976e985ec12d69e6be",
+      "keys": [
+        19,
+        29,
+        40,
+        59
+      ],
+      "code": "7800",
+      "clueRoom": 0,
+      "spawn": {
+        "x": 39,
+        "z": 98.8
+      }
+    },
+    {
+      "seed": 42,
+      "playerCount": 3,
+      "size": 49,
+      "rooms": 20,
+      "topologyHash": "9673b65cd8a216f167721a2a48fab6498b0aa2cb94c007f728300697a25d6dee",
+      "keys": [
+        23,
+        32,
+        37,
+        55
+      ],
+      "code": "5242",
+      "clueRoom": 7,
+      "spawn": {
+        "x": 85.8,
+        "z": 98.8
+      }
+    },
+    {
+      "seed": 137,
+      "playerCount": 3,
+      "size": 49,
+      "rooms": 20,
+      "topologyHash": "bff8e7a5dffab74b4ff50e9bcaa1bb461253e1f9a67d9c746029d4a843f7ed84",
+      "keys": [
+        18,
+        32,
+        38,
+        54
+      ],
+      "code": "8508",
+      "clueRoom": 0,
+      "spawn": {
+        "x": 46.800000000000004,
+        "z": 96.2
+      }
+    },
+    {
+      "seed": 2026,
+      "playerCount": 3,
+      "size": 49,
+      "rooms": 20,
+      "topologyHash": "7b7227461786070370d4082374ea44dd1167e41014b2045e87cd9b43eb1f18fa",
+      "keys": [
+        20,
+        31,
+        47,
+        56
+      ],
+      "code": "3262",
+      "clueRoom": 2,
+      "spawn": {
+        "x": 44.2,
+        "z": 98.8
+      }
+    },
+    {
+      "seed": 8000,
+      "playerCount": 3,
+      "size": 49,
+      "rooms": 20,
+      "topologyHash": "a843a2a50592b9dd843305c9c4e056e71241b9addbd3f84be03a22cb57c5a7c5",
+      "keys": [
+        23,
+        31,
+        39,
+        52
+      ],
+      "code": "1970",
+      "clueRoom": 7,
+      "spawn": {
+        "x": 80.60000000000001,
+        "z": 93.60000000000001
+      }
+    },
+    {
+      "seed": 1,
+      "playerCount": 4,
+      "size": 53,
+      "rooms": 23,
+      "topologyHash": "54a3f0753a2c020ed99b19af2deb803f4a24304e81d1ba4d4122f4f910f241fe",
+      "keys": [
+        19,
+        29,
+        46,
+        68
+      ],
+      "code": "7800",
+      "clueRoom": 0,
+      "spawn": {
+        "x": 52,
+        "z": 109.2
+      }
+    },
+    {
+      "seed": 42,
+      "playerCount": 4,
+      "size": 53,
+      "rooms": 23,
+      "topologyHash": "812d1139d377e9cd487527ba8b296f7850a90ed88813bc233239f94593cb10d4",
+      "keys": [
+        23,
+        35,
+        40,
+        61
+      ],
+      "code": "5242",
+      "clueRoom": 8,
+      "spawn": {
+        "x": 33.800000000000004,
+        "z": 109.2
+      }
+    },
+    {
+      "seed": 137,
+      "playerCount": 4,
+      "size": 53,
+      "rooms": 23,
+      "topologyHash": "f3bde1c6fb74cd242dd61d6aa6cf42a153007509771f74380deab7e1803c833b",
+      "keys": [
+        18,
+        35,
+        41,
+        63
+      ],
+      "code": "8508",
+      "clueRoom": 1,
+      "spawn": {
+        "x": 36.4,
+        "z": 109.2
+      }
+    },
+    {
+      "seed": 2026,
+      "playerCount": 4,
+      "size": 53,
+      "rooms": 23,
+      "topologyHash": "fbf03db79942a335be6a08fc7e031243e08c2fe1593c32f03e3c7d06e18d9237",
+      "keys": [
+        20,
+        31,
+        53,
+        65
+      ],
+      "code": "3262",
+      "clueRoom": 3,
+      "spawn": {
+        "x": 54.6,
+        "z": 104
+      }
+    },
+    {
+      "seed": 8000,
+      "playerCount": 4,
+      "size": 53,
+      "rooms": 23,
+      "topologyHash": "ed2cdbcf214330e0e1728b3fecb549ac45fb295ec595821ce17c1c2f21033f68",
+      "keys": [
+        23,
+        31,
+        42,
+        58
+      ],
+      "code": "1970",
+      "clueRoom": 8,
+      "spawn": {
+        "x": 23.400000000000002,
+        "z": 104
+      }
+    }
+  ],
+  "enemyCases": [
+    {
+      "spec": {
+        "name": "visible",
+        "distance": 10
+      },
+      "result": {
+        "caught": false,
+        "distance": 9.69,
+        "visible": true,
+        "heard": false
+      },
+      "mode": "chase",
+      "position": {
+        "x": 0,
+        "z": 0.31000000000000005
+      }
+    },
+    {
+      "spec": {
+        "name": "outside sight",
+        "distance": 17
+      },
+      "result": {
+        "caught": false,
+        "distance": 17,
+        "visible": false,
+        "heard": false
+      },
+      "mode": "patrol",
+      "position": {
+        "x": 0,
+        "z": 0
+      }
+    },
+    {
+      "spec": {
+        "name": "hidden",
+        "distance": 4,
+        "hidden": true
+      },
+      "result": {
+        "caught": false,
+        "distance": 4,
+        "visible": false,
+        "heard": false
+      },
+      "mode": "patrol",
+      "position": {
+        "x": 0,
+        "z": 0
+      }
+    },
+    {
+      "spec": {
+        "name": "behind close",
+        "distance": -2
+      },
+      "result": {
+        "caught": false,
+        "distance": 1.69,
+        "visible": true,
+        "heard": false
+      },
+      "mode": "chase",
+      "position": {
+        "x": 0,
+        "z": -0.31000000000000005
+      }
+    },
+    {
+      "spec": {
+        "name": "behind far",
+        "distance": -4
+      },
+      "result": {
+        "caught": false,
+        "distance": 4,
+        "visible": false,
+        "heard": false
+      },
+      "mode": "patrol",
+      "position": {
+        "x": 0,
+        "z": 0
+      }
+    },
+    {
+      "spec": {
+        "name": "catch",
+        "distance": 0.9
+      },
+      "result": {
+        "caught": true,
+        "distance": 0.59,
+        "visible": true,
+        "heard": false
+      },
+      "mode": "chase",
+      "position": {
+        "x": 0,
+        "z": 0.31000000000000005
+      }
+    },
+    {
+      "spec": {
+        "name": "noise",
+        "distance": 8,
+        "hidden": true,
+        "radius": 12
+      },
+      "result": {
+        "caught": false,
+        "distance": 7.77,
+        "visible": false,
+        "heard": true
+      },
+      "mode": "investigate",
+      "position": {
+        "x": 0,
+        "z": 0.22999999999999998
+      }
+    },
+    {
+      "spec": {
+        "name": "muffled noise",
+        "distance": 5.2,
+        "hidden": true,
+        "radius": 10,
+        "wall": true
+      },
+      "result": {
+        "caught": false,
+        "distance": 5.205084053115762,
+        "visible": false,
+        "heard": true
+      },
+      "mode": "investigate",
+      "position": {
+        "x": 0.22999999999999998,
+        "z": 0
+      }
+    },
+    {
+      "spec": {
+        "name": "quiet behind wall",
+        "distance": 5.2,
+        "hidden": true,
+        "radius": 8,
+        "wall": true
+      },
+      "result": {
+        "caught": false,
+        "distance": 5.2,
+        "visible": false,
+        "heard": false
+      },
+      "mode": "patrol",
+      "position": {
+        "x": 0,
+        "z": 0
+      }
+    }
+  ]
+}

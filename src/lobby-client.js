@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import {createTabAuthOptions} from './lobby-session.js';
 import { multiplayerConfig } from './multiplayer-config.js';
 
 export function getMultiplayerConfig(env = import.meta.env || {}, fallback = multiplayerConfig) {
@@ -9,12 +10,13 @@ export function getMultiplayerConfig(env = import.meta.env || {}, fallback = mul
 }
 export function getMultiplayerUrl() { return getMultiplayerConfig().url; }
 
-// Leave is tiny and safe for the browser's keepalive budget. Snapshots may be
-// 64 KiB, so they must keep ordinary fetch behavior.
-export function createMultiplayerFetch(fetcher = globalThis.fetch) {
+// Ordinary snapshots keep normal fetch semantics. Only a bounded final unload
+// checkpoint shares the browser keepalive budget with the tiny leave request.
+export function createMultiplayerFetch(fetcher = globalThis.fetch,{isSuspending=()=>false}={}) {
   return (input, init = {}) => {
     const target = typeof input === 'string' ? input : input.url || String(input);
-    return fetcher(input, /\/rpc\/game_leave(?:\?|$)/.test(target) ? { ...init, keepalive: true } : init);
+    const checkpoint=isSuspending()&&/\/rpc\/game_publish_snapshot(?:\?|$)/.test(target)&&typeof init.body==='string'&&new TextEncoder().encode(init.body).length<48000;
+    return fetcher(input, checkpoint||/\/rpc\/game_leave(?:\?|$)/.test(target) ? { ...init, keepalive: true } : init);
   };
 }
 
@@ -66,10 +68,11 @@ export function createLobbyClient(options = {}) {
   const defaults = getMultiplayerConfig();
   const url = options.url ?? defaults.url;
   const key = options.key ?? options.publishableKey ?? defaults.key;
+  const tabSession=createTabAuthOptions(),restoreSession=options.restoreSession??tabSession.restoreSession,recoveryRooms=new Set();
   const listeners = new Set();
   const lastSent = new Map(), inFlight = new Set(), inputSequences = new Map(), actionSequences = new Map();
   let db = options.client, id = null, connected = false, connecting = null, generation = 0;
-  let closing = Promise.resolve();
+  let closing = Promise.resolve(),recoveryPromise=null,suspending=false;
   let channel = null, cancelSubscription = null, pollTimer = null, heartbeatTimer = null, room = null, roomJson = '', requestJson = '';
   let roomSubscription = null, voiceChannel = null, voiceRoom = null;
   let pendingRoom = null, startedRoom = null, refreshPromise = null, refreshAgain = false, commandQueue = Promise.resolve();
@@ -119,11 +122,11 @@ export function createLobbyClient(options = {}) {
       subscription.cancel = () => { clearTimeout(timer); settled = true; resolve(); };
       nextChannel.subscribe(status => {
         if (currentGeneration !== generation || roomSubscription !== subscription) return;
-        if (status === 'SUBSCRIBED') { clearTimeout(timer); settled = true; resolve(); }
+        if (status === 'SUBSCRIBED') { const returning=settled;clearTimeout(timer);settled=true;resolve();if(returning)emit({type:'connection',status:'connected'}); }
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           clearTimeout(timer);
           if (!settled) { settled = true; reject(new Error('REALTIME_ERROR')); }
-          else emit(normalizeError(new Error('REALTIME_ERROR')));
+          else emit({type:'connection',status:'reconnecting'});
         }
       });
     });
@@ -164,14 +167,16 @@ export function createLobbyClient(options = {}) {
         if (nextRoom) {
           const json = JSON.stringify(nextRoom);
           room = nextRoom;
+          if(!recoveryRooms.has(room.id)){await rpc('game_support_recovery');recoveryRooms.add(room.id);}
           // Route frequent gameplay rows only to their actual recipient.
           // Lobby metadata updates and polling keep every roster current.
           await subscribeToRoom(nextRoom);
           if (currentGeneration !== generation) return;
           if (json !== roomJson) { roomJson = json; emit({ type: 'lobby', lobby: room }); }
           if (room.status === 'running' && startedRoom !== room.id) {
+            let restored=null;if(restoreSession){restored=await rpc('game_recover',{p_resume:true});if(currentGeneration!==generation)return;if(restored?.room){room=restored.room;roomJson=JSON.stringify(room);emit({type:'lobby',lobby:room});}}
             startedRoom = room.id;
-            emit({ type: 'started', lobbyId: room.id, seed: room.seed, ownerId: room.ownerId, players: room.members });
+            emit({ type: 'started', lobbyId: room.id, seed: room.seed, ownerId: room.ownerId,ownerEpoch:room.ownerEpoch??0,players: room.members,...(restored?.snapshot?{checkpoint:restored.snapshot,halloween:!!restored.snapshot.state?.run?.halloween}:{} ) });
           }
         } else if (room) clearRoom();
         applyRequest(request);
@@ -225,7 +230,6 @@ export function createLobbyClient(options = {}) {
   }
   const api = {
     get id() { return id; },
-    async readRoundSnapshot(lobbyId){if(!connected||room?.id!==lobbyId)throw new Error('NOT_MEMBER');const result=await db.from('game_snapshots').select('payload').eq('lobby_id',lobbyId).maybeSingle();if(result.error)throw result.error;return result.data?.payload??null;},
     get connected() { return connected; },
     get configured() { return configured; },
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
@@ -239,8 +243,9 @@ export function createLobbyClient(options = {}) {
         await closing;
         if (currentGeneration !== generation) return;
         if (!configured) throw new Error('Supabase multiplayer is not configured. Set the Supabase URL and publishable key.');
-        db ||= createClient(url, key, { auth: { persistSession: false, autoRefreshToken: true, detectSessionInUrl: false }, global: { fetch: createMultiplayerFetch() } });
-        const result = await db.auth.signInAnonymously();
+        db ||= createClient(url, key, { auth: { ...tabSession.auth, autoRefreshToken: true, detectSessionInUrl: false }, global: { fetch: createMultiplayerFetch(globalThis.fetch,{isSuspending:()=>suspending}) } });
+        suspending=false;void db.auth.startAutoRefresh?.();
+        let result;if(restoreSession&&db.auth.getSession){const saved=await db.auth.getSession();if(saved.data?.session?.user)result={data:{user:saved.data.session.user}};}result??=await db.auth.signInAnonymously();
         if (result.error) throw result.error;
         if (currentGeneration !== generation) return;
         id = result.data?.user?.id;
@@ -259,11 +264,11 @@ export function createLobbyClient(options = {}) {
           cancelSubscription = () => { clearTimeout(timer); settled = true; resolve(); };
           channel.subscribe(status => {
             if (currentGeneration !== generation) return;
-            if (status === 'SUBSCRIBED') { clearTimeout(timer); settled = true; resolve(); }
+            if (status === 'SUBSCRIBED') { const returning=settled;clearTimeout(timer);settled=true;resolve();if(returning)emit({type:'connection',status:'connected'}); }
             if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
               clearTimeout(timer);
               if (!settled) { settled = true; reject(new Error('REALTIME_ERROR')); }
-              else emit(normalizeError(new Error('REALTIME_ERROR')));
+              else emit({type:'connection',status:'reconnecting'});
             }
           });
         });
@@ -324,19 +329,30 @@ export function createLobbyClient(options = {}) {
       else commandQueue = commandQueue.then(execute, execute);
       return true;
     },
-    close() {
-      const wasConnected = connected;
+    recover({resumeOwner=room?.ownerId===id}={}) {
+      if(!connected||!id)return Promise.reject(new Error('The session is closed.'));
+      if(recoveryPromise)return recoveryPromise;const currentGeneration=generation;
+      recoveryPromise=(async()=>{try{const data=await rpc('game_recover',{p_resume:resumeOwner});if(currentGeneration!==generation||!connected)return;
+        if(!data?.room)throw new Error('NOT_MEMBER');removeRoomSubscription();removeVoice();room=data.room;await subscribeToRoom(room);if(currentGeneration!==generation||!connected)return;
+        roomJson=JSON.stringify(room);emit({type:'lobby',lobby:room});emit({type:'recovered',lobby:room,snapshot:data.snapshot,serverNow:data.serverNow});emit({type:'connection',status:'connected'});return data;
+      }catch(error){if(currentGeneration===generation){if(error.message==='NOT_MEMBER'||error.message==='ROOM_NOT_FOUND')clearRoom();else emit({type:'connection',status:'reconnecting'});}throw new Error(normalizeError(error).message,{cause:error});
+      }finally{if(currentGeneration===generation)recoveryPromise=null;}})();return recoveryPromise;
+    },
+    close({leave=true,checkpoint}={}) {
+      const wasConnected = connected,wasOwner=room?.status==='running'&&room.ownerId===id;suspending=!leave;
       const pendingCommands = commandQueue;
-      ++generation; connected = false; connecting = null; refreshPromise = null;
-      stop();
+      ++generation; connected = false; connecting = null; refreshPromise = null;recoveryPromise=null;
+      stop();void db?.auth.stopAutoRefresh?.();
       // A create/approve may already be on the wire. Leave after it commits,
       // and let callers await this before navigating away.
       closing = Promise.allSettled([closing, pendingCommands]).then(async () => {
-        if (wasConnected && db) await rpc('game_leave').catch(() => {});
+        if(wasConnected&&wasOwner&&checkpoint&&db){try{await rpc('game_publish_snapshot',{p_snapshot:checkpoint});}catch(error){if(error.message==='RATE_LIMIT'&&leave){await new Promise(resolve=>setTimeout(resolve,110));await rpc('game_publish_snapshot',{p_snapshot:checkpoint}).catch(()=>{});}}}
+        if (leave && wasConnected && db) await rpc('game_leave').catch(() => {});
+        if(leave&&tabSession.auth.storageKey)try{tabSession.auth.storage?.removeItem(tabSession.auth.storageKey);}catch{}
       });
       clearRoom(true); id = null; pendingRoom = null; requestJson = ''; commandQueue = Promise.resolve();
       lastSent.clear(); inFlight.clear();
-      emit({ type: 'connection', status: 'closed' });
+      emit({ type: 'connection', status: leave?'closed':'suspended' });
       return closing;
     },
   };

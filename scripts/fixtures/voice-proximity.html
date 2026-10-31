@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><title>Voice proximity verification</title>
+<script type="module">
+import {createVoiceChat} from '/src/voice-chat.js';
+window.bootVoice=({id,channelId,iceServers=[]})=>{
+ const listeners=new Set(),channel=new BroadcastChannel(channelId);
+ const client={id,subscribe(fn){listeners.add(fn);return()=>listeners.delete(fn);},send(type,payload){if(type==='voice')channel.postMessage({from:id,...payload});return true;},close:async()=>{}};
+ channel.onmessage=({data})=>{if(data.to===id)for(const fn of listeners)fn({type:'voice',playerId:data.from,signal:data.signal});};
+ const voice=createVoiceChat({client,iceServers});client.voice=voice;
+ const other=id==='a'?'b':'a';
+ window.setVoicePose=({x=2,z=0,y=1.65,yaw=0,pitch=0,active=true}={})=>voice.updateSpatial({active,listener:{x:0,y:1.65,z:0,yaw,pitch},players:[{id:other,x,y,z}]});
+ setVoicePose();window.voice=voice;
+ window.joinVoice=()=>{for(const fn of listeners)fn({type:'lobby',lobby:{id:channelId,members:[{id:'a',name:'Listener'},{id:'b',name:'Friend'}]}});};
+ window.leaveVoice=()=>{voice.dispose();channel.close();};
+ window.startVoiceScene=async kind=>{
+  const container=document.createElement('div');container.style.cssText='width:320px;height:180px';document.body.append(container);
+  const members=[{id:'a',name:'Listener',slot:0},{id:'b',name:'Friend',slot:1}];
+  const update=voice.updateSpatial;voice.updateSpatial=frame=>{window.lastVoiceFrame=frame;update(frame);};
+  if(kind==='waiting'){
+   const {createWaitingRoom}=await import('/src/waiting-room.js');window.voiceScene=createWaitingRoom(container,{client,room:{id:channelId,members}});
+  }else{
+   const {startCoopGame}=await import('/src/coop-game.js');window.voiceScene=startCoopGame(container,{client,session:{ownerId:id,seed:1234,players:members,halloween:true}});voiceScene.arrival.dispose();voiceScene.ui.hideScreen();
+  }
+  voiceScene.renderer.render=()=>{};return true;
+ };
+ window.stopVoiceScene=()=>{voiceScene.renderer.setAnimationLoop(null);voiceScene.dispose?.();};
+};
+</script>

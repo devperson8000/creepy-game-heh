@@ -1,3 +1,5 @@
+import {releaseStatus,HALLOWEEN_DEADLINE} from '../src/halloween-release-time.js';
+import {mapReleaseStatus} from '../src/map-release-time.js';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {microphoneCapture,installMicrophoneGain} from './helpers/microphone-capture.mjs';
@@ -18,8 +20,9 @@ context.on('page',page=>{
  page.on('response',r=>{if(r.url().includes('/rpc/game_send_input')&&r.status()>=400)rpcErrors.push(r.status());});
  page.on('request',r=>{if(r.url().includes('/rpc/game_send_input')){const packet=r.postDataJSON()?.p_input;if(packet)packets.push(packet);}});
 });
+if(['localhost','127.0.0.1'].includes(new URL(base).hostname)){await context.route('**/api/map-release',r=>r.fulfill({json:mapReleaseStatus(HALLOWEEN_DEADLINE)}));await context.route('**/api/halloween-release',r=>r.fulfill({json:releaseStatus(HALLOWEEN_DEADLINE+(process.env.HALLOWEEN_RELEASE_TEST==='1'?0:-3600000))}));}
 const host=await context.newPage(),guest=await context.newPage(),pages=[host,guest],name='Microphone QA '+Date.now();
-async function quiet(page){await page.evaluate(usePeer=>{const g=monochrome;g.arrival.dispose();g.ui.hideScreen();g.input.clear();g.renderer.domElement.tabIndex=0;g.renderer.render=()=>{};if(!usePeer)g.client.voice.sendGameplay=()=>false;window.peerInputs=[];g.client.voice.subscribeGameplay(e=>{if(e.type==='input')peerInputs.push(e.payload.input);});},usePeer);}
+async function quiet(page){await page.evaluate(usePeer=>{const g=monochrome;g.arrival.dispose();g.ui.hideScreen();g.input.clear();g.renderer.domElement.tabIndex=0;g.renderer.render=()=>{};window.aimedDrawer=null;const get=g.world.targets.get.bind(g.world.targets);g.world.targets.get=id=>{if(id?.startsWith('drawer-'))window.aimedDrawer=id;return get(id);};const update=g.world.update.bind(g.world);g.world.update=(...args)=>{const result=update(...args);g.world.scene.updateMatrixWorld(true);return result;};if(!usePeer)g.client.voice.sendGameplay=()=>false;window.peerInputs=[];g.client.voice.subscribeGameplay(e=>{if(e.type==='input')peerInputs.push(e.payload.input);});},usePeer);}
 try{
  for(const p of pages){p.setDefaultTimeout(45000);await p.goto(base);await p.click('#lobby-multiplayer');await p.fill('#lobby-player-name',p===host?'Mic host':'Mic guest');}
  await host.fill('#lobby-create-name',name);await host.click('#lobby-create');await host.waitForSelector('.in-waiting-room');await host.evaluate(()=>document.querySelector('#waiting-terminal-button').click());
@@ -68,9 +71,9 @@ try{
  await host.evaluate(()=>{monochrome.run.huntElapsed=0;});
  for(const row of [2,1,0]){
   const at=await host.evaluate(({id,row})=>{const g=monochrome,r=g.run.layout.rooms[0],target=g.world.targets.get(`drawer-${row}`),at=target.mesh.getWorldPosition(g.camera.position.clone()),p={x:(r.x-8)*2.6+r.normal.x*.4,z:(r.z-8)*2.6+r.normal.z*.4,height:-7.2};Object.assign(g.state.players.get(id),p);return{p,yaw:Math.atan2(p.x-at.x,p.z-at.z),pitch:Math.atan2(at.y-p.height-1.65,Math.hypot(p.x-at.x,p.z-at.z))};},{id:guestId,row});
-  await guest.evaluate(({p,yaw,pitch})=>{const g=monochrome;Object.assign(g.state.players.get(g.client.id),p);g.input.setView(yaw,pitch);g.ui.hideScreen();g.renderer.domElement.focus();},at);
-  await guest.getByText('Search drawer',{exact:true}).waitFor();await guest.keyboard.down('KeyE');
-  await host.waitForFunction(row=>monochrome.run.drawers[row].opened,row);await guest.keyboard.up('KeyE');await guest.waitForFunction(row=>monochrome.run.drawers[row].opened,row);
+  await guest.waitForFunction(p=>{const g=monochrome,own=g.state.players.get(g.client.id);return Math.hypot(own.x-p.x,own.z-p.z)<.01;},at.p);await guest.evaluate(({yaw,pitch})=>{const g=monochrome;g.input.clear();g.input.setView(yaw,pitch);g.ui.hideScreen();g.renderer.domElement.focus();},at);
+  await guest.waitForFunction(id=>window.aimedDrawer===id,'drawer-'+row);await guest.keyboard.down('KeyE');
+  await host.waitForFunction(row=>monochrome.run.drawers[row].opened,row);await guest.keyboard.up('KeyE');await guest.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));await guest.waitForFunction(row=>monochrome.run.drawers[row].opened,row);console.log('PASS authoritative drawer row',row);
  }
  const peerPackets=await host.evaluate(()=>peerInputs),allPackets=[...packets,...peerPackets];
  assert.ok(allPackets.some(p=>p.voiceLevel===4));assert.ok(allPackets.some(p=>p.voiceLevel===0));

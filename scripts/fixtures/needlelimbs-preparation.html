@@ -1,0 +1,13 @@
+<!doctype html><html><head><style>body{margin:0;background:#080b0d}canvas{display:block}#label{position:fixed;left:36px;top:28px;color:#d6ddd5;font:12px monospace;letter-spacing:3px;pointer-events:none}#label small{display:block;color:#8b9a95;margin-top:12px;letter-spacing:1px}</style></head><body><div id="label">MONOCHROME / REBUILT<small>Mechanical head design &middot; Needlelimbs source pending</small></div><script type="module">
+import * as THREE from '/node_modules/three/build/three.module.js';
+import {createRebuiltMonochrome} from '/src/mechanical-head.js';
+import {createNeedlelimbsTeaserScene} from '/src/needlelimbs-scene.js';
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(1);renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;document.body.append(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x080b0d);const actor=createRebuiltMonochrome();scene.add(actor.root);actor.sample({time:2,jaw:.4});
+scene.add(new THREE.HemisphereLight(0xbacbd0,0x101713,1.2));for(const [x,y,z,c,v] of [[-2,5,3,0xd0dcd0,35],[2.5,4,-2,0x6e9dab,25],[1,2,2,0xb5a178,5]]){const l=new THREE.PointLight(c,v,12,2);l.position.set(x,y,z);scene.add(l);}
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:0x161d1a,roughness:.95}));ground.rotation.x=-Math.PI/2;scene.add(ground);
+const camera=new THREE.PerspectiveCamera(40,innerWidth/innerHeight,.05,30);
+window.showHead=(angle='front')=>{camera.position.set(angle==='front'?1.15:angle==='side'?3:4,angle==='body'?2.8:3.45,angle==='body'?6:angle==='side'?2:3.1);camera.lookAt(0,angle==='body'?2.05:3.3,0);renderer.render(scene,camera);};
+window.showFilm=async(t)=>{const film=createNeedlelimbsTeaserScene({needlelimbsAsset:Promise.reject(new Error('Selected source pending'))});await film.ready;film.sample(t);renderer.render(film.scene,film.camera);return {error:film.error.message,state:film.state};};
+showHead();window.ready=true;
+</script></body></html>

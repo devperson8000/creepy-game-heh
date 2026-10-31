@@ -21,3 +21,7 @@ test('the title cuts from absent to fully visible at the exact hit cue with no f
  assert.equal(arrivalFrame(ARRIVAL_TITLE_AT).title,1);
  assert.equal(arrivalFrame(ARRIVAL_TITLE_AT+.001).title,1);
 });
+
+test('Halloween wake-up acknowledges the changed suit only while the player discovers it',()=>{
+ assert.equal(arrivalFrame(9.3).dialogue,'');assert.equal(arrivalFrame(7,{halloween:true}).dialogue,'');assert.equal(arrivalFrame(9.3,{halloween:true}).dialogue,'I wasn’t wearing this suit.');assert.equal(arrivalFrame(ARRIVAL_DURATION,{halloween:true}).dialogue,'');
+});

@@ -1,0 +1,37 @@
+BACKROOMS CREATURE REFERENCE SHORTLIST
+Checked: 2026-10-21
+
+Official Sketchfab listing thumbnails saved for model selection. No meshes are included.
+Each listing reports Creative Commons Attribution 4.0 International.
+License: https://creativecommons.org/licenses/by/4.0/
+Individual previews are unchanged. comparison.jpg resizes and arranges them with labels and credits.
+These are existing Backrooms entities; listing licenses do not establish ownership of underlying character lore.
+See references.json for original preview URLs and SHA-256 checksums.
+
+1. Backrooms Entity 38 Needlelimbs
+Creator: Loco
+https://sketchfab.com/Loco420
+https://sketchfab.com/3d-models/backrooms-entity-38-needlelimbs-6e8ad10cbcbb49bda63a1b21a660533d
+Original preview: https://media.sketchfab.com/models/6e8ad10cbcbb49bda63a1b21a660533d/thumbnails/c3ce9cb1f2234ab9a995371110f2afb3/a095e2f301054bf1ac02589198e39dd7.jpeg
+Saved as: 01-needlelimbs.jpg
+
+2. Kitty - Backrooms Entity
+Creator: bigdowsey
+https://sketchfab.com/bigdowsey
+https://sketchfab.com/3d-models/kitty-backrooms-entity-8aa2afeaa1b645fa8f29542eef09d3b9
+Original preview: https://media.sketchfab.com/models/8aa2afeaa1b645fa8f29542eef09d3b9/thumbnails/7119add2677c4a8abc20a6d9fca815d1/71aecf650989447cb17d31360755a1f0.jpeg
+Saved as: 02-kitty.jpg
+
+3. Accurate Backrooms Bacteria v2 with Animations
+Creator: Unschooling with Fin
+https://sketchfab.com/UnschoolingWithFin
+https://sketchfab.com/3d-models/accurate-backrooms-bacteria-v2-with-animations-c067bae794c14fc1969fe22605cdd837
+Original preview: https://media.sketchfab.com/models/c067bae794c14fc1969fe22605cdd837/thumbnails/cbbc5ea20ab44b72b2ee59ef9b0acd6f/3653c1a648114d3ba1c14388ab43a179.jpeg
+Saved as: 03-bacteria.jpg
+
+4. Accurate Smiler Backrooms Blender 3.22
+Creator: Speed12
+https://sketchfab.com/Speed12
+https://sketchfab.com/3d-models/accurate-smiler-backrooms-blender-322-902975161a7047baa5cda8fb7b5a292e
+Original preview: https://media.sketchfab.com/models/902975161a7047baa5cda8fb7b5a292e/thumbnails/e717d2f530924ba9b249d0439df154e5/3b3215e5a21c4e8386e39dbdef43753a.jpeg
+Saved as: 04-smiler.jpg

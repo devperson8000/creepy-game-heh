@@ -1,6 +1,6 @@
 # Mixkit sound shortlist — 25 October 2026
 
-The requested title hit is implemented. These additional cues are researched candidates only; they are not mixed into gameplay yet. Preview URLs point to Mixkit’s own listening files. Source licence: https://mixkit.co/license/#sfxFree.
+The requested title hit is implemented. On 26 October Sydney time the user approved the five shortlisted update sounds; the two Needlelimbs breaths, room ambience, vent wind and monitor-static entries below are now integrated in the shared Halloween gameplay and tester scenes. The remaining heavier candidates remain unused. Preview URLs point to Mixkit’s own listening files. Source licence: https://mixkit.co/license/#sfxFree.
 
 | Candidate | Suggested use | Preview |
 | --- | --- | --- |

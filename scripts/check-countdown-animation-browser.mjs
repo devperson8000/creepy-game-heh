@@ -1,3 +1,4 @@
+import {OPENING_DURATION,OPENING_TITLE_AT} from '../src/opening-sequence.js';
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
@@ -23,6 +24,7 @@ async function context({seconds=309,width=1440,reduced=false,confirmed=true,volu
  if(delivered)await (await delivered).finished();await page.clock.runFor(300);
  return {context,page};
 }
+async function finishOpeningIfPresent(page){await page.locator('.opening-sequence,#lobby-singleplayer').first().waitFor();if(await page.locator('.opening-sequence').count()){await page.keyboard.down('Space');await page.clock.runFor(2200);await page.keyboard.up('Space');await page.clock.runFor((OPENING_DURATION-OPENING_TITLE_AT+1)*1000);}await page.locator('#lobby-singleplayer').waitFor();}
 try{
  const {context:desktop,page}=await context();
  await page.waitForFunction(()=>document.querySelector('.halloween-countdown').dataset.countdownPhase==='idle');
@@ -70,7 +72,7 @@ try{
  assert.equal(await page.locator('[data-countdown-refresh]').isVisible(),true);
  assert.equal(await page.evaluate(()=>document.activeElement?.matches('[data-countdown-refresh]')),true);
  await page.keyboard.press('Escape');assert.equal(await page.locator('#halloween-timer-view').isVisible(),false);
- await page.reload();await page.clock.runFor(100);
+ await page.reload();await page.clock.runFor(100);await finishOpeningIfPresent(page);
  assert.equal(await page.locator('#halloween-timer-view').isVisible(),false,'no repeated automatic view after reload at zero');
  await page.clock.runFor(1000);
  await page.locator('.halloween-countdown [data-briefing-watch]').click({force:true});
@@ -115,7 +117,7 @@ try{
  await mobile.locator('[data-launch-briefing]').waitFor({state:'visible'});
  assert.equal(await mobile.locator('[data-launch-briefing]').evaluate(el=>{const r=el.getBoundingClientRect();return r.top>=document.querySelector('.halloween-timer-header').getBoundingClientRect().bottom&&r.bottom<=document.querySelector('.halloween-timer-footer').getBoundingClientRect().top}),true);
  await mobile.locator('[data-briefing-skip]').click();
- await mobile.locator('[data-countdown-close]').click({force:true});await mobile.reload();await mobile.clock.runFor(100);
+ await mobile.locator('[data-countdown-close]').click({force:true});await mobile.reload();await mobile.clock.runFor(100);await finishOpeningIfPresent(mobile);
  assert.equal(await mobile.locator('#halloween-timer-view').isVisible(),false,'dismissed event stays dismissed after recreating the menu');
  await phone.close();console.log('PASS reduced motion, phone fitting and persisted dismissal');
 
