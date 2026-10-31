@@ -1,13 +1,15 @@
 import * as THREE from 'three';
+import {createHalloweenSurfaces} from './halloween-surfaces.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 /** The same locally authored Halloween models dress the house and the basement. */
 export function createHalloweenProps({aged=false}={}){
+ const surfaces=createHalloweenSurfaces({aged});
  const geometries=new Map(),materials=new Map(),flames=[],paper=[];let disposed=false;
  const geometry=(key,make)=>{if(!geometries.has(key))geometries.set(key,make());return geometries.get(key);};
  const material=(key,color,extra={})=>{if(!materials.has(key))materials.set(key,new THREE.MeshStandardMaterial({color,roughness:aged?.94:.78,...extra}));return materials.get(key);};
- const orange=material('orange',aged?0x9d461c:0xbd591d,{vertexColors:true}),black=material('black',0x12120f,{vertexColors:true}),iron=material('iron',0x373b32,{metalness:.62,roughness:.66});
- const stem=material('stem',0x495032),wax=material('wax',aged?0xc2b08c:0xe4d1ac),bone=material('bone',0xb5ac92),ink=material('ink',0x171814),letter=material('letter',0xc0aa7e);
+ const orange=material('orange',aged?0x9d461c:0xbd591d,{vertexColors:true,...surfaces.get('pumpkin')}),black=material('black',0x12120f,{vertexColors:true,...surfaces.get('pumpkin')}),iron=material('iron',0x373b32,{metalness:.62,roughness:.66,...surfaces.get('iron')});
+ const stem=material('stem',0x495032),wax=material('wax',aged?0xc2b08c:0xe4d1ac,surfaces.get('wax')),bone=material('bone',0xb5ac92),ink=material('ink',0x171814),letter=material('letter',0xc0aa7e);
  const hole=material('carving',0x180c06),glow=material('amber',0xf3a44d,{emissive:0xff791b,emissiveIntensity:aged?.72:1.15}),card=material('card',0xa45826,{side:THREE.DoubleSide}),blackCard=material('black-card',0x1b211b,{side:THREE.DoubleSide});
  const cube=geometry('cube',()=>new THREE.BoxGeometry(1,1,1)),sphere=geometry('sphere',()=>new THREE.SphereGeometry(1,16,12)),cylinder=geometry('cylinder',()=>new THREE.CylinderGeometry(1,1,1,10));
  function group(kind,scale=1){const g=new THREE.Group();g.name=`Halloween / ${kind}`;g.scale.setScalar(scale);g.userData={halloweenProp:kind,halloweenStyle:aged?'weathered':'house'};return g;}
@@ -114,5 +116,5 @@ export function createHalloweenProps({aged=false}={}){
   for(const {mesh,baseY,phase}of flames)mesh.scale.y=baseY*(reducedMotion?1:1+Math.sin(t*5+phase)*.045+Math.sin(t*9.1+phase)*.025);
   for(const {mesh,base,phase}of paper)mesh.rotation.y=base+(reducedMotion?0:Math.sin(t*.7+phase)*.025);
  }
- return {pumpkin,web,bunting,stringLights,bats,candleCluster,lantern,wreath,skeleton,update,dispose(){if(disposed)return;disposed=true;geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());flames.length=paper.length=0;}};
+ return {pumpkin,web,bunting,stringLights,bats,candleCluster,lantern,wreath,skeleton,update,dispose(){if(disposed)return;disposed=true;geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());surfaces.dispose();flames.length=paper.length=0;}};
 }

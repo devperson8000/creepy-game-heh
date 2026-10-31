@@ -1,5 +1,6 @@
 import {createHouseServiceExit} from './house-service-exit.js';
 import * as THREE from 'three';
+import {createHalloweenSurfaces} from './halloween-surfaces.js';
 import {createOpeningSet} from './opening-set.js';
 import {createOpeningHands} from './opening-hands.js';
 import {createHalloweenProps} from './halloween-props.js';
@@ -7,14 +8,14 @@ import {createFinaleSurvivor} from './finale-actors.js';
 import {halloweenEndingFrame,endingEase as ease} from './halloween-ending-timeline.js';
 /** The same furnished house, reached through a real rising passage and its original wall. */
 export function createHalloweenEndingScene({asset,cast=[{id:'solo',slot:0}],runnerId=cast[0]?.id,reducedMotion=false,quality='auto'}={}){
- const scene=new THREE.Scene();scene.name='halloween-house-ending';scene.background=new THREE.Color(0x030606);scene.fog=new THREE.FogExp2(0x030606,.018);
+ const surfaces=createHalloweenSurfaces({aged:true}),scene=new THREE.Scene();scene.name='halloween-house-ending';scene.background=new THREE.Color(0x030606);scene.fog=new THREE.FogExp2(0x030606,.018);
  const camera=new THREE.PerspectiveCamera(61,1,.025,120);scene.add(camera);
  const set=createOpeningSet(scene),hands=createOpeningHands(camera,{hazmat:true}),decorations=createHalloweenProps({aged:true});
  set.passage.visible=false;set.houseFloor.visible=false;
  const route=new THREE.Group();route.name='house-maintenance-route';scene.add(route);
  const cube=new THREE.BoxGeometry(1,1,1),owned=[cube],materials=[];
  const mat=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.9,...extra});materials.push(m);return m;};
- const concrete=mat(0x3e493e),steel=mat(0x303b36,{metalness:.55,roughness:.65}),rust=mat(0x6b4932),black=mat(0x060b09),paint=mat(0x878878);
+ const concrete=mat(0x3e493e,surfaces.get('stone')),steel=mat(0x303b36,{metalness:.55,roughness:.65,...surfaces.get('iron')}),rust=mat(0x6b4932,surfaces.get('iron')),black=mat(0x060b09),paint=mat(0x878878);
  function box(parent,w,h,d,x,y,z,m=concrete){const mesh=new THREE.Mesh(cube,m);mesh.scale.set(w,h,d);mesh.position.set(x,y,z);mesh.receiveShadow=true;parent.add(mesh);return mesh;}
  function text(parent,label,w,h,x,y,z){const c=document.createElement('canvas');c.width=768;c.height=256;const ctx=c.getContext('2d');ctx.fillStyle='#20291f';ctx.fillRect(0,0,768,256);ctx.fillStyle='#c0baa0';ctx.textAlign='center';ctx.font='44px monospace';label.split('\n').forEach((s,i)=>ctx.fillText(s,384,100+i*65));const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;owned.push(map);return box(parent,w,h,.025,x,y,z,mat(0xffffff,{map}));}
  const slope=Math.atan2(5.4,32),ramp=new THREE.Group();ramp.position.set(0,-2.7,-27);ramp.rotation.x=-slope;route.add(ramp);
@@ -79,6 +80,6 @@ export function createHalloweenEndingScene({asset,cast=[{id:'solo',slot:0}],runn
   beam.intensity=t<10.5?65:t<18?8:t<39?65:0;
   scene.fog.density=t>=39?.008:.018;scene.updateMatrixWorld(true);return f;
  }
- function dispose(){if(disposed)return;disposed=true;for(const actor of actors.values())actor.dispose();hands.dispose();exit.dispose();decorations.dispose();set.dispose();owned.forEach(r=>r.dispose());materials.forEach(m=>m.dispose());beam.dispose();scene.clear();}
+ function dispose(){if(disposed)return;disposed=true;for(const actor of actors.values())actor.dispose();hands.dispose();exit.dispose();decorations.dispose();set.dispose();owned.forEach(r=>r.dispose());materials.forEach(m=>m.dispose());beam.dispose();surfaces.dispose();scene.clear();}
  return {scene,camera,set,route,serviceDoor,floorHinge,actors,pumpkinLight,sample,resize,dispose};
 }

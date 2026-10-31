@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createHalloweenSurfaces} from './halloween-surfaces.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {loadNeedlelimbsAsset,createNeedlelimbsActor} from './needlelimbs-actor.js';
 import {createRebuiltMonochrome} from './mechanical-head.js';
@@ -9,9 +10,9 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset,all
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x060809);scene.fog=new THREE.Fog(0x080b0c,13,30);
  const camera=new THREE.PerspectiveCamera(49,16/9,.05,45);scene.add(camera);
  const target=new THREE.WebGLRenderTarget(960,540,{depthBuffer:true});target.texture.colorSpace=THREE.SRGBColorSpace;
- const geometries=new Set(),materials=new Set(),textures=new Set(),monsters=new Map();let survivor,needle,loadError=null,disposed=false,state=sampleNeedlelimbsTeaser(0);
+ const surfaces=createHalloweenSurfaces({aged:true}),geometries=new Set(),materials=new Set(),textures=new Set(),monsters=new Map();let survivor,needle,loadError=null,disposed=false,state=sampleNeedlelimbsTeaser(0);
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.9,...extra});materials.add(m);return m;};
- const concrete=material(0x444841),floor=material(0x272e2a),steel=material(0x252d2c,{metalness:.55,roughness:.56}),dark=material(0x10191a),fixture=material(0xc1d2b8,{emissive:0xa3b399,emissiveIntensity:1});
+ const concrete=material(0x444841,surfaces.get('stone')),floor=material(0x272e2a,surfaces.get('stone')),steel=material(0x252d2c,{metalness:.55,roughness:.56,...surfaces.get('iron')}),dark=material(0x10191a),fixture=material(0xc1d2b8,{emissive:0xa3b399,emissiveIntensity:1});
  function box(w,h,d,x,y,z,m=concrete){const g=new THREE.BoxGeometry(w,h,d);geometries.add(g);const o=new THREE.Mesh(g,m);o.position.set(x,y,z);scene.add(o);return o;}
  // A real right-hand branch: the return wall hides the approach until the head crosses its edge.
  box(5,.15,24,0,-.1,-5,floor);box(5,.15,24,0,4.3,-5,dark);box(.2,4.4,24,-2.5,2.1,-5);
@@ -66,6 +67,6 @@ export function createNeedlelimbsTeaserScene({needlelimbsAsset,survivorAsset,all
   try{renderer.setRenderTarget(target);renderer.setScissorTest(false);renderer.autoClear=true;renderer.toneMappingExposure=1.1;renderer.render(scene,camera);}
   finally{renderer.setRenderTarget(previous);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.toneMappingExposure=exposure;renderer.autoClear=auto;}
  }
- function dispose(){if(disposed)return;disposed=true;survivor?.dispose();needle?.dispose();rebuilt.dispose();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());target.dispose();}
+ function dispose(){if(disposed)return;disposed=true;survivor?.dispose();needle?.dispose();rebuilt.dispose();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());surfaces.dispose();target.dispose();}
  return {scene,camera,target,ready,sample,render,dispose,monsters,creature:rebuilt,get needlelimbsPending(){return allowMissingNeedlelimbs&&!needle;},get survivor(){return survivor;},get error(){return loadError;},get state(){return state;}};
 }

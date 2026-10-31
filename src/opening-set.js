@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {createHalloweenProps} from './halloween-props.js';
+import {createHalloweenSurfaces} from './halloween-surfaces.js';
 
 /** Original, locally authored street/house/passage: no remote assets during startup. */
 export function createOpeningSet(scene){
  const street=new THREE.Group(),house=new THREE.Group(),passage=new THREE.Group();scene.add(street,house,passage);
- const decorations=createHalloweenProps();
+ const decorations=createHalloweenProps(),surfaces=createHalloweenSurfaces();
  const textures=[],materials=[],geometries=[];
  const material=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.85,...extra});materials.push(m);return m;};
  function texture(draw,w=512,h=512){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;draw(canvas.getContext('2d'),w,h);const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;map.wrapS=map.wrapT=THREE.RepeatWrapping;textures.push(map);return map;}
@@ -15,14 +16,14 @@ export function createOpeningSet(scene){
  const brickMap=texture((c,w,h)=>{c.fillStyle='#151718';c.fillRect(0,0,w,h);for(let y=0;y<h;y+=64)for(let x=-128;x<w;x+=128){const offset=(y/64%2)*64;c.fillStyle=`rgb(${45+random()*12},${45+random()*10},${43+random()*10})`;c.fillRect(x+offset+3,y+3,122,58);for(let j=0;j<100;j++){c.fillStyle=random()>.5?'#91908018':'#00000030';c.fillRect(x+offset+random()*124,y+random()*60,3,2);}}});brickMap.repeat.set(2,6);
  const sidingMap=texture((c,w,h)=>{c.fillStyle='#85847b';c.fillRect(0,0,w,h);for(let y=0;y<h;y+=48){c.fillStyle='#3b403b';c.fillRect(0,y,w,3);c.fillStyle='#b9b8a0';c.fillRect(0,y+4,w,2);}});
  const roofMap=texture((c,w,h)=>{c.fillStyle='#292d2c';c.fillRect(0,0,w,h);for(let y=0;y<h;y+=32)for(let x=-64;x<w;x+=64){c.fillStyle=random()>.5?'#343935':'#252a28';c.fillRect(x+(y%64?32:0),y,61,29);}});roofMap.repeat.set(3,3);
- const floor=material(0xffffff,{map:woodMap}),paper=material(0xffffff,{map:paperMap}),brick=material(0xffffff,{map:brickMap}),siding=material(0xffffff,{map:sidingMap}),roof=material(0xffffff,{map:roofMap});
- const trim=material(0xcec7ac),dark=material(0x151c1b),wood=material(0x34271e),metal=material(0x333a39,{metalness:.65,roughness:.47}),orange=material(0xb6490c),black=material(0x080b09),cloth=material(0x9c8e73),red=material(0x842720),skinny=material(0x31291f);
+ const floor=material(0xffffff,{map:woodMap,...surfaces.get('wood')}),paper=material(0xffffff,{map:paperMap,...surfaces.get('paper')}),brick=material(0xffffff,{map:brickMap}),siding=material(0xffffff,{map:sidingMap}),roof=material(0xffffff,{map:roofMap});
+ const trim=material(0xcec7ac),dark=material(0x151c1b),wood=material(0x34271e),metal=material(0x333a39,{metalness:.65,roughness:.47,...surfaces.get('iron')}),orange=material(0xb6490c),black=material(0x080b09),cloth=material(0x9c8e73,surfaces.get('cloth')),red=material(0x842720),skinny=material(0x31291f);
  const glow=material(0xffaf4b,{emissive:0xff8619,emissiveIntensity:1.8}),windowGlow=material(0xffc789,{emissive:0xffab53,emissiveIntensity:.45});
  const roundedCube=new RoundedBoxGeometry(1,1,1,3,.09);geometries.push(roundedCube);
  const cube=new THREE.BoxGeometry(1,1,1),sphere=new THREE.SphereGeometry(1,20,14);geometries.push(cube,sphere);
  function box(group,w,h,d,x,y,z,m=wood){const mesh=new THREE.Mesh(cube,m);mesh.scale.set(w,h,d);mesh.position.set(x,y,z);mesh.receiveShadow=true;mesh.castShadow=true;group.add(mesh);return mesh;}
  function softBox(group,w,h,d,x,y,z,m){const mesh=box(group,w,h,d,x,y,z,m);mesh.geometry=roundedCube;return mesh;}
- function brickSurface(u,v){const map=brickMap.clone();map.repeat.set(u,v);textures.push(map);return material(0xffffff,{map});}
+ function brickSurface(u,v){const map=brickMap.clone();map.repeat.set(u,v);textures.push(map);return material(0xffffff,{map,...surfaces.get('stone')});}
  const alleyBrick=brickSurface(13.3,4.5),shaftBrick=brickSurface(5.5,50),endBrick=brickSurface(3.1,54),ceilingBrick=brickSurface(3.1,14);
  function ball(group,x,y,z,sx,sy,sz,m){const mesh=new THREE.Mesh(sphere,m);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;}
  function rod(group,a,b,r,m=metal){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),mesh=new THREE.Mesh(cube,m);mesh.position.copy(A).add(B).multiplyScalar(.5);mesh.scale.set(r,A.distanceTo(B),r);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),B.sub(A).normalize());group.add(mesh);return mesh;}
@@ -83,5 +84,5 @@ export function createOpeningSet(scene){
  box(passage,3.8,.15,.16,0,-.02,-17.64,metal);for(const x of [-1.78,1.78])box(passage,.1,.1,7.1,x,-.02,-21.2,metal);
  sign(passage,'SERVICE ACCESS\nKEEP CLEAR',.65,.35,1.8,1.5,-15.8,{background:'#343c32',color:'#c4c3a0',size:38}).rotation.y=-Math.PI/2;
  for(let i=0;i<15;i++){const scrap=box(passage,.05,.02,.3,(random()-.5)*3.1,-.02,-10-random()*7,wood);scrap.rotation.y=random()*6;}
- return {street,house,passage,wall,houseFloor,doorPivot,chair,pendant,houseLights,streetLights,update(time,{reducedMotion=false}={}){decorations.update(time,{reducedMotion});street.visible=time<13.5;house.visible=time<31.6;passage.visible=time>28;doorPivot.rotation.y=1.48*(Math.max(0,Math.min(1,(time-7.6)/3.3))**2*(3-2*Math.max(0,Math.min(1,(time-7.6)/3.3))));houseLights.visible=time<30.2;pendant.intensity=55*(1-.75*Math.max(0,Math.min(1,(time-17)/10)));},dispose(){decorations.dispose();textures.forEach(t=>t.dispose());materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());}};
+ return {street,house,passage,wall,houseFloor,doorPivot,chair,pendant,houseLights,streetLights,update(time,{reducedMotion=false}={}){decorations.update(time,{reducedMotion});street.visible=time<13.5;house.visible=time<31.6;passage.visible=time>28;doorPivot.rotation.y=1.48*(Math.max(0,Math.min(1,(time-7.6)/3.3))**2*(3-2*Math.max(0,Math.min(1,(time-7.6)/3.3))));houseLights.visible=time<30.2;pendant.intensity=55*(1-.75*Math.max(0,Math.min(1,(time-17)/10)));},dispose(){decorations.dispose();surfaces.dispose();textures.forEach(t=>t.dispose());materials.forEach(m=>m.dispose());geometries.forEach(g=>g.dispose());}};
 }

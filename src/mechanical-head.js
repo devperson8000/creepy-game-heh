@@ -1,9 +1,10 @@
 import * as THREE from 'three';
+import {createHalloweenSurfaces} from './halloween-surfaces.js';
 import {createCreature,applyIdle,applyRunning} from './creature.js';
 
 /** A repaired Monochrome silhouette: original wide horns, visible industrial reconstruction. */
 export function createMechanicalHead(){
- const root=new THREE.Group();root.name='monochrome-mechanical-head';
+ const surfaces=createHalloweenSurfaces({aged:true}),root=new THREE.Group();root.name='monochrome-mechanical-head';
  const geometries=new Set(),materials=new Set(),textures=new Set();let disposed=false;
  const mat=(color,metalness,roughness)=>{const m=new THREE.MeshStandardMaterial({color,metalness,roughness});materials.add(m);return m;};
  const steel=mat(0x555e5e,.82,.53),dark=mat(0x182326,.72,.6),edge=mat(0x9a9e94,.84,.4),rust=mat(0x503c2b,.5,.92),black=mat(0x07090a,.35,.72);
@@ -11,7 +12,7 @@ export function createMechanicalHead(){
  // Deterministic brushed wear. This is a small runtime texture, shared by this head's plates.
  const grain=new Uint8Array(96*96*4);let seed=3107;
  for(let i=0;i<96*96;i++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;const v=165+(seed%70)-((i%96)%19===0?25:0);grain.set([v,v,v,255],i*4);}
- const wear=new THREE.DataTexture(grain,96,96);wear.colorSpace=THREE.SRGBColorSpace;wear.wrapS=wear.wrapT=THREE.RepeatWrapping;wear.repeat.set(12,12);wear.minFilter=wear.magFilter=THREE.LinearFilter;wear.needsUpdate=true;textures.add(wear);steel.map=wear;edge.map=wear;
+ const wear=new THREE.DataTexture(grain,96,96);wear.colorSpace=THREE.SRGBColorSpace;wear.wrapS=wear.wrapT=THREE.RepeatWrapping;wear.repeat.set(12,12);wear.minFilter=wear.magFilter=THREE.LinearFilter;wear.needsUpdate=true;textures.add(wear);steel.map=wear;edge.map=wear;Object.assign(steel,surfaces.get('iron'));Object.assign(edge,surfaces.get('iron'));
  function mesh(geometry,material,name,parent=root){geometries.add(geometry);const o=new THREE.Mesh(geometry,material);o.name=name;o.castShadow=true;o.userData.mechanicalHead=true;parent.add(o);return o;}
  function box(w,h,d,x,y,z,m,name,parent=root){const o=mesh(new THREE.BoxGeometry(w,h,d),m,name,parent);o.position.set(x,y,z);return o;}
  function tube(points,r,m,name,parent=root){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return mesh(new THREE.TubeGeometry(curve,20,r,8,false),m,name,parent);}
@@ -72,7 +73,7 @@ export function createMechanicalHead(){
   }
  }
  sample(0);
- function dispose(){if(disposed)return;disposed=true;root.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}
+ function dispose(){if(disposed)return;disposed=true;root.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());surfaces.dispose();}
  return {root,jaw,sample,dispose};
 }
 export function createRebuiltMonochrome(){

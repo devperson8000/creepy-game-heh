@@ -1,4 +1,6 @@
 import {createHoodedStranger} from './hooded-stranger.js';
+import {createHalloweenSurfaces} from './halloween-surfaces.js';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {loadKeeperAsset} from './imported-keeper.js';
 import {b2Frame} from './b2-director.js';
 import {createB2Voice} from './b2-voice.js';
@@ -16,15 +18,17 @@ export function rememberFootage(){try{localStorage.setItem(FOOTAGE_KEY,'1');}cat
 export function createHalloweenExperience({renderer,camera,run,input,ui,world=null,torch=null,players=()=>[],localId='solo',onReturn=()=>{},onMute=()=>{},isMuted=()=>false,poseFor=p=>p,replay=false,teaserPreview=false}){
  if(!run.halloween)return {render:()=>false,finish(){},pause(){},dispose(){}};
  const scene=new THREE.Scene();scene.background=new THREE.Color(0x030405);scene.fog=new THREE.FogExp2(0x050607,.065);
- const resources=new Set(),root=new THREE.Group();scene.add(root);
+ const surfaces=createHalloweenSurfaces({aged:true}),resources=new Set(),root=new THREE.Group();scene.add(root);
  const mat=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.88,...extra});resources.add(m);return m;};
- const concrete=mat(0x333532),metal=mat(0x181d1e),paper=mat(0xb5ab8d),orange=mat(0x6e361b),screenMaterial=new THREE.MeshBasicMaterial({toneMapped:false});resources.add(screenMaterial);
+ const concrete=mat(0x333532,surfaces.get('stone')),metal=mat(0x181d1e,{metalness:.48,...surfaces.get('iron')}),paper=mat(0xb5ab8d,surfaces.get('paper')),orange=mat(0x6e361b),screenMaterial=new THREE.MeshBasicMaterial({toneMapped:false});resources.add(screenMaterial);
  function box(w,h,d,x,y,z,m=metal){const g=new THREE.BoxGeometry(w,h,d);resources.add(g);const mesh=new THREE.Mesh(g,m);mesh.position.set(x,y,z);root.add(mesh);return mesh;}
  box(8,.18,8.4,0,-.1,.2,concrete);box(8,3.5,.15,0,1.7,-4,concrete);box(.15,3.5,8.4,-4,1.7,.2,concrete);box(.15,3.5,8.4,4,1.7,.2,concrete);box(8,.15,8.4,0,3.5,.2,metal);box(8,3.5,.15,0,1.7,4.4,metal);
  box(3,.14,1.25,0,.9,-1.7);for(const x of [-1.3,1.3])box(.09,.9,1,x,.45,-1.7);
  for(const x of [-3.35,3.35]){for(const y of [.4,1.1,1.8,2.5]){box(1.05,.06,2.1,x,y,-2.3);for(let i=0;i<5;i++)box(.12,.28,.25,x-.38+i*.18,y+.16,-2.3, i%2?paper:orange);}for(const z of [-3.3,-1.3])box(.06,2.6,.06,x,.1+1.3,z);}
  for(let i=0;i<15;i++){const p=box(.22,.005,.29,Math.sin(i*2.4)*2.8,.01,Math.cos(i*1.7)*2.3,paper);p.rotation.y=i*2.1;}
- box(1.55,1.04,.24,-.65,1.57,-2.07);box(1.35,.79,.015,-.65,1.6,-1.94,screenMaterial);box(.32,.3,.25,-.65,1.04,-2.1);
+ const monitorCase=box(1.55,1.04,.24,-.65,1.57,-2.07);monitorCase.geometry.dispose();resources.delete(monitorCase.geometry);monitorCase.geometry=new RoundedBoxGeometry(1.55,1.04,.24,3,.035);resources.add(monitorCase.geometry);
+ for(const y of [1.27,1.32,1.37])box(.12,.012,.008,.055,y,-1.943,mat(0x030504));
+ box(.024,.009,.01,-1.26,1.12,-1.943,mat(0x83aa78,{emissive:0x547648,emissiveIntensity:.6}));box(1.35,.79,.015,-.65,1.6,-1.94,screenMaterial);box(.32,.3,.25,-.65,1.04,-2.1);
  let keeper=createHoodedStranger(),stranger=keeper.root,keeperLoading=null;root.add(stranger);
  function prepareKeeper(){void prepareAvatars();keeperLoading??=loadKeeperAsset().then(asset=>{if(disposed)return;const replacement=createHoodedStranger({asset});keeper.dispose();keeper=replacement;stranger=keeper.root;root.add(stranger);}).catch(()=>{});return keeperLoading;}
  const switchBase=box(.19,.025,.16,.4,1.015,-2.13,metal),switchButton=box(.085,.065,.085,.4,1.065,-2.13,mat(0x66543b,{emissive:0x8b6431,emissiveIntensity:.3}));switchButton.name='archive-monitor-switch';
@@ -100,7 +104,7 @@ export function createHalloweenExperience({renderer,camera,run,input,ui,world=nu
   for(const [id,a]of avatars)if(!players().some(p=>p.id===id)){a.dispose();avatars.delete(id);}if(q.seen)rememberFootage();
   camera.updateWorldMatrix(true,false);renderer.toneMappingExposure=.95*prefs.brightness;renderer.render(scene,camera);return true;
  }
- function dispose(){if(disposed)return;disposed=true;finish(false);reveal?.remove();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',unlockKey);score.dispose();voice.dispose();teaserAudio.dispose();teaserScene.dispose();renderer.domElement.removeEventListener('pointerdown',resumeScore);overlay.remove();avatars.forEach(a=>a.dispose());keeper.dispose();root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});resources.forEach(r=>r.dispose());}
+ function dispose(){if(disposed)return;disposed=true;finish(false);reveal?.remove();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('keydown',unlockKey);score.dispose();voice.dispose();teaserAudio.dispose();teaserScene.dispose();renderer.domElement.removeEventListener('pointerdown',resumeScore);overlay.remove();avatars.forEach(a=>a.dispose());keeper.dispose();root.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material){for(const m of Array.isArray(o.material)?o.material:[o.material])m.dispose();}});resources.forEach(r=>r.dispose());surfaces.dispose();}
 
  return {render,finish,dispose,pause(){voice.pause();score.pause();teaserAudio.pause();},scene,get stranger(){return stranger;},get keeper(){return keeper;},get keeperReady(){return prepareKeeper();},voice,switchButton,overlay,teaser:teaserScene};
 }

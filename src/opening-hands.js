@@ -1,13 +1,14 @@
 import * as THREE from 'three';
+import {createHalloweenSurfaces} from './halloween-surfaces.js';
 import {openingEase as ease} from './opening-sequence.js';
 
 /** View-relative hands remain in the world depth buffer: the wallpaper really
  * occludes the fingers as they pass through, rather than drawing over the wall. */
 export function createOpeningHands(camera,{hazmat=false}={}){
  const root=new THREE.Group(),left=new THREE.Group(),right=new THREE.Group();camera.add(root);root.add(left,right);
- const materials=[],geometries=[];
+ const surfaces=createHalloweenSurfaces(),materials=[],geometries=[];
  const mat=(color,extra={})=>{const m=new THREE.MeshStandardMaterial({color,roughness:.82,...extra});materials.push(m);return m;};
- const skin=mat(hazmat?0x242b29:0x9e7155),nails=mat(hazmat?0x242b29:0xb28b74),sleeve=mat(hazmat?0xc3a52b:0x263132),cuff=mat(0x192122),metal=mat(0x434b4b,{metalness:.8,roughness:.35}),rubber=mat(0x101615),lens=mat(0xd8e6d5,{emissive:0xb5cdb9,emissiveIntensity:.5});
+ const skin=mat(hazmat?0x242b29:0x9e7155,{roughness:hazmat?.7:.68,...(hazmat?surfaces.get('cloth'):{})}),nails=mat(hazmat?0x242b29:0xb28b74,{roughness:.43}),sleeve=mat(hazmat?0xc3a52b:0x263132,surfaces.get('cloth')),cuff=mat(0x192122,surfaces.get('cloth')),metal=mat(0x434b4b,{metalness:.8,roughness:.35,...surfaces.get('iron')}),rubber=mat(0x101615),lens=mat(0xd8e6d5,{emissive:0xb5cdb9,emissiveIntensity:.5});
  const sphere=new THREE.SphereGeometry(1,16,12);geometries.push(sphere);
  function ellipsoid(group,m,x,y,z,sx,sy,sz){const mesh=new THREE.Mesh(sphere,m);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);return mesh;}
  function segment(group,a,b,r,m){const A=new THREE.Vector3(...a),B=new THREE.Vector3(...b),g=new THREE.CapsuleGeometry(r,A.distanceTo(B),4,10);geometries.push(g);const mesh=new THREE.Mesh(g,m);mesh.position.copy(A).add(B).multiplyScalar(.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),B.sub(A).normalize());group.add(mesh);return mesh;}
@@ -18,8 +19,9 @@ export function createOpeningHands(camera,{hazmat=false}={}){
  const fingers=[];
  for(let i=0;i<4;i++){
   const f=new THREE.Group();f.position.set(-.051+i*.034,.062,0);left.add(f);const length=[.078,.103,.111,.087][i];
-  segment(f,[0,0,0],[0,length*.48,-.002],.015,skin);const joint=new THREE.Group();joint.position.set(0,length*.48,-.002);f.add(joint);
-  segment(joint,[0,0,0],[0,length*.49,-.005],.0125,skin);ellipsoid(joint,nails,0,length*.38,.009,.009,.017,.002);fingers.push({f,joint});
+  ellipsoid(left,skin,-.051+i*.034,.052,.005,.018,.022,.023);
+  segment(f,[0,0,0],[0,length*.48,-.002],.014,skin);const joint=new THREE.Group();joint.position.set(0,length*.48,-.002);f.add(joint);
+  segment(joint,[0,0,0],[0,length*.49,-.005],.012,skin);ellipsoid(joint,skin,0,.006,-.002,.013,.014,.013);ellipsoid(joint,nails,0,length*.38,.009,.008,.014,.0015);fingers.push({f,joint});
  }
  segment(left,[.058,-.027,.003],[.093,.006,-.018],.022,skin);segment(left,[.093,.006,-.018],[.1,.052,-.026],.016,skin);
  // Sweater sleeve, curled gripping fingers and a metal barrel flashlight.
@@ -41,5 +43,5 @@ export function createOpeningHands(camera,{hazmat=false}={}){
   for(const {f,joint}of fingers){f.rotation.x=-.16+.2*reach;joint.rotation.x=-.12+.12*reach;}
   right.visible=torch>0;right.position.set(Math.min(.31,camera.aspect*.24)+fall*.3,-.28-(1-torch)*.7-fall*.36,-.55-fall*.15);
   right.rotation.set(-.11+fall*1.3,-.12+fall*.35,-.12-fall*1.8);right.scale.setScalar(.95);fill.intensity=.65*light;lens.emissiveIntensity=.5*light;
- },dispose(){root.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}};
+ },dispose(){root.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());surfaces.dispose();}};
 }

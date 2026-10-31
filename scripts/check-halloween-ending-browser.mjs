@@ -1,6 +1,8 @@
+import {previewPassword,localPreviewAccess} from './preview-browser-access.mjs';
 import {chromium} from 'playwright';import assert from 'node:assert/strict';import {readFile,mkdir} from 'node:fs/promises';
-const base=process.env.GAME_TEST_URL||'http://localhost:5175',password=await readFile('work/halloween-preview-password.txt','utf8'),browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']}),page=await browser.newPage({viewport:{width:1100,height:850}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);
+const base=process.env.GAME_TEST_URL||'http://localhost:5175',password=previewPassword(),browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']}),page=await browser.newPage({viewport:{width:1100,height:850}}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(30000);
 await page.addInitScript(()=>localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',reducedMotion:true,volume:0})));
+await localPreviewAccess(page,base);
 try{
  await mkdir('work/story-shots',{recursive:true});await page.goto(base+'/testhalloween');await page.getByLabel('Password',{exact:true}).fill(password);await page.getByRole('button',{name:'Unlock tests',exact:true}).click();await page.getByRole('button',{name:'Halloween house ending',exact:true}).click();let frame=page.frames().find(f=>f!==page.mainFrame());await frame.waitForFunction(()=>!!window.monochromeEnding,null,{timeout:45000});
  await frame.evaluate(()=>monochromeEnding.renderer.setAnimationLoop(null));
