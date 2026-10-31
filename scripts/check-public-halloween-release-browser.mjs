@@ -1,0 +1,14 @@
+import {chromium} from 'playwright';import assert from 'node:assert/strict';
+import {HALLOWEEN_DEADLINE,HALLOWEEN_VERSION,releaseStatus} from '../src/halloween-release-time.js';
+import {mapReleaseStatus} from '../src/map-release-time.js';
+const base=process.env.GAME_TEST_URL||'http://localhost:5187',browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});
+try{for(const seasonal of [false,true]){
+ const context=await browser.newContext({viewport:{width:1100,height:800}}),page=await context.newPage(),errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(/\/(models\/(b2|teaser)|audio\/(opening|halloween))\//.test(r.url()))requests.push(r.url());});
+ await page.addInitScript(version=>{localStorage.setItem('monochrome.settings',JSON.stringify({quality:'low',volume:0,reducedMotion:true}));sessionStorage.setItem('monochrome.countdown-view.'+version,'seen');sessionStorage.setItem('monochrome.launch-briefing.'+version,'seen');},HALLOWEEN_VERSION);
+ await page.route('**/api/halloween-release',r=>r.fulfill({json:releaseStatus(seasonal?HALLOWEEN_DEADLINE:HALLOWEEN_DEADLINE-3600000)}));await page.route('**/api/map-release',r=>r.fulfill({json:mapReleaseStatus(HALLOWEEN_DEADLINE)}));
+ await page.goto(base+'/?halloween=preview');
+ if(seasonal){await page.locator('.opening-sequence').waitFor({state:'visible',timeout:15000});await page.locator('.opening-status').waitFor({state:'detached',timeout:15000});const skip=page.locator('.opening-skip');await skip.dispatchEvent('pointerdown',{button:0,pointerId:1});await page.waitForTimeout(2150);await skip.dispatchEvent('pointerup',{button:0,pointerId:1});}
+ await page.locator('#lobby-singleplayer').waitFor({timeout:15000});assert.equal(await page.locator('.halloween-test-entry').count(),0);await page.locator('#lobby-singleplayer').click();await page.waitForFunction(()=>!!window.monochrome);await page.keyboard.press('Space');await page.locator('#arrival').waitFor({state:'detached',timeout:15000});
+ const state=await page.evaluate(()=>{const g=monochrome;return {seasonal:!!g.run.halloween,props:!!g.world.halloween,maze:!!g.run.layout.halloweenMaze,size:g.run.layout.size,drawers:g.run.drawers.length,rooms:g.run.layout.rooms.length,head:g.world.monster?.mechanical?true:false};});assert.equal(state.seasonal,seasonal);assert.equal(state.props,seasonal);assert.equal(state.size,45);assert.equal(state.drawers,state.rooms*3);assert.equal(state.head,false);
+ if(!seasonal)assert.deepEqual(requests,[],'pre-release gameplay must not request seasonal media');else assert.equal(state.maze,true);assert.deepEqual(errors,[]);console.log('PASS public release gate and balanced map',state);await context.close();
+}}finally{await browser.close();}
