@@ -1,7 +1,7 @@
 import {chromium} from 'playwright';import assert from 'node:assert/strict';
 const base=process.env.GAME_TEST_URL||'http://localhost:5198',password=process.env.HALLOWEEN_TEST_PASSWORD;if(!password)throw new Error('Set HALLOWEEN_TEST_PASSWORD for the authorized test hub.');const browser=await chromium.launch({executablePath:'/usr/bin/chromium',headless:true,args:['--no-sandbox','--enable-unsafe-swiftshader']});const page=await browser.newPage({viewport:{width:1440,height:1000}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
 try{
- if(!base.startsWith('https://')){await page.route('**/api/halloween-preview',async r=>r.fulfill({json:{authorized:r.request().postDataJSON()?.password===password}}));await page.route('**/api/halloween-release',r=>r.fulfill({json:{version:'halloween-2026',releaseAt:Date.parse('2026-10-31T05:00:00Z'),serverNow:Date.parse('2026-10-28T12:00:00Z'),released:false}}));}
+ if(!base.startsWith('https://')){await page.route('**/api/halloween-preview',async r=>r.fulfill({json:{authorized:r.request().postDataJSON()?.password===password}}));await page.route('**/api/halloween-release',r=>r.fulfill({json:{version:'halloween-2026-evening',releaseAt:Date.parse('2026-10-31T09:00:00Z'),serverNow:Date.parse('2026-10-28T12:00:00Z'),released:false}}));}
  await page.goto(`${base}/testhalloween`);await page.locator('input[name=password]').fill(password);await page.locator('button[type=submit]').click();
  await page.locator('#halloween-test-hub').waitFor();
  await page.getByRole('button',{name:'Countdown launch sequence',exact:true}).click();const frame=page.frameLocator('#halloween-test-frame');
