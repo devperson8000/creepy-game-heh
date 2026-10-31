@@ -24,7 +24,7 @@ export function createHalloweenCountdown({releaseClock=halloweenRelease,onEnter,
    ${['days','hours','minutes','seconds'].map(unit=>`<div class="halloween-unit"><strong data-countdown="${unit}">00</strong><span>${unit}</span></div>`).join('')}
   </div>
   <p class="halloween-arrived" hidden>The wait is over.</p>
-  <p class="halloween-date"><time datetime="2026-10-31T20:30:00+11:00">31 OCT 2026 · 8:30 PM</time><span>SYDNEY · AEDT</span></p>
+  <p class="halloween-date"><time datetime="2026-10-31T21:00:00+11:00">31 OCT 2026 · 9:00 PM</time><span>SYDNEY · AEDT</span></p>
   <div class="halloween-countdown-actions"><button type="button" data-countdown-open>Fullscreen timer <span aria-hidden="true">↗</span></button><button type="button" data-countdown-sound aria-pressed="false">Sound off</button><button type="button" data-briefing-watch hidden>Watch briefing</button></div>`;
  const clock=root.querySelector('.halloween-clock'),title=root.querySelector('.halloween-title');
  const values=[...root.querySelectorAll('[data-countdown]')];let timer=null,disposed=false;
