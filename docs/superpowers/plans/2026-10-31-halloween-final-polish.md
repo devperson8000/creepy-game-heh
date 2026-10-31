@@ -20,9 +20,9 @@
 - Gameplay remains playable before release and seasonal session selection remains host-controlled.
 
 ### Task 1: Delay now
-- [ ] Update deadline regression to assert 09:00 UTC/20:00 Sydney and old deadline remains locked; watch it fail.
-- [ ] Update src/halloween-release-time.js, both timer labels, per-release version and shared fixtures in main/tester.
-- [ ] Run release/countdown tests and build, commit/push both, confirm live API is unreleased with new deadline.
+- [x] Update deadline regression to assert 09:00 UTC/20:00 Sydney and old deadline remains locked; watch it fail.
+- [x] Update src/halloween-release-time.js, both timer labels, per-release version and shared fixtures in main/tester.
+- [x] Run release/countdown tests and build, commit/push both, confirm live API is unreleased with new deadline.
 
 ### Task 2: Asset audit and polish
 - [ ] Inventory update models/materials/audio/scenes, read existing audit and run baseline tests.
@@ -31,6 +31,7 @@
 - [ ] Verify referenced assets exist, public/private final feature consistency, rendered layouts and scene cleanup.
 
 ### Task 3: Complete release verification
+- [ ] Integrate existing seasonal feature modules into the public release gate; preserve current map/microphone hunt and private route boundary. Add explicit before/at-deadline public production-flow tests.
 - [ ] Run full appropriate suites/builds and relevant browser flows; independent final review and regression fixes.
 - [ ] Publish only authorized release code and protected tests; verify live commit IDs, deadline, assets and session gates.
 - [ ] Record verification and report material limitations accurately.
