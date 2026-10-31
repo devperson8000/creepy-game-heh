@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 const load=()=>import('../src/halloween-countdown.js');
-test('Halloween deadline is October 31 at 8 PM Sydney daylight time',async()=>{
+test('Halloween deadline is October 31 at 8:30 PM Sydney daylight time',async()=>{
  const {HALLOWEEN_DEADLINE}=await load();
- assert.equal(new Date(HALLOWEEN_DEADLINE).toISOString(),'2026-10-31T09:00:00.000Z');
- const local=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Sydney',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',hourCycle:'h23'}).format(new Date(HALLOWEEN_DEADLINE));
- assert.match(local,/31\/10\/2026/);assert.match(local,/20/);
+ assert.equal(new Date(HALLOWEEN_DEADLINE).toISOString(),'2026-10-31T09:30:00.000Z');
+ const local=new Intl.DateTimeFormat('en-AU',{timeZone:'Australia/Sydney',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'2-digit',hourCycle:'h23'}).format(new Date(HALLOWEEN_DEADLINE));
+ assert.match(local,/31\/10\/2026/);assert.match(local,/20:30/);
 });
 test('countdown rolls units correctly and includes the final second',async()=>{
  const {HALLOWEEN_DEADLINE,countdownParts}=await load();
@@ -21,6 +21,7 @@ test('deadline ends at zero and never restarts next Halloween',async()=>{
 test("the postponed release stays locked after the old afternoon deadline",async()=>{
  const {releaseStatus}=await import("../src/halloween-release-time.js");
  assert.equal(releaseStatus(Date.parse("2026-10-31T16:00:00+11:00")).released,false);
- assert.equal(releaseStatus(Date.parse("2026-10-31T19:59:59+11:00")).released,false);
- assert.equal(releaseStatus(Date.parse("2026-10-31T20:00:00+11:00")).released,true);
+ assert.equal(releaseStatus(Date.parse("2026-10-31T20:00:00+11:00")).released,false);
+ assert.equal(releaseStatus(Date.parse("2026-10-31T20:29:59+11:00")).released,false);
+ assert.equal(releaseStatus(Date.parse("2026-10-31T20:30:00+11:00")).released,true);
 });

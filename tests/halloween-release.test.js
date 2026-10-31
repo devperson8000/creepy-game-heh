@@ -4,6 +4,8 @@ import {HALLOWEEN_DEADLINE,releaseStatus} from '../src/halloween-release-time.js
 import {createHalloweenRelease} from '../src/halloween-release.js';
 import handler from '../api/halloween-release.js';
 test('release uses the Sydney deadline and the server clock, independent of a visitor clock',async()=>{
+ assert.equal(releaseStatus(Date.parse('2026-10-31T20:00:00+11:00')).released,false);
+ assert.equal(releaseStatus(Date.parse('2026-10-31T20:29:59+11:00')).released,false);
  assert.equal(releaseStatus(HALLOWEEN_DEADLINE-1).released,false);assert.equal(releaseStatus(HALLOWEEN_DEADLINE).released,true);
  let elapsed=0;const r=createHalloweenRelease({now:()=>elapsed,fetchStatus:async()=>releaseStatus(HALLOWEEN_DEADLINE-1000)});
  await r.refresh();assert.equal(r.released,false);elapsed=1000;assert.equal(r.released,true);r.dispose();
