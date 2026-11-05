@@ -2,7 +2,7 @@
 export function createLevelZero(){
  const walls=[],wall=(x,z,w,d)=>walls.push({x,z,w,d});
  const bounds={minX:-30,maxX:42,minZ:-42,maxZ:30};
- wall(-30, -6,.22,72);wall(42,-6,.22,72);wall(6,-42,72,.22);wall(6,30,72,.22);
+ wall(-30, -6,.22,72);wall(42,-29.5,.22,25);wall(42,7.5,.22,45);wall(6,-42,72,.22);wall(6,30,72,.22);
  // Arrival: staggered openings and the characteristic projecting wallpapered partition.
  wall(-12,8,12,.22);wall(5,8,10,.22);wall(10,15,.22,14);wall(-18,17,.22,18);
  wall(-5,18,8,.22);wall(-1,23,.22,10);wall(19,22,12,.22);
