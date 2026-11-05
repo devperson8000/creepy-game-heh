@@ -14,8 +14,8 @@ export function createBackroomsPost(renderer){
   vec3 color=vec3(texture2D(picture,p+vec2(bleed,0.)).r,texture2D(picture,p).g,texture2D(picture,p-vec2(bleed,0.)).b);
   vec3 glow=vec3(0.);for(int i=1;i<=3;i++){vec2 off=vec2(float(i)*2.)*pixel;glow+=max(texture2D(picture,p+off).rgb-.78,0.);glow+=max(texture2D(picture,p-off).rgb-.78,0.);}color+=glow*.055;
   float lum=dot(color,vec3(.299,.587,.114));color=mix(color,vec3(lum),.055*amount);
-  color*=1.-radius*.55;float grain=hash(floor(p*vec2(720.,480.))+frame)-.5;
-  float head=1.-smoothstep(0.,.013,p.y);color+=grain*.055*amount+head*(hash(vec2(line,frame))-.5)*.14*amount;
+  color*=1.-radius*.55;
+  float head=1.-smoothstep(0.,.013,p.y);color+=head*(hash(vec2(line,frame))-.5)*.03*amount;
   color*=1.-.022*amount*(.5+.5*sin(p.y*480.*3.14159));
   gl_FragColor=vec4(max(color,0.),1.);
   #include <tonemapping_fragment>

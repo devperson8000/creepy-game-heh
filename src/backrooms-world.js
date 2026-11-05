@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {createDustField,sampleDustField} from './backrooms-dust.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createLevelZero,canWalkLevelZero} from './backrooms-layout.js';
 
@@ -58,8 +59,14 @@ export function createBackroomsWorld(){
  const batches=new Map();
  for(const mesh of [...scene.children])if(mesh.isMesh){mesh.updateMatrix();const g=mesh.geometry.clone().applyMatrix4(mesh.matrix);if(!batches.has(mesh.material))batches.set(mesh.material,[]);batches.get(mesh.material).push(g);scene.remove(mesh);}
  for(const [m,parts]of batches){const g=mergeGeometries(parts);resources.add(g);const mesh=new T.Mesh(g,m);mesh.receiveShadow=true;scene.add(mesh);for(const part of parts)part.dispose();}
+ const dustBase=createDustField(map),dustPositions=new Float32Array(dustBase);
+ const dustGeometry=new T.BufferGeometry();dustGeometry.setAttribute('position',new T.BufferAttribute(dustPositions,3).setUsage(T.DynamicDrawUsage));resources.add(dustGeometry);
+ const dustMap=texture((c,s)=>{c.clearRect(0,0,s,s);const g=c.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);g.addColorStop(0,'rgba(255,248,216,.7)');g.addColorStop(.25,'rgba(255,248,216,.25)');g.addColorStop(1,'rgba(255,248,216,0)');c.fillStyle=g;c.fillRect(0,0,s,s);},64);
+ const dustMaterial=new T.PointsMaterial({map:dustMap,color:0xd2c393,size:.025,transparent:true,opacity:.28,depthTest:true,depthWrite:false,sizeAttenuation:true});resources.add(dustMaterial);
+ const dust=new T.Points(dustGeometry,dustMaterial);dust.name='level-zero-world-dust';dustGeometry.computeBoundingSphere();scene.add(dust);
  let lastX=Infinity,lastZ=Infinity,near=[];
  function update(time,player,reduced=false){
+  sampleDustField(dustBase,reduced?0:time,dustPositions);dustGeometry.attributes.position.needsUpdate=true;
   if(Math.hypot(player.x-lastX,player.z-lastZ)>.7){near=[...lights].sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z)).slice(0,pool.length);lastX=player.x;lastZ=player.z;}
   pool.forEach((l,i)=>{const f=near[i];if(!f){l.intensity=0;return;}const flicker=reduced?1:1-.018*Math.sin(time*97+f.phase)-.012*Math.sin(time*131+f.phase);l.position.set(f.x,map.height-.19,f.z);l.intensity=17*f.base*flicker;});
  }
