@@ -14,6 +14,7 @@ export function createNeedleAudio(context,output,{stalker=false}={}){
   const l=context.listener;if(l.positionX){l.positionX.value=player.x;l.positionY.value=(player.y??0)+1.68;l.positionZ.value=player.z;l.forwardX.value=-Math.sin(yaw);l.forwardY.value=0;l.forwardZ.value=-Math.cos(yaw);l.upX.value=0;l.upY.value=1;l.upZ.value=0;}
   filter.frequency.setTargetAtTime(occluded?750:4800,at,.15);gain.gain.setTargetAtTime(!state.active||distance>30?0:occluded?.38:.85,at,.12);
   if(!state.active)return;
+  if((state.scareCount??0)<scares)scares=0;
   if((state.scareCount??0)>scares){scares=state.scareCount;recorded('heavy',1);if(!stalker)click(.18);nextBreath=time+5;}
   if(time>=nextClick){nextClick=time+(state.mode==='investigate'?3.5:7.5);if(distance<25&&!stalker)click();}
   if(time>=nextBreath){nextBreath=time+(stalker&&state.mode==='investigate'?4:11)+(Math.sin(time)*.5+.5)*5;if(distance<17)recorded(state.mode==='investigate'?'heavy':'breath',.6);}

@@ -1,3 +1,4 @@
+import {parseBackroomsRoom} from './backrooms-room.js';
 import { createClient } from '@supabase/supabase-js';
 import {createTabAuthOptions} from './lobby-session.js';
 import { multiplayerConfig } from './multiplayer-config.js';
@@ -163,7 +164,7 @@ export function createLobbyClient(options = {}) {
           rpc('game_directory'), rpc('game_room'), rpc('game_request_state'),
         ]);
         if (currentGeneration !== generation) return;
-        emit({ type: 'lobbies', lobbies: lobbies || [] });
+        emit({ type: 'lobbies', lobbies: (lobbies || []).filter(l=>options.game==='backrooms'?!!parseBackroomsRoom(l.name):!parseBackroomsRoom(l.name)) });
         if (nextRoom) {
           const json = JSON.stringify(nextRoom);
           room = nextRoom;
@@ -232,6 +233,7 @@ export function createLobbyClient(options = {}) {
     get id() { return id; },
     get connected() { return connected; },
     get configured() { return configured; },
+    refresh(){return connected?refresh():Promise.reject(new Error('Not connected.'));},
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     connect() {
       if (connected) return Promise.resolve();

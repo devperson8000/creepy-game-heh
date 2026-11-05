@@ -10,3 +10,9 @@ test('game channel bounds backpressure and rejects malformed or unrelated messag
  channel.bufferedAmount=65000;assert.equal(transport.send('input',{}),false);
  channel.bufferedAmount=0;channel.readyState='closed';assert.equal(transport.send('input',{}),false);
 });
+test('team chat is identity-bound and rejects oversized text',()=>{
+ const received=[],channel={readyState:'open',bufferedAmount:0,send(){}},wire=bindGameplayChannel(channel,m=>received.push(m));
+ assert.equal(wire.send('chat',{text:'Stay together'}),true);assert.equal(wire.send('chat',{text:'x'.repeat(241)}),false);
+ channel.onmessage({data:JSON.stringify({type:'chat',payload:{text:'hello'}})});assert.equal(received[0].payload.text,'hello');
+ channel.onmessage({data:JSON.stringify({type:'chat',payload:{text:42}})});assert.equal(received.length,1);
+});

@@ -328,3 +328,8 @@ test('an owner transport recovery rotates server authority before rebuilding the
 test('a newly elected owner can accept the server handoff without rotating its epoch again',async()=>{
  const b=backend(),running={...room,status:'running',seed:42,ownerEpoch:1};b.values.set('game_room',{data:running});b.values.set('game_recover',{data:{room:running,snapshot:{sequence:22}}});const client=createLobbyClient({client:b.client});await client.connect();await client.recover({resumeOwner:false});assert.deepEqual(b.calls.find(([name])=>name==='game_recover')[1],{p_resume:false});await client.close();
 });
+
+test('Backrooms and Monochrome directories stay separate, malformed prefixes stay out of Backrooms, refresh reads the backend',async t=>{
+ const rows=[{id:'mono',name:'Hall'},{id:'br',name:'[BR0CP] Level 0'},{id:'bad',name:'[BR0 broken'}];
+ for(const game of ['backrooms','monochrome']){const b=backend(),events=[],client=createLobbyClient({client:b.client,game});t.after(()=>client.close());b.values.set('game_directory',{data:rows});client.subscribe(e=>{if(e.type==='lobbies')events.push(e.lobbies);});await client.connect();assert.deepEqual(events.at(-1).map(l=>l.id),game==='backrooms'?['br']:['mono','bad']);const before=b.calls.filter(c=>c[0]==='game_directory').length;await client.refresh();assert.ok(b.calls.filter(c=>c[0]==='game_directory').length>before);await client.close();}
+});
