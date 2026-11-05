@@ -1,3 +1,13 @@
+# Backrooms Level 0 environment
+
+The `/backrooms` path opens a walkable Level 0 architectural reconstruction. Click **Enter the Backrooms**; WASD/arrows move, mouse or drag looks, Shift runs, Escape pauses, and M toggles the fluorescent ambience. Phone controls include movement and hold-to-run. The upper camera controls toggle VHS, sound and pause. Reduced-motion preferences freeze tape motion and suppress camera bob and light flicker.
+
+This is the environment stage: six connected areas across a 72 × 72 metre map, with patterned wallpaper, carpet, acoustic ceiling panels, fluorescent lighting, and a VHS post-processing pass. The layout is an authored reconstruction informed by [Escape the Backrooms](https://store.steampowered.com/app/1943950/Escape_the_Backrooms/), [Kane Pixels’ Found Footage](https://www.youtube.com/watch?v=H4dGpz6cnHo), and [A24’s Backrooms](https://a24films.com/films/backrooms). It is not a verified 1:1 floor plan: the references do not provide a complete common blueprint. Textures and geometry are generated locally; no film or game assets are bundled.
+
+The original MONOCHROME experience remains at **`/`**. Its documentation follows below. Run `node --test tests/backrooms-layout.test.js` for connectivity and collision coverage; `npm test` and `npm run build` verify the repository.
+
+---
+
 # MONOCHROME — browser escape game
 
 A first-person monochrome horror escape game built with Three.js and Vite. Uses the creature developed in this repository and the documented escape loop from [monochromegame.wiki](https://monochromegame.wiki/walkthrough/).

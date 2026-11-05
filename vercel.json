@@ -13,5 +13,15 @@
       "destination": "https://monochrome-halloween-tests.vercel.app/testhalloween",
       "permanent": false
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/backrooms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/backrooms/",
+      "destination": "/index.html"
+    }
   ]
 }
