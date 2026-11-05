@@ -14,6 +14,6 @@ test('grace and pause freeze the threat and catch requires real contact',()=>{
 });
 test('routes and acceleration stay valid through walls and eventually leave stale noise',()=>{
  const map=createLevelZero(),s=createNeedleSimulation(map,{grace:0,spawn:{x:-5,z:3}});s.noise({x:-7,z:13,radius:30});let before={...s.state.position};
- for(let i=0;i<1400;i++){s.tick(.025,{x:39,z:28});const p=s.state.position;assert.ok(canWalkLevelZero(map,p.x,p.z,.4));assert.ok(Math.hypot(p.x-before.x,p.z-before.z)<=3.5*.025+.0001);before={...p};}
+ for(let i=0;i<1400;i++){s.tick(.025,{x:39,z:28});const p=s.state.position;assert.ok(canWalkLevelZero(map,p.x,p.z,.4));assert.ok(Math.hypot(p.x-before.x,p.z-before.z)<=8.5*.025+.0001);before={...p};}
  assert.equal(s.state.lastHeard,null);assert.ok(s.state.travel>5);
 });

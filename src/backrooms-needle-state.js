@@ -1,8 +1,9 @@
+import {BACKROOMS_SPEED} from './backrooms-round.js';
 import {canWalkLevelZero} from './backrooms-layout.js';
 import {createNavigator,sweepMove} from './navigation.js';
 const damp=(a,b,rate,dt)=>a+(b-a)*(1-Math.exp(-rate*dt));
-export function createNeedleSimulation(map,{grace=14,spawn={x:-5,z:3}}={}){
- const canMove=(x,z)=>canWalkLevelZero(map,x,z,.42),nav=createNavigator(canMove,{...map.bounds,spacing:.5});
+export function createNeedleSimulation(map,{grace=14,spawn={x:-5,z:3},sight=false,patrolSpeed=BACKROOMS_SPEED.needlePatrol,huntSpeed=BACKROOMS_SPEED.needleHunt,bodyRadius=.42}={}){
+ const canMove=(x,z)=>canWalkLevelZero(map,x,z,bodyRadius),nav=createNavigator(canMove,{...map.bounds,spacing:.5});
  const state={position:{...spawn},yaw:0,speed:0,travel:0,walk:0,mode:'patrol',elapsed:0,lastHeard:null,caught:false,active:false};
  let path=[],patrol=1,wait=0,memory=0,noiseCooldown=0;
  function destination(target){path=nav.findPath(state.position,target);}
@@ -17,10 +18,11 @@ export function createNeedleSimulation(map,{grace=14,spawn={x:-5,z:3}}={}){
   let remaining=Math.min(delta,.2);
   while(remaining>0){const dt=Math.min(.025,remaining);remaining-=dt;state.elapsed+=dt;state.active=state.elapsed>=grace;if(!state.active)continue;
    noiseCooldown=Math.max(0,noiseCooldown-dt);
+   if(sight&&player){const dx=player.x-state.position.x,dz=player.z-state.position.z,distance=Math.hypot(dx,dz),facing=distance<2||Math.cos(Math.atan2(dx,dz)-state.yaw)>.12;if(distance<22&&facing&&nav.clear(state.position,player)){noiseCooldown=0;noise({...player,radius:24});memory=5.5;}}
    if(state.lastHeard){memory-=dt;if(memory<=0){state.lastHeard=null;state.mode='patrol';path=[];wait=1;}}
    if(path.length&&Math.hypot(path[0].x-state.position.x,path[0].z-state.position.z)<.13)path.shift();
    if(!path.length){wait-=dt;if(state.mode==='investigate'){state.mode='listen';wait=3.5;}else if(wait<=0){state.mode='patrol';state.lastHeard=null;const area=map.areas[(patrol++)%map.areas.length];destination(area);wait=1;}}
-   const target=path[0],desired=target?(state.mode==='investigate'?3.2:1.05):0;
+   const target=path[0],desired=target?(state.mode==='investigate'?huntSpeed:patrolSpeed):0;
    state.speed=damp(state.speed,desired,desired>state.speed?2.8:7,dt);
    if(target){const dx=target.x-state.position.x,dz=target.z-state.position.z,angle=Math.atan2(dx,dz),difference=Math.atan2(Math.sin(angle-state.yaw),Math.cos(angle-state.yaw));state.yaw+=difference*(1-Math.exp(-5*dt));
     const length=Math.hypot(dx,dz),step=Math.min(length,state.speed*dt),next=sweepMove(state.position,{x:state.position.x+dx/length*step,z:state.position.z+dz/length*step},canMove);

@@ -1,8 +1,8 @@
-# Backrooms Level 0 environment
+# Backrooms Level 0 escape game
 
-The `/backrooms` path opens a walkable Level 0 architectural reconstruction. Click **Enter the Backrooms**; WASD/arrows move, mouse or drag looks, Shift runs, Escape pauses, and M toggles the fluorescent ambience. Phone controls include movement and hold-to-run. The upper camera controls toggle VHS, sound and pause. Reduced-motion preferences freeze tape motion and suppress camera bob and light flicker.
+The `/backrooms` path opens a playable Level 0 escape game. Click **Enter the Backrooms**; WASD/arrows move, mouse or drag looks, Shift runs, hold E interacts, Q throws a distraction, F toggles the torch, Escape pauses, and M toggles the fluorescent ambience. Phone controls include movement and hold-to-run. The upper camera controls toggle VHS, sound and pause. Reduced-motion preferences freeze tape motion and suppress camera bob and light flicker.
 
-This is the environment stage: six connected areas across a 72 × 72 metre map, with patterned wallpaper, carpet, acoustic ceiling panels, fluorescent lighting, and a VHS post-processing pass. The layout is an authored reconstruction informed by [Escape the Backrooms](https://store.steampowered.com/app/1943950/Escape_the_Backrooms/), [Kane Pixels’ Found Footage](https://www.youtube.com/watch?v=H4dGpz6cnHo), and [A24’s Backrooms](https://a24films.com/films/backrooms). It is not a verified 1:1 floor plan: the references do not provide a complete common blueprint. Textures and geometry are generated locally; no film or game assets are bundled.
+This is a playable escape round: recover three green-lit power fuses and open the marked emergency exit while avoiding two creatures. The six connected areas span a 72 × 72 metre map, with patterned wallpaper, carpet, acoustic ceiling panels, fluorescent lighting, and a VHS post-processing pass. The layout is an authored reconstruction informed by [Escape the Backrooms](https://store.steampowered.com/app/1943950/Escape_the_Backrooms/), [Kane Pixels’ Found Footage](https://www.youtube.com/watch?v=H4dGpz6cnHo), and [A24’s Backrooms](https://a24films.com/films/backrooms). It is not a verified 1:1 floor plan: the references do not provide a complete common blueprint. Textures and geometry are generated locally; no film or game assets are bundled.
 
 The original MONOCHROME experience remains at **`/`**. Its documentation follows below. Run `node --test tests/backrooms-layout.test.js` for connectivity and collision coverage; `npm test` and `npm run build` verify the repository.
 
@@ -170,3 +170,14 @@ Level 0 now contains the existing supplied Needlelimbs rig and its original skel
 Research: [Fandom Entity 38](https://backrooms.fandom.com/wiki/Entity_38) describes hearing/echolocation, quiet movement, mimicry and avoiding noise. This implementation uses those ideas, but the visible supplied two-legged model in Level 0 is an explicit game adaptation: that article describes a floating creature, camera invisibility and habitats mainly on Levels 1/0.8; [Wikidot Level 0](https://backrooms-wiki.wikidot.com/level-0) does not confirm a native entity population. Animation timing, speeds, grace period and retry mechanics are authored gameplay choices. No claim is made that the model or encounter reproduces wiki anatomy or film canon.
 
 Model attribution remains in `public/models/teaser/CREDITS.md`. Existing licensed breath recordings and the original synthetic lure line are credited in `public/audio/backrooms/CREDITS.md`. The original MONOCHROME/teaser sampling is retained. Run `node scripts/check-backrooms-needle-browser.mjs` against a server on port 5180 (or set `GAME_TEST_URL`) for the encounter browser checks.
+
+
+## Faster two-monster round
+
+Player speed is now 5.4 m/s walking and 9.2 m/s sprinting. Needlelimbs patrols at 2.8 m/s and investigates at 8.4 m/s; the textured CC0 Sonask-based Stalker patrols at 3.2 m/s and pursues at 9.8 m/s. The Stalker uses sight plus sound and searches its last observed/heard location after losing contact. Neither monster teleports or walks through walls. Their distinct grace periods allow you to orient yourself before the hunt.
+
+Recover all three fuses with E (hold on mobile), then hold E at the green emergency exit. A successful escape gives a replay screen; physical contact gives a retry screen. Q/touch distraction can attract either creature. All movement, simulation and interactions pause together. Torch, mute, VHS and mobile controls remain available.
+
+The second creature's rigged/textured source archive was downloaded directly from OpenGameArt and its included credits/license inspected; it is a CC0 original monster by Teh_Bucket, not an official Lifeform/Bacteria replica. Credits are in `public/models/teaser/CREDITS.md`. Newly downloaded Mixkit creature samples are documented with source URLs and hashes in `public/audio/backrooms/CREDITS.md`.
+
+**Replacement hazmat pending supplied file:** the user chose to provide the exact Backrooms suit. Until that GLB/FBX/Blender asset and textures arrive, `BACKROOMS_PLAYER_MODEL` in `src/backrooms-player-config.js` remains null; the previous suit is not silently reused. The first/third-person rig adapter is ready, and the view toggle appears when a validated replacement is configured. The escape round is independently playable in first person.

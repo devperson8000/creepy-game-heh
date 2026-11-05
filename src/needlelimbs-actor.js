@@ -41,7 +41,7 @@ export function createNeedlelimbsActor(asset,{walkClipName,height:targetHeight=3
   action.stop();model.position.copy(basePosition);
   for(const [bone,saved] of bind){bone.position.copy(saved.position);bone.quaternion.copy(saved.quaternion);bone.scale.copy(saved.scale);}
   // Continuous distance-based sampling makes seeking and co-op clocks deterministic.
-  action.reset().play();action.enabled=true;action.setEffectiveWeight(1);mixer.setTime(Math.max(0,travel)*.9);
+  action.reset().play();action.enabled=true;action.setEffectiveWeight(1);mixer.setTime(Math.max(0,travel)*(realtime?.38:.9));
   // Settle the source legs toward their planted imported stance as travel eases out.
   const moving=THREE.MathUtils.clamp(walk,0,1);
   for(const [name,bone] of bones)if(/^(thigh|shin|foot|leg)/.test(name))bone.quaternion.slerp(bind.get(bone).quaternion,1-moving);
