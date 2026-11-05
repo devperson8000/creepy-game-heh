@@ -16,6 +16,8 @@ export function createLevelZero(){
  const columns=[];
  for(const x of [9,17,25,33])for(const z of [-6,3]){wall(x,z,.88,.88);columns.push({x,z});}
  for(const x of [-10,-2,6])for(const z of [-14,-25]){wall(x,z,.72,.72);columns.push({x,z});}
+ // The broad square-pillar gallery is a key landmark in the commercial Level 0 map.
+ for(const x of [14,20,26,34])for(const z of [14,20,26])if(canWalkLevelZero({walls,bounds},x,z,1.4)){wall(x,z,1.7,1.7);columns.push({x,z});}
  return {walls,columns,bounds,height:2.8,spawn:{x:-7,z:13,yaw:-.45},areas:[{name:'Arrival',x:-7,z:13},{name:'Column hall',x:18,z:6},{name:'Long passage',x:37,z:-16},{name:'Dark offices',x:-23,z:-13},{name:'Far rooms',x:25,z:-37},{name:'Empty gallery',x:24,z:25}]};
 }
 export function canWalkLevelZero(map,x,z,radius=.22){

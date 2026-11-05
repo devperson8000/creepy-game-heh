@@ -1,3 +1,4 @@
+import {PITFALLS} from '../src/backrooms-pitfalls.js';
 import test from 'node:test';import assert from 'node:assert/strict';
 import {createBackroomsCoopState,stepBackroomsPlayer,interactBackroomsCoop,backroomsCoopView,resetBackroomsCoop} from '../src/backrooms-coop-state.js';
 import {createLevelZero,canWalkLevelZero} from '../src/backrooms-layout.js';
@@ -8,21 +9,21 @@ test('Backrooms lobby metadata stays separate from Monochrome and codes are stab
 test('co-op objectives are shared but ladder height and falling belong to the interacting player',()=>{
  const map=createLevelZero(),s=createBackroomsCoopState([{id:'h',slot:0},{id:'g',slot:1}]);const h=s.players.h,g=s.players.g;
  const interact=(p,id)=>{const target=[...s.round.parts,s.round.ladder,s.round.key,s.round.door,s.round.vent].find(t=>t.id===id);p.x=target.x;p.z=target.z;p.yaw=0;return interactBackroomsCoop(s,p.id,id,()=>true);};
- assert.equal(interactBackroomsCoop(s,'g','part-1',()=>true).ok,false);
+ assert.equal(interactBackroomsCoop(s,'g','part-3',()=>true).ok,false);
  for(const part of s.round.parts)assert.equal(interact(g,part.id).ok,true);
- assert.equal(interact(h,'ladder').ok,true);assert.equal(s.round.repaired,true);assert.equal(interact(g,'ladder').ok,true);
+ for(let i=0;i<4;i++)assert.equal(interact(h,'ladder').ok,true);assert.equal(s.round.repaired,true);assert.equal(interact(g,'ladder').ok,true);
  for(let i=0;i<50;i++)stepBackroomsPlayer(s,g,{forward:0,right:0,yaw:0,pitch:0},.025,map);
  assert.ok(g.y>.75);assert.equal(h.y,0);assert.equal(interact(g,'key').ok,true);assert.equal(s.round.hasKey,true);assert.equal(backroomsCoopView(s,h.id).climbing,false);
  assert.equal(interact(h,'door').ok,true);assert.equal(s.round.doorOpen,true);
- g.x=52;g.z=-18;g.y=0;for(let i=0;i<80;i++)stepBackroomsPlayer(s,g,{forward:0,right:0,yaw:0,pitch:0},.025,map);assert.equal(g.y,-4);assert.equal(h.y,0);
+ g.x=52;g.z=-18;g.y=0;for(let i=0;i<80;i++)stepBackroomsPlayer(s,g,{forward:0,right:0,yaw:0,pitch:0},.025,map);assert.equal(g.y,PITFALLS.floorY);assert.equal(h.y,0);
  assert.ok(canWalkLevelZero(map,h.x,h.z));
 });
 test('co-op exit waits for all players, remote actions require real proximity, and retry resets the team',()=>{
- const s=createBackroomsCoopState([{id:'h',slot:0},{id:'g',slot:1}]);s.round.doorOpen=true;
- const h=s.players.h,g=s.players.g;h.x=66;h.z=-16;h.y=0;h.yaw=0;
+ const s=createBackroomsCoopState([{id:'h',slot:0},{id:'g',slot:1}]);s.round.doorOpen=true;s.round.upperExitOpen=true;
+ const h=s.players.h,g=s.players.g;h.x=73.6;h.z=-15;h.y=0;h.yaw=0;
  assert.equal(interactBackroomsCoop(s,'h','vent',()=>true).ok,true);assert.equal(s.round.phase,'playing');
  assert.equal(interactBackroomsCoop(s,'g','vent',()=>true).ok,false);
- g.x=66;g.z=-16;g.y=0;assert.equal(interactBackroomsCoop(s,'g','vent',()=>true).ok,true);assert.equal(s.round.phase,'won');
+ g.x=73.6;g.z=-15;g.y=0;assert.equal(interactBackroomsCoop(s,'g','vent',()=>true).ok,true);assert.equal(s.round.phase,'won');
  resetBackroomsCoop(s);assert.equal(s.round.phase,'playing');assert.equal(s.round.collected,0);assert.equal(s.epoch,1);assert.equal(s.players.g.exitReady,false);
 });
 test('host movement remains bounded and respects walls, stale packets cannot move paused players',()=>{
@@ -30,16 +31,18 @@ test('host movement remains bounded and respects walls, stale packets cannot mov
  const start={...p};for(let i=0;i<100;i++)stepBackroomsPlayer(s,p,{forward:1,right:0,yaw:0,pitch:0,sprint:true},.025,m);assert.ok(Math.hypot(p.x-start.x,p.z-start.z)<=23.01);assert.ok(canWalkLevelZero(m,p.x,p.z));
  const before={...p};stepBackroomsPlayer(s,p,{forward:1,right:0,yaw:0,pitch:0,paused:true},.1,m);assert.equal(p.x,before.x);assert.equal(p.z,before.z);
 });
-test('rope rescue pulls a teammate onto the rescuer’s beam without granting remote rescues',()=>{
- const s=createBackroomsCoopState([{id:'h',slot:0},{id:'g',slot:1}]);s.round.doorOpen=true;Object.assign(s.players.h,{x:52,z:-16,y:0});Object.assign(s.players.g,{x:52,z:-18,y:-4});
- assert.equal(interactBackroomsCoop(s,'h','rope:g',()=>true).ok,true);assert.equal(s.players.g.y,0);assert.equal(s.players.g.z,-16);
- s.players.g.y=-4;s.players.g.x=59;assert.equal(interactBackroomsCoop(s,'h','rope:g',()=>true).ok,false);
+test('a rope must be collected and lowered, then the fallen player climbs it over time',()=>{
+ const s=createBackroomsCoopState([{id:'h',slot:0},{id:'g',slot:1}]),m=createLevelZero();s.round.doorOpen=true;Object.assign(s.players.h,{x:52,z:-16,y:0});Object.assign(s.players.g,{x:52,z:-18,y:PITFALLS.floorY});
+ assert.equal(interactBackroomsCoop(s,'h','deploy-rope:g',()=>true).ok,false);s.round.hasRope=true;assert.equal(interactBackroomsCoop(s,'h','deploy-rope:g',()=>true).ok,true);assert.equal(s.players.g.y,PITFALLS.floorY);
+ assert.equal(interactBackroomsCoop(s,'g','rope:g',()=>true).ok,true);stepBackroomsPlayer(s,s.players.g,{forward:0,right:0,yaw:0,pitch:0},.05,m);assert.ok(s.players.g.y>PITFALLS.floorY&&s.players.g.y<0);
+ for(let i=0;i<80;i++)stepBackroomsPlayer(s,s.players.g,{forward:0,right:0,yaw:0,pitch:0},.05,m);assert.equal(s.players.g.y,0);assert.equal(s.players.g.z,-16);
+ s.players.g.y=PITFALLS.floorY;s.players.g.x=65;assert.equal(interactBackroomsCoop(s,'h','deploy-rope:g',()=>true).ok,false);
 });
 test('the remaining team completes the exit if its last waiting member disconnects',async()=>{
  const {createBackroomsCoop}=await import('../src/backrooms-coop.js');let listener;
  const client={id:'h',subscribe(fn){listener=fn;return()=>{};},send(){return true;}};
  const net=createBackroomsCoop({client,session:{ownerId:'h',players:[{id:'h',slot:0},{id:'g',slot:1}],classic:true},world:{map:createLevelZero()}});
- net.state.round.doorOpen=true;Object.assign(net.player,{x:66,z:-16,y:0});net.interact('vent');assert.equal(net.state.round.phase,'playing');
+ net.state.round.doorOpen=true;net.state.round.upperExitOpen=true;Object.assign(net.player,{x:73.6,z:-15,y:0});net.interact('vent');assert.equal(net.state.round.phase,'playing');
  listener({type:'lobby',lobby:{ownerId:'h',members:[{id:'h'}]}});assert.equal(net.state.round.phase,'won');net.dispose();
 });
 test('replayed guest movement is acknowledged, duplicate commands never move twice, and snapshots reconcile prediction',async()=>{

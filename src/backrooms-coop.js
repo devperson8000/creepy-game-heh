@@ -4,7 +4,7 @@ import {canWalkLevelZero} from './backrooms-layout.js';
 const copy=v=>structuredClone(v);
 const validCommand=c=>c&&Number.isSafeInteger(c.sequence)&&c.sequence>0&&Number.isFinite(c.duration)&&c.duration>0&&c.duration<=.05&&['forward','right','yaw','pitch'].every(k=>Number.isFinite(c[k]))&&Math.abs(c.forward)<=1&&Math.abs(c.right)<=1&&Math.abs(c.pitch)<=1.571;
 export function validBackroomsSnapshot(p){
- const s=p?.state;return p?.game==='backrooms'&&Number.isSafeInteger(p.tick)&&s?.game==='backrooms'&&Number.isSafeInteger(s.epoch)&&['playing','won','dead'].includes(s.round?.phase)&&Array.isArray(s.round.parts)&&s.round.parts.length===4&&Object.values(s.players??{}).length>0&&Object.values(s.players).length<=4&&Object.values(s.players).every(v=>['x','z','y','yaw','pitch'].every(k=>Number.isFinite(v[k]))&&v.x>=-31&&v.x<=69&&v.z>=-43&&v.z<=31&&v.y>=-4.1&&v.y<=2);
+ const s=p?.state;return p?.game==='backrooms'&&Number.isSafeInteger(p.tick)&&s?.game==='backrooms'&&Number.isSafeInteger(s.epoch)&&['playing','won','dead'].includes(s.round?.phase)&&Array.isArray(s.round.parts)&&s.round.parts.length===4&&Object.values(s.players??{}).length>0&&Object.values(s.players).length<=4&&Object.values(s.players).every(v=>['x','z','y','yaw','pitch'].every(k=>Number.isFinite(v[k]))&&v.x>=-31&&v.x<=75&&v.z>=-43&&v.z<=31&&v.y>=-6.5&&v.y<=2);
 }
 export function createBackroomsCoop({client,session,world,onNotice=()=>{},onMove=()=>{},onReset=()=>{},onDistract=()=>{},onInteract=()=>{}}){
  const host=client.id===session.ownerId,nav=createNavigator((x,z)=>canWalkLevelZero(world.map,x,z,.35),{...world.map.bounds,spacing:.5});
@@ -61,11 +61,11 @@ export function createBackroomsCoop({client,session,world,onNotice=()=>{},onMove
   }
  }
  function publish(encounter){
-  if(!host||disposed)return;monsters={needle:copy(encounter.simulation.state),hunter:encounter.hunter?copy(encounter.hunterSimulation.state):null};
+  if(!host||disposed)return;monsters={bacteria:encounter.entityState?copy(encounter.entityState):null};
   if(now-sentAt<.13)return;
   if(client.send('snapshot',{snapshot:{game:'backrooms',tick:++tick,state:copy(state),monsters,acks}}))sentAt=now;
  }
- function interact(targetId){if(host)execute(client.id,{code:'interact:'+crypto.randomUUID(),targetId});else if(!waitingAction){waitingAction={code:'interact:'+crypto.randomUUID(),targetId};retryAt=0;actionUntil=now+4;}return true;}
+ function interact(targetId){if(host)execute(client.id,{code:'interact:'+crypto.randomUUID(),targetId});else if(!waitingAction||waitingAction.targetId!==targetId){waitingAction={code:'interact:'+crypto.randomUUID(),targetId};retryAt=0;actionUntil=now+4;}return true;}
  function restart(){if(!host)return false;resetBackroomsCoop(state);queues.clear();seen.clear();acks={};onReset();return true;}
  return {host,step,publish,interact,restart,finish(reason){if(host&&state.round.phase==='playing'){state.round.phase='dead';state.caughtBy=reason;for(const p of Object.values(state.players)){p.speed=0;p.sprint=false;}}},distract(){if(host)onDistract(state.players[client.id],state.elapsed);else client.send('action',{action:{code:'distract',targetId:'distract'}});},target:()=>backroomsCoopTarget(state,client.id,nav.clear),view:()=>backroomsCoopView(state,client.id),get state(){return state;},get player(){return state.players[client.id];},get monsters(){return monsters;},get connected(){return connection!=='closed'&&(host||performance.now()-lastSnapshot<5000);},dispose(){disposed=true;unsubscribe();}};
 }
