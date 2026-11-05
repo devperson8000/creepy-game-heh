@@ -20,10 +20,10 @@ test('co-op objectives are shared but ladder height and falling belong to the in
 });
 test('co-op exit waits for all players, remote actions require real proximity, and retry resets the team',()=>{
  const s=createBackroomsCoopState([{id:'h',slot:0},{id:'g',slot:1}]);s.round.doorOpen=true;s.round.upperExitOpen=true;
- const h=s.players.h,g=s.players.g;h.x=73.6;h.z=-15;h.y=0;h.yaw=0;
+ const h=s.players.h,g=s.players.g;h.x=s.round.vent.x-.5;h.z=-15.8;h.y=0;h.yaw=-Math.PI/2;h.crouch=true;
  assert.equal(interactBackroomsCoop(s,'h','vent',()=>true).ok,true);assert.equal(s.round.phase,'playing');
  assert.equal(interactBackroomsCoop(s,'g','vent',()=>true).ok,false);
- g.x=73.6;g.z=-15;g.y=0;assert.equal(interactBackroomsCoop(s,'g','vent',()=>true).ok,true);assert.equal(s.round.phase,'won');
+ g.x=s.round.vent.x-.5;g.z=-15.8;g.y=0;g.yaw=-Math.PI/2;g.crouch=true;assert.equal(interactBackroomsCoop(s,'g','vent',()=>true).ok,true);assert.equal(s.round.phase,'won');
  resetBackroomsCoop(s);assert.equal(s.round.phase,'playing');assert.equal(s.round.collected,0);assert.equal(s.epoch,1);assert.equal(s.players.g.exitReady,false);
 });
 test('host movement remains bounded and respects walls, stale packets cannot move paused players',()=>{
@@ -42,7 +42,7 @@ test('the remaining team completes the exit if its last waiting member disconnec
  const {createBackroomsCoop}=await import('../src/backrooms-coop.js');let listener;
  const client={id:'h',subscribe(fn){listener=fn;return()=>{};},send(){return true;}};
  const net=createBackroomsCoop({client,session:{ownerId:'h',players:[{id:'h',slot:0},{id:'g',slot:1}],classic:true},world:{map:createLevelZero()}});
- net.state.round.doorOpen=true;net.state.round.upperExitOpen=true;Object.assign(net.player,{x:73.6,z:-15,y:0});net.interact('vent');assert.equal(net.state.round.phase,'playing');
+ net.state.round.doorOpen=true;net.state.round.upperExitOpen=true;Object.assign(net.player,{x:net.state.round.vent.x-.5,z:-15.8,y:0,yaw:-Math.PI/2,crouch:true});net.interact('vent');assert.equal(net.state.round.phase,'playing');
  listener({type:'lobby',lobby:{ownerId:'h',members:[{id:'h'}]}});assert.equal(net.state.round.phase,'won');net.dispose();
 });
 test('replayed guest movement is acknowledged, duplicate commands never move twice, and snapshots reconcile prediction',async()=>{

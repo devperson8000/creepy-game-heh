@@ -7,7 +7,7 @@ export function roundTarget(r,player,yaw,canSee=()=>true){
  const targets=lower?[r.altDoor,...(!r.hasTorch?[r.flashlight]:[]),r.altVent]:player.x>42?[...(!r.hasRope?[r.rope]:[]),r.upperExitOpen?r.vent:r.pitExitDoor]:[...r.parts.filter(p=>!p.taken),...(r.climbing&&r.ladderHeight>.75&&!r.hasKey?[r.key]:[r.ladder]),r.door];
  return targets.map(t=>{const dx=t.x-player.x,dz=t.z-player.z,distance=Math.hypot(dx,dz),facing=distance<.15?1:(-Math.sin(yaw)*dx-Math.cos(yaw)*dz)/distance;
  const labels={ladder:!r.repaired?(r.collected>r.installed?'Fit ladder section '+(r.installed+1)+' / 4':'Find ladder sections · '+r.installed+' / 4 fitted'):r.climbing?'Climb down':'Climb ladder',key:'Take escape key',door:r.doorOpen?'Door unlocked':r.hasKey?'Unlock pitfall door':'Locked — find the ladder key',flashlight:'Take flashlight',rope:'Take rescue rope',vent:'Enter white-lit exit passage','pit-exit-door':'Open the lit exit door','alt-vent':'Enter alternate exit vent','alt-door':r.altDoorOpen?'Close lower passage door':'Open lower passage door'};
- return {...t,distance,facing,disabled:t.id==='ladder'&&!r.repaired&&r.collected<=r.installed,duration:t.id==='ladder'&&!r.repaired?.8:.45,label:labels[t.id]??'Take ladder fragment'};
+ return {...t,distance,facing,disabled:(t.id==='ladder'&&!r.repaired&&r.collected<=r.installed)||((t.id==='vent'||t.id==='alt-vent')&&!player.crouch),duration:t.id==='ladder'&&!r.repaired?.8:.45,label:((t.id==='vent'||t.id==='alt-vent')&&!player.crouch)?'Crouch · Ctrl to enter vent':labels[t.id]??'Take ladder fragment'};
  }).filter(t=>t.distance<2.1&&t.facing>.6&&(t.id==='alt-door'?lower:t.id==='alt-vent'?player.y>PITFALLS.floorY+1.65&&player.y<PITFALLS.floorY+2.15:t.id==='flashlight'?lower&&player.y<=PITFALLS.floorY+.3:t.id==='vent'||t.id==='rope'||t.id==='pit-exit-door'?player.y>-.25:canSee(player,t))).sort((a,b)=>a.distance-b.distance)[0]??null;
 }
 export function interactRound(r,id){
@@ -24,10 +24,10 @@ export function interactRound(r,id){
 }
 export function canMoveRound(r,x,z,base,player=null){
  const y=player?.y??0;if(y<-.25){if(!r.doorOpen||!canWalkPit(x,z,y))return false;if(x>41.7&&x<42.3&&(!r.altDoorOpen||z<-25.7||z>-24.3))return false;return pitFloor(x,z,y)<=y+.3;}
- if(x<41.5)return base(x,z);return r.doorOpen&&canWalkPit(x,z,y);
+ if(x<41.5)return base(x,z);if(x>73.65&&!r.upperExitOpen)return false;return r.doorOpen&&canWalkPit(x,z,y);
 }
 export function roundFloor(r,x,z,y=0){return r.doorOpen?pitFloor(x,z,y):0;}
-export function backroomsMoveSpeed(r,p,sprint){return r.doorOpen?pitMoveSpeed(p.x,p.z,p.y??0,sprint,BACKROOMS_SPEED.walk,BACKROOMS_SPEED.sprint):(sprint?BACKROOMS_SPEED.sprint:BACKROOMS_SPEED.walk);}
+export function backroomsMoveSpeed(r,p,sprint){if(p.crouch)return 1.6;return r.doorOpen?pitMoveSpeed(p.x,p.z,p.y??0,sprint,BACKROOMS_SPEED.walk,BACKROOMS_SPEED.sprint):(sprint?BACKROOMS_SPEED.sprint:BACKROOMS_SPEED.walk);}
 export function advanceRoundPhysics(r,p,delta){
  const dt=Math.min(.1,Math.max(0,delta));
  if(r.climbing){r.ladderHeight=Math.min(.9,r.ladderHeight+dt*1.1);p.y=r.ladderHeight;p.x=r.ladder.x;p.z=r.ladder.z+.4-r.ladderHeight*.26;r.velocity=0;return;}
@@ -39,8 +39,8 @@ export function advanceRoundPhysics(r,p,delta){
  if(p.y<=PITFALLS.floorY+.05)r.fell=true;
 }
 export function roundObjective(r,player=null){
- if(!r.repaired)return [r.collected===4?'ASSEMBLE THE LADDER':r.collected+' / 4 SECTIONS FOUND',r.collected>r.installed?'Return to the ladder. Hold E to fit sections · '+r.installed+' / 4 built.':'Search the arrival rooms, column hall, far offices and gallery.'];
+ if(!r.repaired)return [r.collected===4?'ASSEMBLE THE LADDER':r.collected+' / 4 SECTIONS FOUND',r.collected>r.installed?'Return to the ladder. Hold F to fit sections · '+r.installed+' / 4 built.':'Search the arrival rooms, column hall, far offices and gallery.'];
  if(!r.hasKey)return ['RETRIEVE THE KEY','Climb the repaired ladder and take the key above it.'];
  if(!r.doorOpen)return ['FIND THE LOCKED DOOR','The key opens the door beyond the long passage.'];
- const below=player?(player.y??0)<-.25:r.fell;return [below?'FIND THE LOWER EXIT':'REACH THE LIT EXIT DOOR',below?'Follow arrows to the lower door and alternate stair/vent, or climb a rescue rope.':'Cross the grid slowly. Rope and the white-lit exit door are on the far side.'];
+ const below=player?(player.y??0)<-.25:r.fell;return [below?'FIND THE LOWER EXIT':'REACH THE LIT EXIT DOOR',below?'Follow arrows through the lower door to the house. Find the flashlight, stairs and hallway vent, or climb a rescue rope.':'Counterbalance with Q / E when you tilt. Rope and the white-lit exit door are on the far side.'];
 }

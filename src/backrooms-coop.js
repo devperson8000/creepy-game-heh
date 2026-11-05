@@ -2,9 +2,10 @@ import {createBackroomsCoopState,stepBackroomsPlayer,interactBackroomsCoop,backr
 import {createNavigator} from './navigation.js';
 import {canWalkLevelZero} from './backrooms-layout.js';
 const copy=v=>structuredClone(v);
-const validCommand=c=>c&&Number.isSafeInteger(c.sequence)&&c.sequence>0&&Number.isFinite(c.duration)&&c.duration>0&&c.duration<=.05&&['forward','right','yaw','pitch'].every(k=>Number.isFinite(c[k]))&&Math.abs(c.forward)<=1&&Math.abs(c.right)<=1&&Math.abs(c.pitch)<=1.571;
+const validPosture=c=>(!Object.hasOwn(c,'lean')||(Number.isFinite(c.lean)&&Math.abs(c.lean)<=1))&&(!Object.hasOwn(c,'crouch')||typeof c.crouch==='boolean');
+const validCommand=c=>c&&Number.isSafeInteger(c.sequence)&&c.sequence>0&&Number.isFinite(c.duration)&&c.duration>0&&c.duration<=.05&&['forward','right','yaw','pitch'].every(k=>Number.isFinite(c[k]))&&Math.abs(c.forward)<=1&&Math.abs(c.right)<=1&&Math.abs(c.pitch)<=1.571&&validPosture(c);
 export function validBackroomsSnapshot(p){
- const s=p?.state;return p?.game==='backrooms'&&Number.isSafeInteger(p.tick)&&s?.game==='backrooms'&&Number.isSafeInteger(s.epoch)&&['playing','won','dead'].includes(s.round?.phase)&&Array.isArray(s.round.parts)&&s.round.parts.length===4&&Object.values(s.players??{}).length>0&&Object.values(s.players).length<=4&&Object.values(s.players).every(v=>['x','z','y','yaw','pitch'].every(k=>Number.isFinite(v[k]))&&v.x>=-31&&v.x<=75&&v.z>=-43&&v.z<=31&&v.y>=-6.5&&v.y<=2);
+ const s=p?.state;return p?.game==='backrooms'&&Number.isSafeInteger(p.tick)&&s?.game==='backrooms'&&Number.isSafeInteger(s.epoch)&&['playing','won','dead'].includes(s.round?.phase)&&Array.isArray(s.round.parts)&&s.round.parts.length===4&&Object.values(s.players??{}).length>0&&Object.values(s.players).length<=4&&Object.values(s.players).every(v=>['x','z','y','yaw','pitch'].every(k=>Number.isFinite(v[k]))&&v.x>=-31&&v.x<=81&&v.z>=-43&&v.z<=31&&v.y>=-6.5&&v.y<=2);
 }
 export function createBackroomsCoop({client,session,world,onNotice=()=>{},onMove=()=>{},onReset=()=>{},onDistract=()=>{},onInteract=()=>{}}){
  const host=client.id===session.ownerId,nav=createNavigator((x,z)=>canWalkLevelZero(world.map,x,z,.35),{...world.map.bounds,spacing:.5});
@@ -18,7 +19,7 @@ export function createBackroomsCoop({client,session,world,onNotice=()=>{},onMove
   if(result.ok){onInteract(state.players[id]);if(!seen.has(id))seen.set(id,new Set());const set=seen.get(id);set.add(action.code);if(set.size>64)set.delete(set.values().next().value);acks[id]=action.code;}
  }
  function receive(id,packet){
-  if(!state.players[id]||!packet||typeof packet.motionId!=='string'||!Array.isArray(packet.commands)||packet.commands.length>180||!packet.commands.every(validCommand))return;
+  if(!state.players[id]||!packet||!validPosture(packet)||typeof packet.motionId!=='string'||!Array.isArray(packet.commands)||packet.commands.length>180||!packet.commands.every(validCommand))return;
   let q=queues.get(id);if(q?.motionId!==packet.motionId){q={motionId:packet.motionId,commands:[],last:0,budget:0};queues.set(id,q);state.players[id].inputSequence=0;}
   const fresh=packet.commands.filter(c=>c.sequence>q.last);if(fresh.some((c,i)=>c.sequence!==(i?fresh[i-1].sequence:q.last)+1)||q.commands.length+fresh.length>180)return;
   q.commands.push(...fresh);if(fresh.length)q.last=fresh.at(-1).sequence;

@@ -15,7 +15,7 @@ export function createBackroomsTeam(scene,localId){
  }
  function update(players,dt){const ids=new Set();for(const p of Object.values(players)){if(p.id===localId)continue;ids.add(p.id);let a=actors.get(p.id);if(!a){a=marker(p);actors.set(p.id,a);}const target=new T.Vector3(p.x,p.y,p.z);if(a.pose.distanceTo(target)>3)a.pose.copy(target);else a.pose.lerp(target,1-Math.exp(-14*dt));
   if(a.custom)a.update({...p,x:a.pose.x,y:a.pose.y,z:a.pose.z},dt,{yaw:p.yaw,thirdPerson:true});
-  else{a.root.position.copy(a.pose);a.root.rotation.y=p.yaw;a.phase+=dt*(p.speed??0)*3;const swing=Math.sin(a.phase)*Math.min(.6,(p.speed??0)*.08);a.legs.forEach((l,i)=>l.rotation.x=swing*(i?1:-1));a.arms.forEach((l,i)=>l.rotation.x=swing*(i?-1:1));}
+  else{a.root.position.copy(a.pose);a.root.rotation.y=p.yaw;a.root.rotation.z=-(p.balance?.angle??0)*.22;a.root.scale.y=p.crouch?.67:1;a.phase+=dt*(p.speed??0)*3;const swing=Math.sin(a.phase)*Math.min(.6,(p.speed??0)*.08);a.legs.forEach((l,i)=>l.rotation.x=swing*(i?1:-1));a.arms.forEach((l,i)=>l.rotation.x=swing*(i?-1:1));}
  }for(const [id,a]of actors)if(!ids.has(id)){a.dispose();actors.delete(id);}}
  return {actors,update,dispose(){for(const a of actors.values())a.dispose();actors.clear();for(const r of resources)r.dispose();}};
 }

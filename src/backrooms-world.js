@@ -71,10 +71,10 @@ export function createBackroomsWorld(){
  const upperFog=new T.Color(0xa39b79),lowerFog=new T.Color(0x514d3b);
  let lastX=Infinity,lastZ=Infinity,lastLayer=null,near=[];
  function update(time,player,reduced=false){
-  const lower=(player.y??0)<-4.5,drop=T.MathUtils.clamp((-(player.y??0)-.3)/3.2,0,1);scene.fog.density=.008+.014*drop;scene.fog.color.lerpColors(upperFog,lowerFog,drop);
+  const lower=(player.y??0)<-.25,drop=T.MathUtils.clamp((-(player.y??0)-.3)/3.2,0,1);ambient.intensity=1.25-.96*drop;scene.fog.density=.008+.014*drop;scene.fog.color.lerpColors(upperFog,lowerFog,drop);
   sampleDustField(dustBase,reduced?0:time,dustPositions);dustGeometry.attributes.position.needsUpdate=true;
   if(lower!==lastLayer||Math.hypot(player.x-lastX,player.z-lastZ)>.7){near=lights.filter(f=>((f.y??(map.height-.19))<0)===lower).sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z)).slice(0,pool.length);lastX=player.x;lastZ=player.z;lastLayer=lower;}
-  pool.forEach((l,i)=>{const f=near[i];if(!f){l.intensity=0;return;}const flicker=reduced?1:1-.018*Math.sin(time*97+f.phase)-.012*Math.sin(time*131+f.phase);l.position.set(f.x,f.y??(map.height-.19),f.z);l.intensity=17*f.base*flicker;});
+  pool.forEach((l,i)=>{const f=near[i];if(!f){l.intensity=0;return;}const flicker=reduced?1:1-.018*Math.sin(time*97+f.phase)-.012*Math.sin(time*131+f.phase);l.color.set(f.color??0xffedb5);l.position.set(f.x,f.y??(map.height-.19),f.z);l.intensity=17*f.base*flicker;});
  }
  return {scene,map,update,registerLight(sample){lights.push({base:1,phase:0,...sample});},surfaces:{wall:paper,carpetTexture:carpet,ceilingTexture:ceiling},canMove:(x,z)=>canWalkLevelZero(map,x,z),dispose(){for(const r of resources)r.dispose();scene.clear();}};
 }
