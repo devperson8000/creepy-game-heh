@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {createNeedleGait} from './needlelimbs-gait.js';
+import {createNeedleGait,createNeedleLiveGait} from './needlelimbs-gait.js';
 import {clone} from 'three/addons/utils/SkeletonUtils.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 export const NEEDLELIMBS_MODEL_URL='/models/teaser/needlelimbs.glb';
@@ -8,7 +8,7 @@ export function loadNeedlelimbsAsset(){
  cached??=new GLTFLoader().loadAsync(NEEDLELIMBS_MODEL_URL).catch(error=>{cached=undefined;throw error;});return cached;
 }
 /** Uses the source skeleton and animation. Never substitutes another creature or a static mesh. */
-export function createNeedlelimbsActor(asset,{walkClipName}={}){
+export function createNeedlelimbsActor(asset,{walkClipName,height:targetHeight=3.25,realtime=false}={}){
  const walkClip=asset.animations?.find(c=>walkClipName?c.name===walkClipName:/walk|stalk|crawl|locomot/i.test(c.name));
  if(!walkClip)throw new Error('Needlelimbs needs its original skeletal walking animation.');
  const root=new THREE.Group(),model=clone(asset.scene);root.name='teaser-needlelimbs';root.add(model);
@@ -19,7 +19,7 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
  model.updateMatrixWorld(true);model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
  const bounds=new THREE.Box3().setFromObject(model),height=bounds.max.y-bounds.min.y;
  if(!Number.isFinite(height)||height<.001)throw new Error('Needlelimbs source has no usable bounds.');
- const scale=3.25/height;model.scale.multiplyScalar(scale);model.position.set(-(bounds.min.x+bounds.max.x)*scale/2,-bounds.min.y*scale,-(bounds.min.z+bounds.max.z)*scale/2);
+ const scale=targetHeight/height;model.scale.multiplyScalar(scale);model.position.set(-(bounds.min.x+bounds.max.x)*scale/2,-bounds.min.y*scale,-(bounds.min.z+bounds.max.z)*scale/2);
  const find=pattern=>[...bones].find(([name])=>pattern.test(name))?.[1];
  const head=find(/head(\d+)?$/),neck=find(/neck(\d+)?$/);
  if(!head){surfaces.forEach(m=>m.dispose());skeletons.forEach(s=>s.dispose());throw new Error('Needlelimbs source needs a head bone for the corner peek.');}
@@ -35,8 +35,8 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
  const mixer=new THREE.AnimationMixer(model),action=mixer.clipAction(clip);action.play();mixer.setTime(0);
  root.updateMatrixWorld(true);model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
  model.position.y-=new THREE.Box3().setFromObject(model).min.y;root.updateMatrixWorld(true);
- const gait=createNeedleGait(model),basePosition=model.position.clone();
- function sample({travel=0,walk=1,peek=0,time=0,position=[0,0,0],yaw=0}={}){
+ const gait=realtime?createNeedleLiveGait(model):createNeedleGait(model),basePosition=model.position.clone();
+ function sample({travel=0,walk=1,peek=0,time=0,position=[0,0,0],yaw=0,speed=0}={}){
   if(disposed)return;
   action.stop();model.position.copy(basePosition);
   for(const [bone,saved] of bind){bone.position.copy(saved.position);bone.quaternion.copy(saved.quaternion);bone.scale.copy(saved.scale);}
@@ -45,22 +45,26 @@ export function createNeedlelimbsActor(asset,{walkClipName}={}){
   // Settle the source legs toward their planted imported stance as travel eases out.
   const moving=THREE.MathUtils.clamp(walk,0,1);
   for(const [name,bone] of bones)if(/^(thigh|shin|foot|leg)/.test(name))bone.quaternion.slerp(bind.get(bone).quaternion,1-moving);
+  if(realtime)for(const [name,bone] of bones)if(!/^(thigh|shin|foot|leg|spine$)/.test(name))bone.quaternion.slerp(bind.get(bone).quaternion,1-moving*.85);
   const p=THREE.MathUtils.clamp(peek,0,1);
   // Lean from the upper spine, then turn the neck/head; the planted root stays behind cover.
   const chest=find(/^(spine002|chest)$/),shoulders=find(/^spine003$/);
   if(chest){chest.rotation.x+=p*.07+Math.sin(time*1.8)*.006;chest.rotation.z+=Math.sin(travel/.95*Math.PI*2)*.012*moving;}
   if(shoulders)shoulders.rotation.x+=p*.04;
   if(neck){neck.rotation.x+=p*.06;neck.rotation.y+=p*.15;neck.rotation.z-=p*.1;}
-  head.rotation.y+=p*.5;head.rotation.z-=p*.16;
+  head.rotation.y+=p*.5+(realtime?Math.sin(time*.42)*.055:0);head.rotation.z-=p*.16;
+  if(realtime)for(const [name,bone]of bones)if(/^f(index|middle|ring)01/.test(name))bone.rotation.x+=Math.sin(time*.65)*.025;
   root.position.fromArray(position);root.rotation.set(0,yaw,0);
   // Preserve the imported bent stance and source skeletal gait.
   root.updateMatrixWorld(true);
+  if(!realtime){
   // Refresh skinned bounds: cached rest-pose bounds cannot ground an animated rig.
   model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
 
-  gait.sample({travel,walk:moving,position,yaw});
+  }
+  gait.sample({travel,walk:moving,position,yaw,time,speed});
   root.updateMatrixWorld(true);
-  model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
+  if(!realtime)model.traverse(o=>{if(o.isSkinnedMesh){o.skeleton.update();o.computeBoundingBox();}});
   root.updateMatrixWorld(true);
  }
  function dispose(){if(disposed)return;disposed=true;mixer.stopAllAction();mixer.uncacheRoot(model);skeletons.forEach(s=>s.dispose());surfaces.forEach(m=>m.dispose());root.removeFromParent();}

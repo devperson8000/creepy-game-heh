@@ -53,3 +53,28 @@ export function createNeedleGait(model){
  }
  return {legs,sample};
 }
+
+/** Continuous gameplay gait: support contacts remain in world space through bends and turns. */
+export function createNeedleLiveGait(model){
+ const {legs}=createNeedleGait(model),up=new THREE.Vector3(0,1,0);let lastTime=null,next=0,contacts=0;
+ const feet=legs.map(leg=>({...leg,anchor:null,from:null,to:null,phase:1}));
+ function sample({time,position,yaw,speed=0,walk=0}){
+  const dt=lastTime===null?0:Math.max(0,Math.min(.1,time-lastTime));lastTime=time;
+  const forward=new THREE.Vector3(Math.sin(yaw),0,Math.cos(yaw)),side=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw)),origin=new THREE.Vector3(...position);
+  model.position.y-=.2;model.position.x+=Math.sin(time*1.1)*.004;model.updateWorldMatrix(true,true);
+  const ideal=leg=>origin.clone().addScaledVector(side,leg.rest.x).addScaledVector(forward,leg.rest.z);
+  for(const foot of feet)if(!foot.anchor){foot.anchor=ideal(foot);foot.anchor.y=position[1]+foot.rest.y;}
+  const active=feet.find(f=>f.phase<1);
+  if(!active&&feet.length){const f=feet[next%feet.length],goal=ideal(f),error=Math.hypot(goal.x-f.anchor.x,goal.z-f.anchor.z);
+   if(error>(walk>.1?.24:.16)){f.from=f.anchor.clone();f.to=goal.addScaledVector(forward,Math.min(.42,speed*.16));f.to.y=position[1]+f.rest.y;f.phase=0;next++;}}
+  for(const leg of feet){
+   const target=leg.anchor.clone();
+   if(leg.phase<1){leg.phase=Math.min(1,leg.phase+dt/THREE.MathUtils.clamp(.58/(speed+.6),.17,.48));target.lerpVectors(leg.from,leg.to,smooth(leg.phase));target.y+=Math.sin(leg.phase*Math.PI)**2*.12;if(leg.phase===1){leg.anchor.copy(leg.to);contacts++;}}
+   const hip=point(leg.hip),dir=target.clone().sub(hip),length=dir.length();dir.normalize();const d=THREE.MathUtils.clamp(length,.001,leg.upper+leg.lower-.0001),along=(leg.upper**2-leg.lower**2+d*d)/(2*d),height=Math.sqrt(Math.max(0,leg.upper**2-along*along));
+   const pole=leg.pole.clone().applyAxisAngle(up,yaw);pole.addScaledVector(dir,-pole.dot(dir)).normalize();const bend=hip.clone().addScaledVector(dir,along).addScaledVector(pole,height);
+   aim(leg.hip,leg.knee,bend);aim(leg.knee,leg.foot,target);
+   const orientation=new THREE.Quaternion().setFromAxisAngle(up,yaw).multiply(leg.rotation);leg.foot.quaternion.copy(leg.foot.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(orientation));leg.foot.updateWorldMatrix(false,true);
+  }return contacts;
+ }
+ return {sample,feet,get contacts(){return contacts;}};
+}

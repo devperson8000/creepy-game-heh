@@ -1,0 +1,3 @@
+# Level 0 Needlelimbs audio
+`needle-lure.mp3`: original phrase “Hello. Over here.” generated offline using FFmpeg Flite's synthetic `slt` voice; filtered, normalized and given a short room reflection. No real person's voice was cloned. Flite: https://github.com/festvox/flite (BSD-style license). A gameplay interpretation of Entity 38's voice mimicry; not an official recording.
+Creature breathing reuses `/audio/halloween/sfx/needle-breath.mp3` and `needle-breath-heavy.mp3`, credited under the Mixkit Sound Effects Free License in `../halloween/CREDITS.md`. The original files are unchanged. New quiet echolocation clicks and short scrape accents are synthesized by Web Audio. Volume, pause and mute apply to all creature sound. No external audio service is used at runtime.
