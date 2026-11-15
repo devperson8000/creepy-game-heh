@@ -1,0 +1,34 @@
+body.monochrome2-intro{background:#030505;color:#e8e9e2;overflow:hidden}
+body.monochrome2-intro #scene{position:fixed;inset:0;width:100%;height:100%;overflow:hidden;background:#080b0b}
+body.monochrome2-intro #scene canvas{display:block;width:100%;height:100%;touch-action:pan-y}
+body.monochrome2-intro>.grain,body.monochrome2-intro>.vignette,body.monochrome2-intro>.hud,body.monochrome2-intro>.touch-move,body.monochrome2-intro>#crosshair,body.monochrome2-intro>#error{display:none!important}
+.m2-ui{position:fixed;inset:0;z-index:30;pointer-events:none;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#e9e9e1}
+.m2-topline{position:absolute;top:24px;left:28px;right:28px;display:flex;justify-content:space-between;align-items:center;font-size:9px;letter-spacing:.26em;color:#d1d4c8;text-shadow:0 2px 14px #000}
+.m2-topline strong{font-weight:600;color:#f2f2e9}
+.m2-topline span:last-child{opacity:.64}
+.m2-subtitle{position:absolute;left:50%;bottom:76px;transform:translateX(-50%);width:min(760px,88vw);min-height:50px;text-align:center;text-shadow:0 2px 12px #000,0 0 24px #000;font-size:clamp(13px,1.35vw,17px);line-height:1.5;letter-spacing:.015em;opacity:0;transition:opacity .22s ease}
+.m2-subtitle.visible{opacity:1}
+.m2-subtitle b{display:block;margin-bottom:5px;color:#d5d2b8;font-size:9px;font-weight:600;letter-spacing:.28em}
+.m2-progress{position:absolute;bottom:26px;left:50%;transform:translateX(-50%);width:min(410px,72vw);height:2px;background:#ffffff26;overflow:hidden}
+.m2-progress i{display:block;width:0;height:100%;background:#e8e8dc;box-shadow:0 0 12px #fff8;transform-origin:left}
+.m2-start,.m2-title{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 42%,#161c1bd9,#030505f5 72%);pointer-events:auto;transition:opacity .9s ease,visibility .9s ease}
+.m2-start.hidden,.m2-title.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.m2-start-card{text-align:center;width:min(600px,88vw);padding:30px}
+.m2-kicker{font-size:9px;letter-spacing:.38em;color:#a5aea2}
+.m2-start h1{margin:22px 0 12px;font-size:clamp(34px,7vw,72px);line-height:.98;letter-spacing:-.075em;font-weight:700}
+.m2-start p{margin:0 auto 28px;max-width:420px;color:#9fa79c;font-size:12px;line-height:1.8}
+.m2-play,.m2-replay{border:1px solid #d9ddcf;background:#dfe2d5;color:#101512;padding:15px 24px;font-size:10px;font-weight:700;letter-spacing:.2em;cursor:pointer;transition:transform .2s ease,background .2s ease}
+.m2-play:hover,.m2-replay:hover{transform:translateY(-2px);background:#f4f5e9}
+.m2-play:focus-visible,.m2-replay:focus-visible,.m2-sound:focus-visible{outline:2px solid #f3f4e9;outline-offset:4px}
+.m2-sound{position:absolute;right:28px;bottom:22px;pointer-events:auto;border:1px solid #aab0a033;background:#070a09a8;color:#dadbd1;padding:9px 12px;font-size:9px;letter-spacing:.18em;cursor:pointer;backdrop-filter:blur(10px)}
+.m2-title{background:#020303;transition:opacity 1.1s ease}
+.m2-title-inner{text-align:center;padding:36px;opacity:0;transform:translateY(12px);transition:opacity 1.2s ease,transform 1.2s ease}
+.m2-title.visible .m2-title-inner{opacity:1;transform:translateY(0)}
+.m2-title .m2-kicker{color:#929c91}
+.m2-title h2{margin:25px 0 0;font-size:clamp(35px,7.3vw,84px);font-weight:750;letter-spacing:-.075em;line-height:.96;color:#f0f0e8}
+.m2-title h2 span{display:block;margin-top:15px;font-size:clamp(13px,2.2vw,23px);font-weight:500;letter-spacing:.42em;color:#b9c1b6}
+.m2-title .m2-rule{width:90px;height:1px;background:#a7b4a0;margin:30px auto 0;opacity:.68}
+.m2-title .m2-replay{margin-top:34px}
+.m2-grain{position:fixed;inset:0;z-index:20;pointer-events:none;opacity:.1;mix-blend-mode:screen;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.6' d='M0 0h180v180H0z'/%3E%3C/svg%3E")}
+@media(max-width:600px){.m2-topline{top:16px;left:16px;right:16px;font-size:8px;letter-spacing:.16em}.m2-subtitle{bottom:72px;width:90vw;font-size:13px}.m2-sound{right:15px;bottom:17px}.m2-progress{bottom:24px}.m2-start-card{padding:18px}.m2-title-inner{padding:20px}}
+@media(prefers-reduced-motion:reduce){.m2-subtitle,.m2-start,.m2-title,.m2-title-inner,.m2-play,.m2-replay{transition:none}}

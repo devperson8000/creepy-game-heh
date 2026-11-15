@@ -22,6 +22,14 @@
     {
       "source": "/backrooms/",
       "destination": "/index.html"
+    },
+    {
+      "source": "/monochrome2",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/monochrome2/",
+      "destination": "/index.html"
     }
   ]
 }
