@@ -1,6 +1,6 @@
 # MONOCHROME 2: IN THE BACKROOMS — release intro
 
-The dedicated /monochrome2 route plays a 48-second, in-engine Three.js cinematic. It is separate from both the original Monochrome game and the playable /backrooms route.
+The dedicated /monochrome2 route plays a 66-second, in-engine Three.js cinematic. It is separate from both the original Monochrome game and the playable /backrooms route.
 
 ## Story beats
 1. Three hazmat survivors exit the elevator they escaped through at the end of Monochrome.
@@ -10,8 +10,8 @@ The dedicated /monochrome2 route plays a 48-second, in-engine Three.js cinematic
 5. The lead wakes on the yellow carpet of Level 0, rises as the camera moves behind and above, and the title appears: **MONOCHROME 2: IN THE BACKROOMS**.
 
 ## Presentation
-- Three independent instances of the existing CC0 hazmat survivor rig, using its baked Idle and Walk animations and per-survivor numbering.
-- Procedural street, convenience-store interior, descending service ramp, tiny emissive wall seam, and a first glimpse of the yellow Level 0 environment.
+- Three independent instances of the existing CC0 hazmat survivor rig, using its baked Idle and Walk animations and per-survivor numbering. Walk-cycle time is driven by measured character travel distance so foot motion stays in step with the slower root movement.
+- Procedural street, convenience-store interior, descending service ramp, a tiny emissive wall seam that remains visible until the lead reaches it, and a continuous step onto the lower yellow Level 0 carpet. Props sit on their shelves and surfaces rather than hovering.
 - Camera choreography, environmental lighting, restrained film grain, generated ambient sound/effects, and captions.
 - Dialogue uses the browser's native speech synthesis voices. Voice quality and voice availability depend on the user's browser and operating system; captions remain available when speech synthesis is unavailable.
 - Start is user-initiated so the browser can unlock audio. Replay and sound controls are included.
