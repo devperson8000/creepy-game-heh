@@ -12,7 +12,7 @@ import './secretroom.css';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const v3 = (x, y, z) => new T.Vector3(x, y, z);
 
-export function startSecretRoom(container) {
+export function startSecretRoom(container,{autostart=false}={}) {
   document.title = 'MONOCHROME — The Secret Room';
   document.body.classList.add('secretroom-page');
   container.setAttribute('aria-label', 'A small enclosed Backrooms room containing an old television and VHS cassette');
@@ -42,8 +42,8 @@ export function startSecretRoom(container) {
   let time = 0;
   let distanceTravelled = 0;
   let previous = performance.now();
-  let paused = true;
-  let started = false;
+  let paused = !autostart;
+  let started = !!autostart;
   let muted = false;
   let disposed = false;
   let drag = null;
@@ -747,7 +747,17 @@ export function startSecretRoom(container) {
     document.body.classList.remove('secretroom-page');
   }
   on(window, 'pagehide', dispose, { once: true });
-  el('[data-action="start"]').focus();
+  if(autostart){
+    setPause(false);
+    const reveal=document.createElement('div');
+    reveal.className='sr-entry-reveal';
+    reveal.setAttribute('aria-hidden','true');
+    document.body.append(reveal);
+    window.setTimeout(()=>reveal.remove(),1250);
+    renderer.domElement.focus({preventScroll:true});
+  }else{
+    el('[data-action="start"]').focus();
+  }
 
   return {
     world,
