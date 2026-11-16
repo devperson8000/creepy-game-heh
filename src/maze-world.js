@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {reducedMotion} from './preferences.js';
 import {buildMazeWallSurfaces,mazeWallHalf} from './maze-wall-surfaces.js';
 import {CELL,worldPoint,gridPoint,walkable,groundHeight as sampleGround,randomSource} from './level.js';
 import {createMazeNavigator} from './maze-navigation.js';
