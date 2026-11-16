@@ -315,14 +315,14 @@ export function createSecretRoomWorld() {
   const tvPlastic = makeMaterial({ color: 0x777365, roughness: 0.56, metalness: 0.06 });
   const tvPlasticLight = makeMaterial({ color: 0x928c77, roughness: 0.76 });
   const bezelMaterial = makeMaterial({ color: 0x252724, roughness: 0.4, metalness: 0.18 });
-  const screenMaterial = new T.MeshPhysicalMaterial({
-    color: 0x10140f,
-    roughness: 0.16,
-    metalness: 0.18,
-    clearcoat: 0.92,
-    clearcoatRoughness: 0.09,
-    emissive: 0x020503,
-    emissiveIntensity: 0.55
+  // The CRT picture is a direct phosphor image, not a light-reactive surface.
+  // Bypassing scene lighting and tone mapping keeps its blacks black and its
+  // text/footage crisp even in the brightly lit room.
+  const screenMaterial = new T.MeshBasicMaterial({
+    color: 0x010302,
+    side: T.DoubleSide,
+    toneMapped: false,
+    fog: false
   });
   resources.add(screenMaterial);
   const glassMaterial = new T.MeshPhysicalMaterial({
@@ -332,7 +332,7 @@ export function createSecretRoomWorld() {
     clearcoat: 1,
     clearcoatRoughness: 0.04,
     transparent: true,
-    opacity: 0.18,
+    opacity: 0.065,
     depthWrite: false
   });
   resources.add(glassMaterial);
@@ -445,7 +445,8 @@ export function createSecretRoomWorld() {
   const floorTop = -0.005;
 
   // Recessed outlet with separate contacts, screws, moulded face and a raised
-  // protective lip. The plug prongs finish inside the actual socket opening.
+  // protective lip. The plug body seats flush to the faceplate and both blades
+  // continue fully behind it into the recessed contacts, out of view.
   rounded(0.045,0.205,0.235,3.245,0.565,-1.06,0.018,socketMaterial,powerGroup);
   for(const z of [-1.106,-1.014]){
     const screw=new T.Mesh(new T.CylinderGeometry(.008,.008,.008,16),brass);
@@ -462,7 +463,9 @@ export function createSecretRoomWorld() {
   const powerPlug=new T.Group();
   powerPlug.name='loose-tv-mains-plug';
   const plugStart=v3(.955,.055,-.985);
-  const plugEnd=v3(3.12,.565,-1.06);
+  // The front shoulder of the plug sits flush at x=3.2225; the metal blades
+  // continue beyond the faceplate into the socket cavity and cannot be seen.
+  const plugEnd=v3(3.17,.565,-1.06);
   powerPlug.position.copy(plugStart);
   powerGroup.add(powerPlug);
   rounded(.105,.044,.076,0,0,0,.012,sleeveMaterial,powerPlug);
@@ -481,17 +484,28 @@ export function createSecretRoomWorld() {
   rounded(.003,.031,.052,-.048,.001,.001,.001,brass,powerPlug);
   const polarity = new T.Mesh(new T.SphereGeometry(.004,10,8),socketDark);
   polarity.position.set(-.018,.025,.018);powerPlug.add(polarity);resources.add(polarity.geometry);
-  const gloveMaterial=makeMaterial({color:0xa6a893,roughness:.97});
-  const gloveCuffMaterial=makeMaterial({color:0x343e34,roughness:.94});
-  const glove=new T.Group();glove.name='first-person-hazmat-glove';glove.visible=false;powerPlug.add(glove);
-  rounded(.052,.105,.105,-.205,-.026,0,.018,gloveCuffMaterial,glove);
-  rounded(.105,.093,.115,-.13,-.006,0,.027,gloveMaterial,glove);
+  // First-person hand styled to match the game's hazmat-survivor character:
+  // dark, matte rubber glove, close-set curled fingers and the pale suit sleeve.
+  const gloveMaterial=makeMaterial({color:0x171c1c,roughness:.985});
+  const gloveCuffMaterial=makeMaterial({color:0x8b8e7f,roughness:.98});
+  const gloveSeamMaterial=makeMaterial({color:0x51584e,roughness:.98});
+  const glove=new T.Group();glove.name='first-person-hazmat-character-hand';glove.visible=false;powerPlug.add(glove);
+  // Forearm sleeve and reinforced wrist transition.
+  rounded(.142,.126,.132,-.255,-.018,0,.034,gloveCuffMaterial,glove);
+  rounded(.034,.111,.118,-.177,-.012,0,.012,gloveSeamMaterial,glove);
+  rounded(.012,.116,.122,-.154,-.009,0,.005,gloveCuffMaterial,glove);
+  // Rounded rubber palm; the fingers sit together in a natural gripping curl.
+  rounded(.108,.091,.113,-.119,-.006,0,.032,gloveMaterial,glove);
   for(let i=0;i<4;i++){
-    const finger=rounded(.076,.025,.021,-.058,.028,-.041+i*.027,.009,gloveMaterial,glove);
-    finger.rotation.z=-.08;
+    const finger=rounded(.077,.022,.021,-.056,.021,-.034+i*.022,.01,gloveMaterial,glove);
+    finger.rotation.z=-.12;
+    const crease=rounded(.004,.024,.022,-.081,.021,-.034+i*.022,.002,gloveSeamMaterial,glove);
+    crease.rotation.z=-.12;
   }
-  const thumb=rounded(.071,.026,.031,-.105,-.048,.067,.01,gloveMaterial,glove);
+  const thumb=rounded(.071,.027,.032,-.108,-.045,.062,.012,gloveMaterial,glove);
   thumb.rotation.x=-.24;thumb.rotation.z=.38;
+  const thumbSeam=rounded(.004,.023,.029,-.128,-.045,.063,.002,gloveSeamMaterial,glove);
+  thumbSeam.rotation.x=-.24;thumbSeam.rotation.z=.38;
 
   function makeCordGeometry(points,segments=100){
     const curve=new T.CatmullRomCurve3(points,false,'centripetal',.5);
@@ -632,9 +646,9 @@ export function createSecretRoomWorld() {
       const colors={off:[0x6f3429,0x42130d],booting:[0x63d88a,0x1c9d49],ready:[0x76a66d,0x275b28],playing:[0x76a66d,0x275b28]};
       const [color,emissive]=colors[state]??colors.off;
       ledMaterial.color.set(color);ledMaterial.emissive.set(emissive);ledMaterial.emissiveIntensity=state==='off'?.25:1.05;
-      screenMaterial.emissive.set(state==='off'?0x020503:0xffffff);
-      screenMaterial.emissiveIntensity=state==='off'?.3:1.45;
-      screenGlow.intensity=state==='off'?0:state==='booting'?1.6:1.8;
+      screenMaterial.color.set(state==='off'?0x010302:0xffffff);
+      // Keep the picture itself unlit; only a very faint spill reaches the room.
+      screenGlow.intensity=state==='off'?0:state==='booting'?.08:.12;
     }
   };
 
@@ -777,9 +791,8 @@ export function createSecretRoomWorld() {
   function setTvTexture(textureValue) {
     screenMaterial.map = textureValue;
     screenMaterial.color.set(0xffffff);
-    screenMaterial.emissive.set(0xffffff);
-    screenMaterial.emissiveIntensity = 1.45;
-    screenGlow.intensity = 1.8;
+    screenMaterial.color.set(0xffffff);
+    screenGlow.intensity = 0.12;
     screenMaterial.needsUpdate = true;
   }
   function setTvVideo(video) {
