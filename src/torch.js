@@ -13,7 +13,7 @@ export function sampleTorchSurface({camera,raycaster,meshes,hidden=false}){
  return {distance:hit?.distance??Infinity,hit};
 }
 
-export function createTorch(scene,camera,{halloween=false}={}){
+export function createTorch(scene,camera,{maze=false}={}){
  scene.add(camera);
  const reactive=new Map();
  // Signs, keys and the creature need to reflect the beam instead of being
@@ -31,7 +31,7 @@ export function createTorch(scene,camera,{halloween=false}={}){
   }
   mesh.material=reactive.get(original);
  });
- const basePower=halloween?85:140;let power=basePower;
+ const basePower=maze?85:140;let power=basePower;
  const beam=new THREE.SpotLight(0xe4e9dc,basePower,24,.58,1,1.5);
  beam.position.set(0,-.035,-.025);beam.castShadow=true;
  beam.shadow.mapSize.set(512,512);beam.shadow.camera.near=.05;beam.shadow.camera.far=24;beam.shadow.bias=-.00015;beam.shadow.normalBias=.015;
@@ -66,7 +66,7 @@ export function createTorch(scene,camera,{halloween=false}={}){
   exposure=.95*(on?1:ceilingPower);
   for(const material of reactive.values()){material.emissive.copy(material.color);material.emissiveIntensity=.35*ceilingPower;}
   const reduced=reducedMotion(),dt=Math.max(0,Math.min(.1,delta)),blend=1-Math.exp(-dt*12),yaw=camera.rotation.y,pitch=camera.rotation.x;
-  const distance=Number.isFinite(surfaceDistance)?Math.max(0,surfaceDistance):Infinity,target=basePower*(halloween?THREE.MathUtils.clamp((distance/2.5)**1.5,.14,1):1);
+  const distance=Number.isFinite(surfaceDistance)?Math.max(0,surfaceDistance):Infinity,target=basePower*(maze?THREE.MathUtils.clamp((distance/2.5)**1.5,.14,1):1);
   power+=(target-power)*blend;beam.intensity=on?power:0;
   motion+=(Number(moving&&!reduced)-motion)*blend;
   const turn=lastYaw===null?0:Math.atan2(Math.sin(yaw-lastYaw),Math.cos(yaw-lastYaw));
