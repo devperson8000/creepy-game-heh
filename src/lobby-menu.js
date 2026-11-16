@@ -123,7 +123,7 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,o
   );
   comingSoon.append(
    signalMeta,
-   element('h2', '', 'Halloween has passed.'),
+   element('h2', '', 'The signal is changing.'),
    element('p', 'lobby-coming-soon-copy', 'Something is coming soon.'),
    signalFooter
   );
