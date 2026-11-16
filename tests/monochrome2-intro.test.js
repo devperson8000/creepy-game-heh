@@ -21,11 +21,10 @@ test('the intro moves from the street to the two-line title in the intended orde
 });
 
 test('the real Backrooms map flashes as a 0.15-second opening background cut, then only occasionally',()=>{
- assert.equal(monochrome2BackroomsBackgroundFlash(0),false);
- assert.equal(monochrome2BackroomsBackgroundFlash(.079),false);
- assert.equal(monochrome2BackroomsBackgroundFlash(.08),true,'the first map flash begins almost immediately');
- assert.equal(monochrome2BackroomsBackgroundFlash(.229),true,'the opening flash remains visible for about 0.15 seconds');
- assert.equal(monochrome2BackroomsBackgroundFlash(.231),false,'the original Monochrome background returns');
+ assert.equal(monochrome2BackroomsBackgroundFlash(0),true,'the map flash starts on the first playback frame');
+ assert.equal(monochrome2BackroomsBackgroundFlash(.079),true);
+ assert.equal(monochrome2BackroomsBackgroundFlash(.149),true,'the opening flash remains visible for about 0.15 seconds');
+ assert.equal(monochrome2BackroomsBackgroundFlash(.151),false,'the original Monochrome background returns');
  assert.equal(monochrome2BackroomsBackgroundFlash(2),false,'there is a clear gap after the opening flash');
  for(const time of [4.8,13.6,26.2,43.4]){
   assert.equal(monochrome2BackroomsBackgroundFlash(time),true,'a later sparse map flash is scheduled');
