@@ -131,9 +131,20 @@ export function createMazeWorld(run){
  const inscriptionMaterial=new THREE.MeshBasicMaterial({map:inscriptionTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
  const stairInscription=new THREE.Mesh(new THREE.PlaneGeometry(2.05,.58),inscriptionMaterial);
  stairInscription.position.set(-3.412,5.08,-26.05);stairInscription.rotation.y=Math.PI/2;
- stairInscription.name='reversed-stairwell-inscription';stairInscription.userData.interactId='wall-note';
- scene.add(stairInscription);rayMeshes.push(stairInscription);
- targets.set('wall-note',{id:'wall-note',type:'wall-note',mesh:stairInscription,position:{x:-3.412,z:-26.05,height:5.08}});
+ stairInscription.name='reversed-stairwell-inscription';
+ scene.add(stairInscription);
+ // The invisible hover surface hugs only the handwritten lines, not the full wall panel.
+ const stairInscriptionHitbox=new THREE.Mesh(
+  new THREE.BoxGeometry(1.35,.54,.08),
+  new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide})
+ );
+ stairInscriptionHitbox.position.copy(stairInscription.position);
+ stairInscriptionHitbox.rotation.copy(stairInscription.rotation);
+ stairInscriptionHitbox.name='reversed-stairwell-inscription-hitbox';
+ stairInscriptionHitbox.userData.interactId='wall-note';
+ stairInscriptionHitbox.castShadow=false;stairInscriptionHitbox.receiveShadow=false;
+ scene.add(stairInscriptionHitbox);rayMeshes.push(stairInscriptionHitbox);
+ targets.set('wall-note',{id:'wall-note',type:'wall-note',mesh:stairInscriptionHitbox,position:{x:-3.412,z:-26.05,height:5.08}});
  const lighting=createProximityLighting(lamps.map(l=>l.position)),ambient=new THREE.AmbientLight(0xa8b49b,.09),fill=new THREE.PointLight(0xb5bea8,.8,3,1.7);scene.add(ambient,fill);
  const ceilingLights=Array.from({length:6},()=>{const light=new THREE.PointLight(0xd7d9be,0,7,1.7);scene.add(light);return light;});
  let doorProgress=0,selection=[],lastX=Infinity,lastZ=Infinity;
