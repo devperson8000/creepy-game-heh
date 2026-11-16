@@ -7,6 +7,7 @@ import './arrival.css';
 import './voice-chat.css';
 import './polish.css';
 import './hunt-clock.css';
+import './secret-entry.css';
 
 import {gamePreferences} from './preferences.js';
 import {createVoiceChat} from './voice-chat.js';
@@ -35,7 +36,7 @@ function failed(error){
 async function edition(){
  await mapReady;
  await mapRelease.refresh();
- return {mapUpdate:mapRelease.released,halloween:false};
+ return {mapUpdate:true,halloween:false};
 }
 
 function preparing(){
