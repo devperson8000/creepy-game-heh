@@ -95,17 +95,17 @@ export function createSecretEntryCinematic({ scene, camera, position, yaw, onCom
   portal.add(ring);
   scene.add(portal);
 
-  const sidePosition = new THREE.Vector3(start.x + 1.18, start.height + 1.28, start.z + 2.18);
+  const sidePosition = new THREE.Vector3(start.x + 2.05, start.height + 1.42, start.z + 0.9);
   const sideGuide = new THREE.PerspectiveCamera(45, camera.aspect, camera.near, camera.far);
   sideGuide.position.copy(sidePosition);
   sideGuide.lookAt(start.x - 0.05, start.height + 1.15, start.z);
   const initialPosition = camera.position.clone();
   const initialQuaternion = camera.quaternion.clone();
   const initialFov = camera.fov;
-  const followPosition = new THREE.Vector3(start.x - 1.08, start.height + 1.65, start.z);
+  const followPosition = new THREE.Vector3(start.x - 0.72, start.height + 1.65, start.z);
   const followGuide = new THREE.PerspectiveCamera(66, camera.aspect, camera.near, camera.far);
   followGuide.position.copy(followPosition);
-  followGuide.lookAt(start.x - 4.1, start.height + 1.5, start.z);
+  followGuide.lookAt(start.x - 4.85, start.height + 1.52, start.z);
 
   const fade = document.createElement('div');
   fade.className = 'secret-entry-fade';
@@ -116,7 +116,7 @@ export function createSecretEntryCinematic({ scene, camera, position, yaw, onCom
   function sampleAvatar(t, handProgress, walkProgress) {
     const walk = ease(walkProgress);
     const nextPosition = {
-      x: start.x - walk * 0.86,
+      x: start.x - walk * 1.4,
       z: start.z,
       height: start.height
     };
