@@ -48,6 +48,7 @@ export function startSecretRoom(container) {
   let held = false;
   let inserted=false,insertion=null,vhsEnabled=true;
   let powerCableHeld=false,powerCableConnected=false,tvPowered=false,setupComplete=false;
+  let cablePickupAnimation=null;
   let plugAnimation=null,switchAnimation=null,tvCameraLocked=false,cameraTween=null,tvReturnPose=null;
   let tvMode='off',tvElapsed=0,tvGame=null,tvErrorTime=0,tvCanvas=null,tvTexture=null;
   let teaserPlayback=null,teaserReadyPromise=null,teaserLoadError=null,playbackElapsed=0;
@@ -283,7 +284,7 @@ export function startSecretRoom(container) {
   }
 
   function currentTarget(){
-    if(insertion||tvCameraLocked||cameraTween||plugAnimation||switchAnimation)return null;
+    if(insertion||tvCameraLocked||cameraTween||plugAnimation||switchAnimation||cablePickupAnimation)return null;
     if(!powerCableHeld&&!powerCableConnected&&pointTarget(world.power.pickupTarget,2.1,.48))return{id:'cable-pickup',label:'Pick up the TV power cable',duration:.52};
     if(powerCableHeld&&!powerCableConnected&&pointTarget(world.power.outletTarget,1.75,.48))return{id:'plug',label:'Plug the TV power cable into the outlet',duration:.72};
     if(powerCableConnected&&!tvPowered&&pointTarget(world.power.switchTarget,1.7,.55))return{id:'power',label:'Turn on the television power',duration:.42};
@@ -445,9 +446,9 @@ export function startSecretRoom(container) {
     if (target.id === 'pickup') beginPickup();
     else if (target.id === 'cable-pickup') {
       powerCableHeld=true;
+      cablePickupAnimation={elapsed:0,duration:.46,from:world.power.plug.position.clone(),fromQuaternion:world.power.plug.quaternion.clone()};
       world.power.beginCableHold();
-      updateCarriedPowerCable();
-      announce('TV power cable picked up. Carry the plug to the wall outlet on the right.');
+      announce('Gathering the TV power lead. Carry the plug to the wall outlet on the right.');
     }
     else if (target.id === 'plug') {
       plugAnimation={elapsed:0,duration:.78,from:world.power.plug.position.clone(),fromQuaternion:world.power.plug.quaternion.clone()};
@@ -556,13 +557,21 @@ export function startSecretRoom(container) {
     }
   }
 
-  function updateCarriedPowerCable(){
+  function updateCarriedPowerCable(delta=0){
     if(!powerCableHeld||powerCableConnected||plugAnimation||disposed)return;
     camera.updateMatrixWorld(true);
-    const position=camera.localToWorld(v3(.5,-.34,-.78));
-    position.x=clamp(position.x,-3.14,3.14);
-    position.z=clamp(position.z,-3.14,3.14);
-    const quaternion=camera.getWorldQuaternion(new T.Quaternion());
+    const destination=camera.localToWorld(v3(.5,-.34,-.78));
+    destination.x=clamp(destination.x,-3.14,3.14);
+    destination.z=clamp(destination.z,-3.14,3.14);
+    const destinationQuaternion=camera.getWorldQuaternion(new T.Quaternion());
+    let position=destination,quaternion=destinationQuaternion;
+    if(cablePickupAnimation){
+      cablePickupAnimation.elapsed+=delta;
+      const p=clamp(cablePickupAnimation.elapsed/cablePickupAnimation.duration,0,1),e=p*p*(3-2*p);
+      position=new T.Vector3().lerpVectors(cablePickupAnimation.from,destination,e);
+      quaternion=cablePickupAnimation.fromQuaternion.clone().slerp(destinationQuaternion,e);
+      if(p>=1)cablePickupAnimation=null;
+    }
     world.power.setHeldPose(position,quaternion);
   }
 
@@ -656,7 +665,7 @@ export function startSecretRoom(container) {
       updateCameraAndPower(delta);
       if (!tvCameraLocked && !cameraTween) {
         updatePlayer(delta);
-        updateCarriedPowerCable();
+        updateCarriedPowerCable(delta);
         updateInteraction(delta);
       }
       updateInsertion(delta);
