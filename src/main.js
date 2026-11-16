@@ -1,10 +1,87 @@
-import './finale.css';import './style.css';import './lobby-menu.css';import './coop-game.css';import './waiting-room.css';import './arrival.css';import './voice-chat.css';import './polish.css';import './hunt-clock.css';import './halloween-countdown.css';import './halloween-game.css';import './opening-sequence.css';
-import {gamePreferences,reducedMotion} from './preferences.js';import {createVoiceChat} from './voice-chat.js';import {startGame} from './game.js';import {createLobbyMenu} from './lobby-menu.js';import {createLobbyClient} from './lobby-client.js';import {startCoopGame} from './coop-game.js';import {mapRelease} from './map-release.js';import {halloweenRelease} from './halloween-release.js';import {waitForHalloweenSession} from './halloween-session.js';
-const releaseReady=Promise.all([mapRelease.start(),halloweenRelease.start()]);
-window.addEventListener('pagehide',()=>{mapRelease.dispose();halloweenRelease.dispose();},{once:true});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){void mapRelease.refresh();void halloweenRelease.refresh();}});
-function failed(error){console.error(error);const message=document.querySelector('#error');message.hidden=false;message.textContent='The game could not start. Please reload and check that WebGL is enabled.';}
-async function edition(){await releaseReady;await Promise.all([mapRelease.refresh(),halloweenRelease.refresh()]);return {mapUpdate:mapRelease.released,halloween:halloweenRelease.released};}
-function preparing(){const message=document.createElement('p');message.className='round-loading';message.setAttribute('role','status');message.textContent='Preparing the descent…';document.body.append(message);return()=>message.remove();}
-function makeMenu(){return createLobbyMenu({showHalloweenTest:false,createClient:()=>{const client=createLobbyClient();client.voice=createVoiceChat({client});return client;},onSingleplayer:async()=>{const done=preparing();try{window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,...await edition()});}catch(error){failed(error);}finally{done();}},onMultiplayer:async({client,session})=>{const done=preparing();try{if(!session.checkpoint)session=client.id===session.ownerId?{...session,...await edition()}:await waitForHalloweenSession(client,session);window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});}catch(error){client.close();failed(error);}finally{done();}}});}
-try{document.documentElement.classList.toggle('reduce-motion',gamePreferences().reducedMotion);document.querySelector('#scene').setAttribute('aria-label','First-person basement escape game');document.body.classList.add('overlay-open');void releaseReady.then(async()=>{if(!halloweenRelease.released){makeMenu();return;}const [{playOpeningBeforeMenu},{createOpeningFilm}]=await Promise.all([import('./opening-sequence.js'),import('./opening-film.js')]);playOpeningBeforeMenu({container:document.querySelector('#scene'),createFilm:createOpeningFilm,reducedMotion:reducedMotion(),onComplete:makeMenu});}).catch(failed);}catch(error){failed(error);}
+import './finale.css';
+import './style.css';
+import './lobby-menu.css';
+import './coop-game.css';
+import './waiting-room.css';
+import './arrival.css';
+import './voice-chat.css';
+import './polish.css';
+import './hunt-clock.css';
+
+import {gamePreferences} from './preferences.js';
+import {createVoiceChat} from './voice-chat.js';
+import {startGame} from './game.js';
+import {createLobbyMenu} from './lobby-menu.js';
+import {createLobbyClient} from './lobby-client.js';
+import {startCoopGame} from './coop-game.js';
+import {mapRelease} from './map-release.js';
+import {waitForHalloweenSession} from './halloween-session.js';
+
+// The map update remains active, but Halloween's timed release and opening
+// cinematic are retired. New rounds explicitly use the normal game mode.
+const mapReady=mapRelease.start();
+window.addEventListener('pagehide',()=>mapRelease.dispose(),{once:true});
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden)void mapRelease.refresh();
+});
+
+function failed(error){
+ console.error(error);
+ const message=document.querySelector('#error');
+ message.hidden=false;
+ message.textContent='The game could not start. Please reload and check that WebGL is enabled.';
+}
+
+async function edition(){
+ await mapReady;
+ await mapRelease.refresh();
+ return {mapUpdate:mapRelease.released,halloween:false};
+}
+
+function preparing(){
+ const message=document.createElement('p');
+ message.className='round-loading';
+ message.setAttribute('role','status');
+ message.textContent='Preparing the descent…';
+ document.body.append(message);
+ return()=>message.remove();
+}
+
+function makeMenu(){
+ return createLobbyMenu({
+  showHalloweenTest:false,
+  createClient:()=>{
+   const client=createLobbyClient();
+   client.voice=createVoiceChat({client});
+   return client;
+  },
+  onSingleplayer:async()=>{
+   const done=preparing();
+   try{
+    window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,...await edition()});
+   }catch(error){failed(error);}
+   finally{done();}
+  },
+  onMultiplayer:async({client,session})=>{
+   const done=preparing();
+   try{
+    if(!session.checkpoint){
+     session=client.id===session.ownerId
+      ? {...session,...await edition()}
+      : await waitForHalloweenSession(client,session);
+    }
+    window.monochrome=startCoopGame(document.querySelector('#scene'),{client,session});
+   }catch(error){
+    client.close();
+    failed(error);
+   }finally{done();}
+  }
+ });
+}
+
+try{
+ document.documentElement.classList.toggle('reduce-motion',gamePreferences().reducedMotion);
+ document.querySelector('#scene').setAttribute('aria-label','First-person basement escape game');
+ document.body.classList.add('overlay-open');
+ makeMenu();
+}catch(error){failed(error);}

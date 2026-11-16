@@ -11,3 +11,15 @@
 @media(max-width:360px){.lobby-menu{padding:18px 16px}.lobby-brand{font-size:12px}.lobby-intro h1{font-size:42px}.lobby-mode-detail{font-size:10px}.lobby-roster{grid-template-columns:repeat(2,minmax(0,1fr))}.lobby-player{min-height:185px}.lobby-connection{max-width:140px;text-align:right}.lobby-footer span:last-child{display:none}}
 @media(prefers-reduced-motion:reduce){.lobby-menu *{transition:none!important}}
 .lobby-mode-arrow{width:12px;height:12px;top:34px;right:32px;border-top:1px solid #c4c9b4;border-right:1px solid #c4c9b4}.lobby-mode-arrow::after{content:"";position:absolute;width:17px;height:1px;background:#c4c9b4;top:5px;right:-3px;transform:rotate(-45deg)}
+
+ 
+/* A neutral post-event notice replaces the retired Halloween countdown. */
+.lobby-right-stack{display:grid;gap:16px;align-content:center;min-width:0}
+.lobby-coming-soon{position:relative;isolation:isolate;overflow:hidden;padding:24px 28px 22px;border:1px solid #c3c7c326;border-radius:2px;background:linear-gradient(135deg,#171a19ed,#0b0d0cef);box-shadow:inset 0 1px #ffffff0b,0 18px 50px #0005}
+.lobby-coming-soon::before{content:"";position:absolute;left:28px;top:0;width:44px;height:1px;background:#d9ddd4a0;box-shadow:0 0 15px #d9ddd433}
+.lobby-coming-soon::after{content:"";position:absolute;right:0;top:0;bottom:0;width:1px;background:linear-gradient(transparent,#c5c9c333,transparent)}
+.lobby-coming-soon-kicker{font:8px/1.7 ui-monospace,monospace;letter-spacing:.17em;color:#8c9692}
+.lobby-coming-soon h2{margin-top:9px!important;font:500 clamp(20px,2vw,27px)/1.2 Georgia,serif;letter-spacing:-.025em;color:#e5e8e4}
+.lobby-coming-soon-copy{margin-top:7px!important;font-size:12px;letter-spacing:.025em;color:#929b96}
+@media(max-width:1200px){.lobby-right-stack{gap:13px}.lobby-coming-soon{padding:20px 22px 18px}}
+@media(prefers-reduced-motion:reduce){.lobby-coming-soon::before{box-shadow:none}}

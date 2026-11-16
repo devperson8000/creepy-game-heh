@@ -35,7 +35,7 @@ export function createHalloweenCountdown({releaseClock=halloweenRelease,onEnter,
   clock.setAttribute('aria-label',`${parts.days} days, ${parts.hours} hours, ${parts.minutes} minutes, ${parts.seconds} seconds until the Halloween update`);
   clock.hidden=complete;root.querySelector('.halloween-arrived').hidden=!complete;
   root.querySelector('[data-briefing-watch]').hidden=!complete;
-  if(complete){title.textContent='Halloween is live.';root.querySelector('.halloween-arrived').textContent='The archive is waiting. Enter a new run.';clearInterval(timer);}
+  if(complete){title.textContent='Halloween has passed.';root.querySelector('.halloween-arrived').textContent='Something is coming soon.';clearInterval(timer);}
  }
  timer=setInterval(update,1000);update();
  const focusView=createCountdownView(root,{releaseClock,onEnter,storage});

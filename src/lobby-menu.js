@@ -1,4 +1,3 @@
-import {createHalloweenCountdown} from './halloween-countdown.js';
 import {startMenuHallway} from './menu-hallway.js';
 import {createWaitingRoom} from './waiting-room.js';
 const NAME_KEY = 'monochrome.playerName';
@@ -43,7 +42,7 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,o
  let screen = 'mode', playerName = initialPlayerName ?? storedName(), lobbyName = '', client = null, unsubscribe = null;
  let network = 'idle', lobbies = [], room = null, pendingLobby = null, actionPending = false;
  let message = '', isError = false, disposed = false, generation = 0;
- let waiting=null,waitingId=null,countdown=null;
+ let waiting=null,waitingId=null;
  function releaseWaiting(){waiting?.dispose();waiting=null;waitingId=null;root.classList.remove('in-waiting-room','terminal-open');}
 
  function button(label, id, run, {primary = false, disabled = false, small = false} = {}) {
@@ -105,9 +104,18 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,o
   multiplayer.classList.add('lobby-mode-card');
   multiplayer.append(element('span', 'lobby-mode-number', '02 / SHARED DESCENT'), element('strong', '', 'Multiplayer'), element('span', 'lobby-mode-detail', '2–4 players · Private entry · Host approval'), element('span', 'lobby-mode-arrow'));
   options.append(solo, multiplayer);
-  countdown=createHalloweenCountdown();
-  content.append(intro, options, countdown.root);
-  if(showHalloweenTest){const tests=button('Test Halloween Gameplay','halloween-test-entry',onHalloweenTest);tests.classList.add('halloween-test-entry');content.append(tests);}
+
+  const rightPanel = element('div', 'lobby-right-stack');
+  const comingSoon = element('aside', 'lobby-coming-soon');
+  comingSoon.setAttribute('aria-label', 'Upcoming Monochrome update');
+  comingSoon.append(
+   element('p', 'lobby-coming-soon-kicker', 'MONOCHROME / NEXT TRANSMISSION'),
+   element('h2', '', 'Halloween has passed.'),
+   element('p', 'lobby-coming-soon-copy', 'Something is coming soon.')
+  );
+  rightPanel.append(options, comingSoon);
+  if(showHalloweenTest){const tests=button('Test Halloween Gameplay','halloween-test-entry',onHalloweenTest);tests.classList.add('halloween-test-entry');rightPanel.append(tests);}
+  content.append(intro, rightPanel);
  }
 
  function sessionPanel() {
@@ -259,7 +267,6 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,o
   const active = root.contains(document.activeElement) ? document.activeElement : null;
   const focusedId = active?.id;
   const selection = active?.tagName === 'INPUT' ? [active.selectionStart, active.selectionEnd] : null;
-  countdown?.dispose();countdown=null;
   content.replaceChildren();
   root.dataset.screen = screen;
   if (screen === 'mode') modeScreen();
@@ -369,7 +376,6 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,o
   if (disposed) return;
   disposed = true;
   menuHallway?.dispose();
-  countdown?.dispose();
   releaseWaiting();
   if (keepClient) { generation++; unsubscribe?.(); unsubscribe = null; }
   else releaseClient();
