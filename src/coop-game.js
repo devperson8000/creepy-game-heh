@@ -399,17 +399,24 @@ export function startCoopGame(container,{client,session}){
   }
   let target=!ui.overlay&&!document.hidden?currentTarget():null;
   wallNoteFocused=target?.type==='wall-note';
-  const interactionHeld=wallNoteFocused?wallNoteFDown:input.interact;
-  const held=retainDrawerTarget(target,holdId,world.targets,interactionHeld);if(held!==target)target=targetInfo(held);
-  if(!interactionHeld){hold=0;holdId=null;latched=false;}
-  else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+delta/target.duration);if(hold>=1){
-   if(target.type==='wall-note')wallNoteReader.open(target.mesh);
-   else if(target.type==='keypad'&&!run.codeAccepted)openKeypad();
-   else if(target.type==='drawer'&&!isHost)drawerRequests.request(run,target.drawerId);
-   else sendAction(target.id);
-   latched=true;hold=0;
-  }}
-  else if(!target){hold=0;holdId=null;}
+  if(!target&&entryProgress.aligned){
+   target={id:'secret-entry-contact',type:'secret-entry-contact',label:'Hold W to push through the wall',hotkey:'W'};
+  }
+  if(target?.type==='secret-entry-contact'){
+   hold=entryProgress.progress;holdId=target.id;latched=false;
+  }else{
+   const interactionHeld=wallNoteFocused?wallNoteFDown:input.interact;
+   const held=retainDrawerTarget(target,holdId,world.targets,interactionHeld);if(held!==target)target=targetInfo(held);
+   if(!interactionHeld){hold=0;holdId=null;latched=false;}
+   else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+delta/target.duration);if(hold>=1){
+    if(target.type==='wall-note')wallNoteReader.open(target.mesh);
+    else if(target.type==='keypad'&&!run.codeAccepted)openKeypad();
+    else if(target.type==='drawer'&&!isHost)drawerRequests.request(run,target.drawerId);
+    else sendAction(target.id);
+    latched=true;hold=0;
+   }}
+   else if(!target){hold=0;holdId=null;}
+  }
   if(!isHost){if(run.phase!=='playing'||own.status!=='alive')drawerRequests.clear();else if(!disconnected)drawerRequests.tick(now/1000);}
   revivePrompts.update({players:state.players.values(),own,camera,elapsed:run.elapsed,targetId:target?.id,progress:latched&&holdId===target?.id?1:hold,active:!ui.overlay&&!document.hidden&&!disconnected&&run.phase==='playing',canSee:world.canSeeInteraction});
   const renderedRun=viewRun(watched),hunting=huntActive(renderedRun);
