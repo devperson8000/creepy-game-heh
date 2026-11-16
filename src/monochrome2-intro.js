@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createSeamlessLoopBuffer } from './seamless-audio-loop.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
@@ -347,20 +348,6 @@ function createSoundscape(){
   active.add(osc);osc.onended=()=>{active.delete(osc);osc.disconnect();level.disconnect();};
   osc.start(startAt);osc.stop(startAt+duration+.03);
  }
- function makeSeamlessLoop(input,fadeSeconds=.38){
-  const fade=Math.max(32,Math.min(Math.floor(input.sampleRate*fadeSeconds),Math.floor(input.length/4)));
-  const middle=input.length-fade*2;if(middle<32)return input;
-  const output=context.createBuffer(input.numberOfChannels,input.length-fade,input.sampleRate);
-  for(let channel=0;channel<input.numberOfChannels;channel++){
-   const source=input.getChannelData(channel),target=output.getChannelData(channel);
-   target.set(source.subarray(fade,input.length-fade),0);
-   for(let i=0;i<fade;i++){
-    const p=i/(fade-1),tail=source[input.length-fade+i],head=source[i];
-    target[middle+i]=tail*Math.cos(p*Math.PI/2)+head*Math.sin(p*Math.PI/2);
-   }
-  }
-  return output;
- }
  function beginLoop(){
   if(disposed||!loopRequested||!loopBuffer||loopSource||context.state==='closed')return;
   const source=context.createBufferSource();source.buffer=loopBuffer;source.loop=true;source.loopStart=0;source.loopEnd=loopBuffer.duration;
@@ -373,7 +360,7 @@ function createSoundscape(){
    const response=await fetch('/audio/monochrome2/noclip-build-12s.mp3');
    if(!response.ok)throw new Error('Could not load the Monochrome 2 sound loop.');
    const decoded=await context.decodeAudioData(await response.arrayBuffer());
-   if(disposed)return;loopBuffer=makeSeamlessLoop(decoded);beginLoop();
+   if(disposed)return;loopBuffer=createSeamlessLoopBuffer(context,decoded);beginLoop();
   }catch(error){console.warn('Monochrome 2 seamless loop unavailable:',error);}
  }
  void loadLoop();
