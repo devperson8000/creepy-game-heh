@@ -322,7 +322,7 @@ export function createSecretRoomWorld() {
     clearcoat: 0.92,
     clearcoatRoughness: 0.09,
     emissive: 0x020503,
-    emissiveIntensity: 0.3
+    emissiveIntensity: 0.55
   });
   resources.add(screenMaterial);
   const glassMaterial = new T.MeshPhysicalMaterial({
@@ -332,7 +332,7 @@ export function createSecretRoomWorld() {
     clearcoat: 1,
     clearcoatRoughness: 0.04,
     transparent: true,
-    opacity: 0.44,
+    opacity: 0.18,
     depthWrite: false
   });
   resources.add(glassMaterial);
@@ -429,8 +429,9 @@ export function createSecretRoomWorld() {
   );
 
 
-  // Visible mains lead, loose plug, outlet and hinged rocker switch.
-  const cableMaterial = makeMaterial({ color: 0x171915, roughness: 0.88 });
+  // Real TV mains lead: strain-relief at the CRT, a loose coil on the carpet,
+  // and a free plug that the player can pick up and carry to the wall socket.
+  const cableMaterial = makeMaterial({ color: 0x171915, roughness: 0.82, metalness: 0.02 });
   const sleeveMaterial = makeMaterial({ color: 0x292b25, roughness: 0.78 });
   const socketMaterial = makeMaterial({ color: 0x9a927d, roughness: 0.84 });
   const socketDark = makeMaterial({ color: 0x171a16, roughness: 0.94 });
@@ -439,6 +440,12 @@ export function createSecretRoomWorld() {
   const switchDark = makeMaterial({ color: 0x4c4a40, roughness: 0.82 });
   const powerGroup = new T.Group();
   scene.add(powerGroup);
+  const floorCableY = 0.014;
+  const cableRadius = 0.0075;
+  const floorTop = -0.005;
+
+  // Recessed outlet with separate contacts, screws, moulded face and a raised
+  // protective lip. The plug prongs finish inside the actual socket opening.
   rounded(0.045,0.205,0.235,3.245,0.565,-1.06,0.018,socketMaterial,powerGroup);
   for(const z of [-1.106,-1.014]){
     const screw=new T.Mesh(new T.CylinderGeometry(.008,.008,.008,16),brass);
@@ -447,8 +454,17 @@ export function createSecretRoomWorld() {
   for(const z of [-1.087,-1.033])rounded(.009,.042,.012,3.216,.565,z,.004,socketDark,powerGroup);
   rounded(.009,.012,.012,3.216,.52,-1.06,.004,socketDark,powerGroup);
 
+  // Moulded cable exit on the rear-right of the CRT housing.
+  rounded(.062,.052,.028,.225,-.12,-.267,.012,tvPlasticLight,tv);
+  const strainRelief = new T.Mesh(new T.CylinderGeometry(.013,.018,.08,16),cableMaterial);
+  strainRelief.rotation.x=Math.PI/2;strainRelief.position.set(.225,-.12,-.302);tv.add(strainRelief);resources.add(strainRelief.geometry);
+
   const powerPlug=new T.Group();
-  powerPlug.name='loose-tv-mains-plug';powerPlug.position.set(2.97,.565,-1.06);powerGroup.add(powerPlug);
+  powerPlug.name='loose-tv-mains-plug';
+  const plugStart=v3(.955,.055,-.985);
+  const plugEnd=v3(3.12,.565,-1.06);
+  powerPlug.position.copy(plugStart);
+  powerGroup.add(powerPlug);
   rounded(.105,.044,.076,0,0,0,.012,sleeveMaterial,powerPlug);
   rounded(.064,.048,.068,-.018,0,0,.014,socketMaterial,powerPlug);
   rounded(.028,.032,.06,-.061,0,0,.01,cableMaterial,powerPlug);
@@ -460,23 +476,91 @@ export function createSecretRoomWorld() {
     const ridge=rounded(.006,.046,.08,-.048-i*.008,0,0,.002,sleeveMaterial,powerPlug);
     ridge.castShadow=false;
   }
-  const cableStart=[
-    v3(.235,tvY-.10,tvZ-.235),v3(.25,.56,-.81),v3(.28,.055,-.92),
-    v3(.58,.019,-.955),v3(1.25,.016,-1.035),v3(2.08,.016,-1.06),v3(2.87,.035,-1.06)
-  ];
-  let cableMesh;
-  function refreshCable(){
-    const end=powerPlug.position.clone().add(v3(-.055,0,0));
-    const geometry=new T.TubeGeometry(new T.CatmullRomCurve3([...cableStart.map(p=>p.clone()),end]),96,.0085,9,false);
-    if(cableMesh){resources.delete(cableMesh.geometry);cableMesh.geometry.dispose();cableMesh.geometry=geometry;}
-    else{cableMesh=new T.Mesh(geometry,cableMaterial);cableMesh.castShadow=true;cableMesh.receiveShadow=true;powerGroup.add(cableMesh);}
-    resources.add(geometry);
+  // A small tactile mould seam and polarity mark make the plug read as a real
+  // two-prong TV mains connector rather than a floating abstract handle.
+  rounded(.003,.031,.052,-.048,.001,.001,.001,brass,powerPlug);
+  const polarity = new T.Mesh(new T.SphereGeometry(.004,10,8),socketDark);
+  polarity.position.set(-.018,.025,.018);powerPlug.add(polarity);resources.add(polarity.geometry);
+
+  function makeCordGeometry(points,segments=100){
+    const curve=new T.CatmullRomCurve3(points,false,'centripetal',.5);
+    const geometry=new T.TubeGeometry(curve,segments,cableRadius,8,false);
+    const position=geometry.attributes.position;
+    // The whole outside of the rubber tube, not just its centreline, is
+    // constrained above the carpet plane so spline smoothing cannot dip below it.
+    const minimumY=floorTop+.004;
+    for(let i=0;i<position.count;i++)if(position.getY(i)<minimumY)position.setY(i,minimumY);
+    position.needsUpdate=true;geometry.computeVertexNormals();
+    return geometry;
   }
-  refreshCable();
-  for(const x of [.42,.78,1.48,2.16,2.78]){
-    const clip=rounded(.035,.016,.026,x,.017,-1.01,.004,iron,powerGroup);clip.castShadow=false;
+  const cableOrigin=v3(.225,tvY-.12,tvZ-.302);
+  const coilCenter=v3(.835,floorCableY,-.985);
+  const coilPoints=[];
+  for(let i=0;i<=180;i++){
+    const p=i/180,angle=p*Math.PI*6.4,radius=.026+.11*p;
+    coilPoints.push(v3(coilCenter.x+Math.cos(angle)*radius,
+      floorCableY+.0015*Math.sin(angle*1.5),
+      coilCenter.z+Math.sin(angle)*radius));
+  }
+  const coilStart=coilPoints[0].clone();
+  const coilTube=makeCordGeometry(coilPoints,220);
+  const coilMesh=new T.Mesh(coilTube,cableMaterial);
+  coilMesh.castShadow=true;coilMesh.receiveShadow=true;coilMesh.renderOrder=4;powerGroup.add(coilMesh);
+  resources.add(coilTube);
+
+  const fixedCablePoints=[
+    cableOrigin.clone(),
+    v3(.36,.91,-.72),
+    v3(.54,.63,-.735),
+    v3(.565,.11,-.755),
+    v3(.66,floorCableY,-.88),
+    coilStart
+  ];
+  const fixedCableGeometry=makeCordGeometry(fixedCablePoints,90);
+  const fixedCableMesh=new T.Mesh(fixedCableGeometry,cableMaterial);
+  fixedCableMesh.castShadow=true;fixedCableMesh.receiveShadow=true;fixedCableMesh.renderOrder=4;powerGroup.add(fixedCableMesh);
+  resources.add(fixedCableGeometry);
+
+  let carriedCableMesh=null;
+  function replaceCarriedCable(points){
+    const geometry=makeCordGeometry(points,150);
+    if(carriedCableMesh){
+      resources.delete(carriedCableMesh.geometry);
+      carriedCableMesh.geometry.dispose();
+      carriedCableMesh.geometry=geometry;
+    }else{
+      carriedCableMesh=new T.Mesh(geometry,cableMaterial);
+      carriedCableMesh.castShadow=true;carriedCableMesh.receiveShadow=true;carriedCableMesh.renderOrder=4;
+      powerGroup.add(carriedCableMesh);
+    }
+    resources.add(geometry);
+    carriedCableMesh.visible=true;
+  }
+  function cablePointsTo(end){
+    const wallRunX=Math.max(.76,Math.min(3.12,end.x));
+    const floorZ=Math.max(-2.95,Math.min(2.95,end.z));
+    const endFoot=v3(wallRunX,floorCableY,floorZ);
+    return [
+      cableOrigin.clone(),
+      v3(.36,.91,-.72),
+      v3(.54,.63,-.735),
+      v3(.565,.11,-.755),
+      v3(.66,floorCableY,-.88),
+      v3(.76,floorCableY,-.985),
+      endFoot,
+      v3(end.x,end.y*.62+floorCableY*.38,end.z),
+      end.clone()
+    ];
+  }
+  function refreshPluggedCable(){
+    replaceCarriedCable([
+      cableOrigin.clone(),v3(.36,.91,-.72),v3(.54,.63,-.735),v3(.565,.11,-.755),
+      v3(.66,floorCableY,-.88),v3(.76,floorCableY,-1.04),v3(2.72,floorCableY,-1.06),
+      v3(3.04,.025,-1.06),plugEnd.clone()
+    ]);
   }
 
+  // The switch and its independent indicator lamp have a physical hinged rocker.
   rounded(.045,.205,.19,3.245,1.105,-1.06,.018,switchMaterial,powerGroup);
   for(const z of [-1.125,-.995]){
     const screw=new T.Mesh(new T.CylinderGeometry(.006,.006,.007,14),brass);
@@ -498,12 +582,34 @@ export function createSecretRoomWorld() {
   const powerLabel=new T.Mesh(new T.PlaneGeometry(.145,.047),labelMaterial);
   powerLabel.rotation.y=-Math.PI/2;powerLabel.position.set(3.195,1.205,-1.06);powerGroup.add(powerLabel);resources.add(powerLabel.geometry);
 
-  const plugStart=v3(2.97,.565,-1.06),plugEnd=v3(3.12,.565,-1.06);
+  const screenGlow = new T.PointLight(0x75ff9a, 0, 2.8, 1.8);
+  screenGlow.position.set(0, tvY + 0.04, tvZ + 0.68);
+  scene.add(screenGlow);
   const powerApi={
-    plug:powerPlug,switchTarget:v3(3.14,1.105,-1.06),plugStart,plugEnd,
-    setPlugProgress(value){
-      const p=Math.max(0,Math.min(1,value)),e=p*p*(3-2*p);
-      powerPlug.position.lerpVectors(plugStart,plugEnd,e);powerPlug.rotation.z=(1-e)*-.08;refreshCable();
+    plug:powerPlug,
+    pickupTarget:powerPlug.position,
+    outletTarget:v3(3.16,.565,-1.06),
+    switchTarget:v3(3.14,1.105,-1.06),
+    beginCableHold(){
+      coilMesh.visible=false;fixedCableMesh.visible=false;
+      if(carriedCableMesh)carriedCableMesh.visible=true;
+    },
+    setHeldPose(position,quaternion){
+      powerPlug.position.copy(position);powerPlug.quaternion.copy(quaternion);
+      const cableEnd=powerPlug.position.clone().add(v3(-.06,0,0));
+      replaceCarriedCable(cablePointsTo(cableEnd));
+    },
+    setPlugInsertion(from,fromQuaternion,progress){
+      const p=Math.max(0,Math.min(1,progress)),e=p*p*(3-2*p);
+      powerPlug.position.lerpVectors(from,plugEnd,e);
+      powerPlug.quaternion.copy(fromQuaternion).slerp(new T.Quaternion(),e);
+      const cableEnd=powerPlug.position.clone().add(v3(-.06,0,0));
+      replaceCarriedCable(cablePointsTo(cableEnd));
+    },
+    setCablePlugged(){
+      powerPlug.position.copy(plugEnd);powerPlug.quaternion.identity();
+      coilMesh.visible=false;fixedCableMesh.visible=false;
+      refreshPluggedCable();
     },
     setSwitchOn(on,progress=1){
       const p=Math.max(0,Math.min(1,progress));switchPivot.rotation.z=(on?.42:0)*p;
@@ -512,10 +618,12 @@ export function createSecretRoomWorld() {
       pilotMaterial.emissiveIntensity=on?1.15:.32;
     },
     setTvPowerState(state){
-      const colors={off:[0x6f3429,0x42130d],booting:[0xc28a42,0x735021],ready:[0x76a66d,0x275b28],playing:[0x76a66d,0x275b28]};
+      const colors={off:[0x6f3429,0x42130d],booting:[0x63d88a,0x1c9d49],ready:[0x76a66d,0x275b28],playing:[0x76a66d,0x275b28]};
       const [color,emissive]=colors[state]??colors.off;
       ledMaterial.color.set(color);ledMaterial.emissive.set(emissive);ledMaterial.emissiveIntensity=state==='off'?.25:1.05;
-      screenMaterial.emissive.set(state==='off'?0x020503:0x0b160f);screenMaterial.emissiveIntensity=state==='off'?.3:.62;
+      screenMaterial.emissive.set(state==='off'?0x020503:0xffffff);
+      screenMaterial.emissiveIntensity=state==='off'?.3:1.45;
+      screenGlow.intensity=state==='off'?0:state==='booting'?1.6:1.8;
     }
   };
 
@@ -658,8 +766,9 @@ export function createSecretRoomWorld() {
   function setTvTexture(textureValue) {
     screenMaterial.map = textureValue;
     screenMaterial.color.set(0xffffff);
-    screenMaterial.emissive.set(0x0c100c);
-    screenMaterial.emissiveIntensity = 0.42;
+    screenMaterial.emissive.set(0xffffff);
+    screenMaterial.emissiveIntensity = 1.45;
+    screenGlow.intensity = 1.8;
     screenMaterial.needsUpdate = true;
   }
   function setTvVideo(video) {
