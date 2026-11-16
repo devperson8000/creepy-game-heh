@@ -1,4 +1,5 @@
 import * as T from 'three';
+import { loadPlayerAvatarAsset, createPlayerAvatar } from './player-avatar.js';
 import { createSecretRoomWorld } from './secretroom-world.js';
 import { createBackroomsPost } from './backrooms-post.js';
 import { createRoomAmbience } from './room-ambience.js';
@@ -32,6 +33,10 @@ export function startSecretRoom(container) {
   const camera = new T.PerspectiveCamera(68, 1, 0.06, 60);
   camera.rotation.order = 'YXZ';
   const player = { x: 0, y: 0, z: 2.55, speed: 0, sprint: false, crouch: false };
+  let hazmatViewmodel=null,hazmatViewmodelError=null;
+  const hazmatGripPosition=new T.Vector3(),hazmatGripQuaternion=new T.Quaternion();
+  const hazmatDesiredGrip=new T.Vector3(),hazmatLocalOffset=new T.Vector3();
+  let hazmatViewmodelBase=null;
   let yaw = 0;
   let pitch = -0.16;
   let time = 0;
@@ -72,6 +77,30 @@ export function startSecretRoom(container) {
   const handPosition = new T.Vector3(0.31, -0.23, -0.58);
   const tempPosition = new T.Vector3();
   const tempQuaternion = new T.Quaternion();
+  const hazmatViewmodelReady=loadPlayerAvatarAsset().then(asset=>{
+    if(disposed)return null;
+    const avatar=createPlayerAvatar(asset,{id:'secretroom-first-person',name:'',slot:0});
+    const isolated=avatar.enableFirstPersonViewmodel();
+    if(!isolated.triangleCount)throw new Error('No right-arm triangles were found in the survivor model.');
+    camera.add(avatar.root);
+    avatar.root.visible=false;
+    avatar.update({x:.1,height:-1.45,z:-.48,yaw:0,pitch:0,torch:false,moving:false},1/60);
+    camera.updateMatrixWorld(true);
+    avatar.getGripWorldTransform(hazmatGripPosition,hazmatGripQuaternion);
+    hazmatDesiredGrip.copy(camera.localToWorld(v3(.5,-.34,-.78)));
+    hazmatLocalOffset.subVectors(hazmatDesiredGrip,hazmatGripPosition);
+    camera.getWorldQuaternion(tempQuaternion).invert();
+    hazmatLocalOffset.applyQuaternion(tempQuaternion);
+    avatar.root.position.add(hazmatLocalOffset);
+    hazmatViewmodelBase=avatar.root.position.clone();
+    avatar.root.visible=false;
+    hazmatViewmodel=avatar;
+    return avatar;
+  }).catch(error=>{
+    hazmatViewmodelError=error;
+    console.error('The actual hazmat first-person arm could not load:',error);
+    return null;
+  });
   const clockText = value => {
     const total = Math.floor(value);
     return String(Math.floor(total / 60)).padStart(2, '0') + ':' +
@@ -285,7 +314,7 @@ export function startSecretRoom(container) {
 
   function currentTarget(){
     if(insertion||tvCameraLocked||cameraTween||plugAnimation||switchAnimation||cablePickupAnimation)return null;
-    if(!powerCableHeld&&!powerCableConnected&&pointTarget(world.power.pickupTarget,2.1,.48))return{id:'cable-pickup',label:'Pick up the TV power cable',duration:.52};
+    if(!powerCableHeld&&!powerCableConnected&&hazmatViewmodel&&pointTarget(world.power.pickupTarget,2.1,.48))return{id:'cable-pickup',label:'Pick up the TV power cable',duration:.52};
     if(powerCableHeld&&!powerCableConnected&&pointTarget(world.power.outletTarget,1.75,.48))return{id:'plug',label:'Plug the TV power cable into the outlet',duration:.72};
     if(powerCableConnected&&!tvPowered&&pointTarget(world.power.switchTarget,1.7,.55))return{id:'power',label:'Turn on the television power',duration:.42};
     if(held){
@@ -446,7 +475,7 @@ export function startSecretRoom(container) {
     if (target.id === 'pickup') beginPickup();
     else if (target.id === 'cable-pickup') {
       powerCableHeld=true;
-      cablePickupAnimation={elapsed:0,duration:.46,from:world.power.plug.position.clone(),fromQuaternion:world.power.plug.quaternion.clone()};
+      cablePickupAnimation={elapsed:0,duration:.52,from:world.power.plug.position.clone(),fromQuaternion:world.power.plug.quaternion.clone()};
       world.power.beginCableHold();
       announce('Gathering the TV power lead. Carry the plug to the wall outlet on the right.');
     }
@@ -558,18 +587,29 @@ export function startSecretRoom(container) {
   }
 
   function updateCarriedPowerCable(delta=0){
-    if(!powerCableHeld||powerCableConnected||plugAnimation||disposed)return;
+    if(!hazmatViewmodel||disposed)return;
+    const active=powerCableHeld||Boolean(cablePickupAnimation)||Boolean(plugAnimation);
+    hazmatViewmodel.root.visible=active;
+    if(!active)return;
     camera.updateMatrixWorld(true);
-    const destination=camera.localToWorld(v3(.5,-.34,-.78));
-    destination.x=clamp(destination.x,-3.14,3.14);
-    destination.z=clamp(destination.z,-3.14,3.14);
-    const destinationQuaternion=camera.getWorldQuaternion(new T.Quaternion());
-    let position=destination,quaternion=destinationQuaternion;
+    hazmatViewmodel.update({
+      x:hazmatViewmodelBase.x,height:hazmatViewmodelBase.y,z:hazmatViewmodelBase.z,
+      yaw:0,pitch:clamp(pitch,-1.1,1.1),torch:false,moving:false
+    },delta);
+    if(plugAnimation){
+      // Keep the real forearm and glove attached while the plug is pressed
+      // into the socket. The existing right-arm IK reaches the moving item.
+      hazmatViewmodel.setGripWorldTransform(world.power.plug.position,world.power.plug.quaternion);
+      return;
+    }
+    if(!powerCableHeld||powerCableConnected)return;
+    hazmatViewmodel.getGripWorldTransform(hazmatGripPosition,hazmatGripQuaternion);
+    let position=hazmatGripPosition,quaternion=hazmatGripQuaternion;
     if(cablePickupAnimation){
       cablePickupAnimation.elapsed+=delta;
       const p=clamp(cablePickupAnimation.elapsed/cablePickupAnimation.duration,0,1),e=p*p*(3-2*p);
-      position=new T.Vector3().lerpVectors(cablePickupAnimation.from,destination,e);
-      quaternion=cablePickupAnimation.fromQuaternion.clone().slerp(destinationQuaternion,e);
+      position=tempPosition.lerpVectors(cablePickupAnimation.from,hazmatGripPosition,e);
+      quaternion=tempQuaternion.copy(cablePickupAnimation.fromQuaternion).slerp(hazmatGripQuaternion,e);
       if(p>=1)cablePickupAnimation=null;
     }
     world.power.setHeldPose(position,quaternion);
@@ -695,6 +735,7 @@ export function startSecretRoom(container) {
     document.exitPointerLock?.();
     for (const remove of listeners) remove();
     ambience.dispose();
+    hazmatViewmodel?.dispose();
     tvStaticAudio.pause();
     teaserPlayback?.dispose();
     tvTexture?.dispose();
