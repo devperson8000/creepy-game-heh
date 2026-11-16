@@ -42,7 +42,7 @@ export const SECRET_ENTRY = Object.freeze({
   // This covers the reachable right-hand edge of the stair corridor, not a
   // tiny point the player can accidentally pass without noticing.
   minX: -3.34,
-  maxX: -2.35,
+  maxX: -2.8,
   minZ: -6.0,
   maxZ: -1.2,
   minHeight: -5.5,
