@@ -80,26 +80,33 @@ export function startSecretRoom(container,{autostart=false}={}) {
   const tempQuaternion = new T.Quaternion();
   const hazmatViewmodelReady=loadPlayerAvatarAsset().then(asset=>{
     if(disposed)return null;
-    const avatar=createPlayerAvatar(asset,{id:'secretroom-first-person',name:'',slot:0});
-    const isolated=avatar.enableFirstPersonViewmodel();
-    if(!isolated.triangleCount)throw new Error('No right-arm triangles were found in the survivor model.');
-    camera.add(avatar.root);
-    avatar.root.visible=false;
-    avatar.update({x:.1,height:-1.45,z:-.48,yaw:0,pitch:0,torch:false,moving:false},1/60);
-    camera.updateMatrixWorld(true);
-    avatar.getGripWorldTransform(hazmatGripPosition,hazmatGripQuaternion);
-    hazmatDesiredGrip.copy(camera.localToWorld(v3(.5,-.34,-.78)));
-    hazmatLocalOffset.subVectors(hazmatDesiredGrip,hazmatGripPosition);
-    camera.getWorldQuaternion(tempQuaternion).invert();
-    hazmatLocalOffset.applyQuaternion(tempQuaternion);
-    avatar.root.position.add(hazmatLocalOffset);
-    hazmatViewmodelBase=avatar.root.position.clone();
-    avatar.root.visible=false;
-    hazmatViewmodel=avatar;
-    return avatar;
+    let avatar=null;
+    try{
+      avatar=createPlayerAvatar(asset,{id:'secretroom-first-person',name:'',slot:0});
+      const isolated=avatar.enableFirstPersonViewmodel();
+      if(!isolated.triangleCount)throw new Error('No right-arm triangles were found in the survivor model.');
+      camera.add(avatar.root);
+      avatar.root.visible=false;
+      avatar.update({x:.1,height:-1.45,z:-.48,yaw:0,pitch:0,torch:false,moving:false},1/60);
+      camera.updateMatrixWorld(true);
+      avatar.getGripWorldTransform(hazmatGripPosition,hazmatGripQuaternion);
+      hazmatDesiredGrip.copy(camera.localToWorld(v3(.5,-.34,-.78)));
+      hazmatLocalOffset.subVectors(hazmatDesiredGrip,hazmatGripPosition);
+      camera.getWorldQuaternion(tempQuaternion).invert();
+      hazmatLocalOffset.applyQuaternion(tempQuaternion);
+      avatar.root.position.add(hazmatLocalOffset);
+      hazmatViewmodelBase=avatar.root.position.clone();
+      avatar.root.visible=false;
+      hazmatViewmodel=avatar;
+      return avatar;
+    }catch(error){
+      avatar?.dispose();
+      throw error;
+    }
   }).catch(error=>{
     hazmatViewmodelError=error;
     console.error('The actual hazmat first-person arm could not load:',error);
+    announce('The hazmat character arm could not be loaded. Reload the room to try again.');
     return null;
   });
   const clockText = value => {
