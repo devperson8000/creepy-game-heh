@@ -1,8 +1,10 @@
 import {createTeaserAudio} from './teaser-audio.js';
 import {reducedMotion} from './preferences.js';
+
 export const ARRIVAL_DURATION=10.8;
 const clamp=x=>Math.max(0,Math.min(1,x));
 const ease=(a,b,t)=>{const x=clamp((t-a)/(b-a));return x*x*(3-2*x);};
+
 export function arrivalFrame(time,{halloween=false}={}){
  const t=Math.max(0,Number.isFinite(time)?time:0),wake=ease(9.1,10.7,t);
  let openness=ease(6.75,7.35,t)*.66;
@@ -10,20 +12,64 @@ export function arrivalFrame(time,{halloween=false}={}){
   if(t>=a&&t<c)openness*=t<b?1-ease(a,b,t):ease(b,c,t);
  }
  openness+=(1-openness)*ease(8.48,9.1,t);
- return {dialogue:halloween&&t>=8.85&&t<ARRIVAL_DURATION?"I wasn’t wearing this suit.":'',done:t>=ARRIVAL_DURATION,black:1-ease(6.55,6.95,t),openness:clamp(openness),eyeHeight:.22+1.43*wake,roll:wake===1?0:-.75*(1-wake),pitch:.48*(1-wake)+Math.sin(t*2)*.015*(1-wake),sway:(1-wake)*Math.sin(t*1.7)*.025};
+ return {
+  dialogue:halloween&&t>=8.85&&t<ARRIVAL_DURATION?"I wasn’t wearing this suit.":'',
+  done:t>=ARRIVAL_DURATION,
+  openness:clamp(openness),
+  eyeHeight:.22+1.43*wake,
+  roll:wake===1?0:-.75*(1-wake),
+  pitch:.48*(1-wake)+Math.sin(t*2)*.015*(1-wake),
+  sway:(1-wake)*Math.sin(t*1.7)*.025
+ };
 }
+
 export function createArrival({halloween=false}={}){
- const root=document.createElement('div');root.id='arrival';root.setAttribute('aria-label','Descending into Monochrome');root.innerHTML='<div class="arrival-void" aria-hidden="true"></div><div class="arrival-lid arrival-upper" aria-hidden="true"></div><div class="arrival-lid arrival-lower" aria-hidden="true"></div><div class="arrival-haze" aria-hidden="true"></div><p class="arrival-discovery" role="status"></p>';
- document.body.append(root);document.body.classList.add('arrival-active');
- const reduced=reducedMotion();let elapsed=reduced?9.1:6.95,active=true,voiceAt=null;
- const caption=root.querySelector('.arrival-discovery'),voice=halloween?createTeaserAudio({voices:[{at:0,end:2,file:'arrival-suit-v1'}],soundCues:[],monsterCue:null,footsteps:false}):null;voice?.resume();
- function update(delta,camera,player,{muted=false,volume=.8}={}){
-  if(!active)return false;elapsed+=Math.max(0,Math.min(1,delta));
-  const p=arrivalFrame(elapsed,{halloween});if(caption.textContent!==p.dialogue)caption.textContent=p.dialogue;if(p.dialogue){voiceAt??=elapsed;voice?.update(elapsed-voiceAt,{muted,volume});}else voice?.pause();
-  root.style.setProperty('--arrival-black',p.black);root.style.setProperty('--arrival-opening',p.openness);root.style.setProperty('--arrival-haze',String((1-p.openness)*.22));
-  camera.position.set(player.x+p.sway*(reduced?0:1),player.height+p.eyeHeight,player.z);camera.rotation.set(reduced?0:p.pitch,player.yaw??Math.PI,reduced?0:p.roll,'YXZ');camera.fov=66+(1-p.openness)*4;camera.updateProjectionMatrix();
-  if(p.done){dispose();return true;}return false;
+ const root=document.createElement('div');
+ root.id='arrival';
+ root.setAttribute('aria-label','Waking up');
+ root.innerHTML='<div class="arrival-lid arrival-upper" aria-hidden="true"></div><div class="arrival-lid arrival-lower" aria-hidden="true"></div><div class="arrival-haze" aria-hidden="true"></div><p class="arrival-discovery" role="status"></p>';
+ const upper=root.querySelector('.arrival-upper'),lower=root.querySelector('.arrival-lower');
+ const reduced=reducedMotion();
+ // Start at the final eyelid opening, immediately before the camera lifts.
+ // The earlier black/title sequence is intentionally skipped.
+ let elapsed=reduced?ARRIVAL_DURATION-.01:8.48,active=true,voiceAt=null;
+ const caption=root.querySelector('.arrival-discovery');
+ const voice=halloween?createTeaserAudio({voices:[{at:0,end:2,file:'arrival-suit-v1'}],soundCues:[],monsterCue:null,footsteps:false}):null;
+ voice?.resume();
+
+ function applyFrame(p){
+  // Direct transforms avoid CSS calc multiplication, which can leave both lids shut.
+  const travel=p.openness*103;
+  upper.style.transform=`translateY(-${travel}%)`;
+  lower.style.transform=`translateY(${travel}%)`;
+  root.style.setProperty('--arrival-haze',String((1-p.openness)*.22));
  }
- function dispose(){if(!active)return;active=false;voice?.dispose();root.remove();document.body.classList.remove('arrival-active');}
+ const initial=arrivalFrame(elapsed,{halloween});
+ applyFrame(initial);
+ document.body.append(root);
+ document.body.classList.add('arrival-active');
+
+ function update(delta,camera,player,{muted=false,volume=.8}={}){
+  if(!active)return false;
+  elapsed+=Math.max(0,Math.min(1,delta));
+  const p=arrivalFrame(elapsed,{halloween});
+  if(caption.textContent!==p.dialogue)caption.textContent=p.dialogue;
+  if(p.dialogue){voiceAt??=elapsed;voice?.update(elapsed-voiceAt,{muted,volume});}
+  else voice?.pause();
+  applyFrame(p);
+  camera.position.set(player.x+p.sway*(reduced?0:1),player.height+p.eyeHeight,player.z);
+  camera.rotation.set(reduced?0:p.pitch,player.yaw??Math.PI,reduced?0:p.roll,'YXZ');
+  camera.fov=66+(1-p.openness)*4;
+  camera.updateProjectionMatrix();
+  if(p.done){dispose();return true;}
+  return false;
+ }
+ function dispose(){
+  if(!active)return;
+  active=false;
+  voice?.dispose();
+  root.remove();
+  document.body.classList.remove('arrival-active');
+ }
  return {update,dispose,pause:()=>voice?.pause(),get active(){return active;},get elapsed(){return elapsed;}};
 }
