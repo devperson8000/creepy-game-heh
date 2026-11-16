@@ -22,8 +22,9 @@ import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {createSoundOcclusion} from './sound-occlusion.js';
-import {advanceSecretEntryCharge} from './secret-entry.js';
+import {advanceSecretEntryCharge,SECRET_ROOM_PLACEMENT} from './secret-entry.js';
 import {createSecretEntryCinematic} from './secret-entry-cinematic.js';
+import {startSecretRoom} from './secretroom.js';
 
 export function startGame(container,{seed,autostart=false,halloween=false,mapUpdate=false}={}){
  const ambience=createRoomAmbience({halloween});
@@ -43,7 +44,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);let surfaceDistance=Infinity;
  let enemy=createEnemy(run.layout),player={id:'solo',name:'You',slot:0,status:'alive',x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
- let secretCharge=0,entryCinematic=null;
+ let secretCharge=0,entryCinematic=null,secretRoomActive=false,secretRoomExperience=null;
  const soloState={seed,run,players:new Map([['solo',player]]),closets:new Map()};let ending=null,endingAsset=null,endingFailed=false,endingFinished=false;
  function beginHouseEscape(){
   if(!beginFinale(soloState,Date.now()/1000,{requested:true}))return false;
@@ -55,6 +56,19 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void monsterAudio.resume();void ambience.resume();});
  const questUI=createHalloweenQuestUI(ui.root,run);
  const experience=createHalloweenExperience({renderer,camera,run,input,ui,world,torch,players:()=>[player],onReturn:()=>{if(Math.hypot(player.x,player.z-3.4)<2)interactHalloween(run,'halloween:return');},onMute:()=>toggleSound(),isMuted:()=>monsterAudio.muted});
+ if(run.layout.narrowMaze){
+  secretRoomExperience=startSecretRoom(container,{
+   embedded:{
+    renderer,camera,scene:world.scene,
+    position:new THREE.Vector3(SECRET_ROOM_PLACEMENT.centerX,run.layout.floorHeight??SECRET_ROOM_PLACEMENT.floorY,SECRET_ROOM_PLACEMENT.centerZ),
+    rotationY:SECRET_ROOM_PLACEMENT.yaw,
+    onActivate(){
+     secretRoomActive=true;ui.overlay='secret-room';ui.root.hidden=true;input.clear();
+     monsterAudio.pause();ambience.pause();if(torch.on)torch.toggle();
+    }
+   }
+  });
+ }
  let inB2=false;
  let pendingNoise=[],noiseUntil=0;const footsteps={distance:0};
  function emitNoise(noise){if(!noise)return;monsterAudio.playNoise(noise.type);player.noise=noise.radius>12?'Loud':noise.radius>4?'Audible':'Quiet';noiseUntil=performance.now()+1000;if(huntActive(run))pendingNoise.push(noise);}
@@ -78,7 +92,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
   if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}
  });
 document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'||ui.overlay==='halloween'))toggleSound();});
- window.addEventListener('pagehide',()=>{ending?.dispose();entryCinematic?.dispose();experience.dispose();questUI.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
+ window.addEventListener('pagehide',()=>{ending?.dispose();entryCinematic?.dispose();secretRoomExperience?.dispose();experience.dispose();questUI.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
  function closeKeypad(){void monsterAudio.resume();void ambience.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
  function submitCode(){if(enterCode(run,buffer)){ui.feedback(run.halloween?'Code accepted. Complete the four key locks to unlock the house service exit.':'Code accepted. Complete the four key locks to open the elevator.','success');monsterAudio.playNoise('keypad');ui.toast('Code accepted.');closeKeypad();}else{ui.feedback('Access denied. Read the four digits from this run.');buffer='';ui.el('code-display').textContent='— — — —';}}
@@ -133,6 +147,11 @@ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repea
    renderer.render(world.scene,camera);
    return;
   }
+  if(secretRoomActive){
+   secretRoomExperience.update(frameDelta);
+   secretRoomExperience.render();
+   return;
+  }
   questUI.update();
   if(run.finale?.variant==='house'&&!endingFinished){
    advanceFinale(soloState,Date.now()/1000);
@@ -180,7 +199,12 @@ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repea
      scene:world.scene,camera,
      position:{x:player.x,z:player.z,height:player.height},
      yaw:input.yaw,
-     onComplete(){window.location.assign('/secretroom?entry=1');}
+     roomRoot:secretRoomExperience.world.root,
+     onComplete(){
+      entryCinematic?.dispose();
+      entryCinematic=null;
+      secretRoomExperience.activate();
+     }
     });
    }
    let target=run.phase==='playing'?currentTarget():null;

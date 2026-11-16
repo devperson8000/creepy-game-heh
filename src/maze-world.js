@@ -5,7 +5,7 @@ import {CELL,worldPoint,gridPoint,walkable,groundHeight as sampleGround,randomSo
 import {createMazeNavigator} from './maze-navigation.js';
 import {createProximityLighting} from './proximity-lighting.js';
 import {createWallNotes} from './wall-notes.js';
-import {WALL_INSCRIPTION_REVERSED} from './secret-entry.js';
+import {WALL_INSCRIPTION_REVERSED,SECRET_ROOM_BOUNDS,SECRET_ROOM_PLACEMENT,SECRET_ROOM_LAYOUT} from './secret-entry.js';
 
 export function createMazeWorld(run){
  const layout=run.layout,floor=layout.floorHeight,height=layout.ceilingHeight,size=layout.size;
@@ -18,14 +18,29 @@ export function createMazeWorld(run){
  const boxGeometry=new THREE.BoxGeometry(1,1,1);
  function box(w,h,d,x,y,z,mat=concrete,parent=scene){const m=new THREE.Mesh(boxGeometry,mat);m.scale.set(w,h,d);m.position.set(x,y,z);m.receiveShadow=true;parent.add(m);rayMeshes.push(m);return m;}
  function collider(x,z,w,d,enabled=()=>true,wall=false){blockers.push({x,z,w,d,enabled,wall});}
+ function slabWithOpening(minX,maxX,minZ,maxZ,hole,centerY,thickness,material){
+  const h={minX:Math.max(minX,hole.minX),maxX:Math.min(maxX,hole.maxX),minZ:Math.max(minZ,hole.minZ),maxZ:Math.min(maxZ,hole.maxZ)};
+  if(h.maxX<=h.minX||h.maxZ<=h.minZ){box(maxX-minX,thickness,maxZ-minZ,(minX+maxX)/2,centerY,(minZ+maxZ)/2,material);return;}
+  const pieces=[
+   [minX,h.minX,minZ,maxZ],
+   [h.maxX,maxX,minZ,maxZ],
+   [h.minX,h.maxX,minZ,h.minZ],
+   [h.minX,h.maxX,h.maxZ,maxZ]
+  ];
+  for(const [x0,x1,z0,z1] of pieces)if(x1-x0>.01&&z1-z0>.01)box(x1-x0,thickness,z1-z0,(x0+x1)/2,centerY,(z0+z1)/2,material);
+ }
  function target(id,type,mesh,data={}){const t={id,type,mesh,...data};mesh.userData.interactId=id;targets.set(id,t);return t;}
  function sign(text,w,h,x,y,z,{rotation=0,background='#171e17',color='#aaa993',size=58}={}){const c=document.createElement('canvas');c.width=768;c.height=256;const ctx=c.getContext('2d');ctx.fillStyle=background;ctx.fillRect(0,0,768,256);ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`${size}px monospace`;ctx.fillText(text,384,128,720);const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map,side:THREE.DoubleSide,roughness:1}));mesh.position.set(x,y,z);mesh.rotation.y=rotation;scene.add(mesh);rayMeshes.push(mesh);return mesh;}
  function fixture(x,y,z,strength=8){box(.72,.07,.2,x,y+.04,z,dark);const tube=box(.6,.025,.12,x,y,z,white.clone());tube.userData.ceilingLight=true;const light=new THREE.PointLight(0xd7d9be,strength,7,1.7);light.position.set(x,y-.08,z);lamps.push({light,tube,base:strength,position:{x,z,height:groundHeight({x,z})}});}
  const halfWall=(x,z)=>mazeWallHalf(layout,x,z),wallSurfaces=buildMazeWallSurfaces(layout);
  for(const geometry of wallSurfaces.geometries){const mesh=new THREE.Mesh(geometry,concrete);mesh.name='joined-maze-wall';mesh.userData.mazeWall=true;mesh.receiveShadow=true;scene.add(mesh);rayMeshes.push(mesh);}
  const first=worldPoint({x:0,z:layout.mazeStart}),last=worldPoint({x:size-1,z:size-1}),center={x:(first.x+last.x)/2,z:(first.z+last.z)/2};
- box(size*CELL,.12,(size-layout.mazeStart)*CELL,center.x,floor-.06,center.z,floorMat);
- const roofStart=worldPoint({x:0,z:7}).z-CELL/2,roofEnd=last.z+CELL/2;box(size*CELL,.12,roofEnd-roofStart,center.x,floor+height+.06,(roofStart+roofEnd)/2);
+ const floorMinX=center.x-size*CELL/2,floorMaxX=center.x+size*CELL/2;
+ const floorMinZ=center.z-(size-layout.mazeStart)*CELL/2,floorMaxZ=center.z+(size-layout.mazeStart)*CELL/2;
+ slabWithOpening(floorMinX,floorMaxX,floorMinZ,floorMaxZ,SECRET_ROOM_BOUNDS,floor-.06,.12,floorMat);
+ const roofStart=worldPoint({x:0,z:7}).z-CELL/2,roofEnd=last.z+CELL/2;
+ const roofHole={...SECRET_ROOM_BOUNDS,minZ:Math.max(roofStart,SECRET_ROOM_BOUNDS.minZ),maxZ:Math.min(roofEnd,SECRET_ROOM_BOUNDS.maxZ)};
+ slabWithOpening(floorMinX,floorMaxX,roofStart,roofEnd,roofHole,floor+height+.06,.12,concrete);
  // Elevator hub, stair corridor, and enclosed cab are on the upper floor.
  box(12,.15,8,-2.6,3.525,-29,floorMat);box(12,.15,8,-2.6,7.85,-29);
  box(.2,4.4,8,-8.6,5.8,-29);box(.2,4.4,8,3.4,5.8,-29);
@@ -36,7 +51,13 @@ export function createMazeWorld(run){
  const stair=layout.stairs,length=stair.bottomZ-stair.topZ,drop=stair.topHeight-stair.bottomHeight;
  for(let i=0;i<64;i++){const z=stair.topZ+(i+.5)*length/64,y=stair.topHeight-drop*i/64;box(stair.width,y-floor+.12,length/64,stair.x,(floor+y)/2-.06,z,floorMat);}
  const ceiling=box(stair.width+.2,.14,Math.hypot(length,drop),stair.x,(stair.topHeight+stair.bottomHeight)/2+2.65,(stair.topZ+stair.bottomZ)/2);ceiling.rotation.x=Math.atan2(drop,length);
- for(const x of [stair.x-stair.width/2-.1,stair.x+stair.width/2+.1])box(.2,15,length,x,.3,(stair.topZ+stair.bottomZ)/2);
+ const leftWallX=stair.x-stair.width/2-.1,rightWallX=stair.x+stair.width/2+.1;
+ const wallCutStart=Math.max(stair.topZ,SECRET_ROOM_BOUNDS.minZ),wallCutEnd=Math.min(stair.bottomZ,SECRET_ROOM_BOUNDS.maxZ);
+ for(const [a,b] of [[stair.topZ,wallCutStart],[wallCutEnd,stair.bottomZ]])if(b-a>.05)box(.2,15,b-a,leftWallX,.3,(a+b)/2);
+ const stairWallBottom=.3-15/2,stairWallTop=.3+15/2,roomWallTop=SECRET_ROOM_PLACEMENT.floorY+SECRET_ROOM_PLACEMENT.height;
+ const upperWallHeight=Math.max(0,stairWallTop-Math.max(stairWallBottom,roomWallTop));
+ if(upperWallHeight>.05)box(.2,upperWallHeight,Math.max(.05,wallCutEnd-wallCutStart),leftWallX,(Math.max(stairWallBottom,roomWallTop)+stairWallTop)/2,(wallCutStart+wallCutEnd)/2);
+ box(.2,15,length,rightWallX,.3,(stair.topZ+stair.bottomZ)/2);
  // Leave the descent clear: no hanging signs or decorative panels over the steps.
  fixture(-2.6,7.6,-29,25);fixture(-2.6,1,-13.8,4);
  const boards=[];
@@ -142,6 +163,8 @@ export function createMazeWorld(run){
  const ceilingLights=Array.from({length:6},()=>{const light=new THREE.PointLight(0xd7d9be,0,7,1.7);scene.add(light);return light;});
  let doorProgress=0,selection=[],lastX=Infinity,lastZ=Infinity;
  function domain(x,z,radius){
+  const secretCell=gridPoint({x,z});
+  if(secretCell.x>=SECRET_ROOM_LAYOUT.interiorMinCellX&&secretCell.x<=SECRET_ROOM_LAYOUT.interiorMaxCellX&&secretCell.z>=SECRET_ROOM_LAYOUT.minCellZ&&secretCell.z<=SECRET_ROOM_LAYOUT.maxCellZ)return false;
   if(z<=-25&&z>=-33&&x>=-8.5+radius&&x<=3.3-radius)return true;
   if(z<-32.5&&z>=-35.29+radius&&x>=-3.59+radius&&x<=-1.61-radius)return true;
   if(z>=layout.stairs.topZ-.1&&z<=layout.stairs.bottomZ+.1&&Math.abs(x+2.6)<=layout.stairs.width/2-radius)return true;

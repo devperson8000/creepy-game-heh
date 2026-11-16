@@ -4,9 +4,9 @@ const round=n=>Math.round(n*1e5)/1e5,roomCache=new WeakMap();
 export function mazeWallHalf(layout,x,z){let rooms=roomCache.get(layout);if(!rooms){rooms=new Set(layout.rooms.map(p=>`${p.x},${p.z}`));roomCache.set(layout,rooms);}return CELL/2+([[1,0],[-1,0],[0,1],[0,-1]].some(([dx,dz])=>rooms.has(`${x+dx},${z+dz}`))?.1:.4);}
 /** Exterior of the wall/closet solid union. Adjacent blocks never draw coincident faces. */
 export function buildMazeWallSurfaces(layout){
- const boxes=[],floor=layout.floorHeight,height=layout.ceilingHeight,closets=new Set(layout.closets.map(c=>`${c.x},${c.z}`));
+ const boxes=[],floor=layout.floorHeight,height=layout.ceilingHeight,closets=new Set(layout.closets.map(c=>`${c.x},${c.z}`)),secretWallCells=new Set(layout.secretRoomLayout?.wallCells??[]);
  function box(x,y,z,w,h,d){boxes.push({min:[x-w/2,y-h/2,z-d/2].map(round),max:[x+w/2,y+h/2,z+d/2].map(round)});}
- for(let z=layout.mazeStart;z<layout.size;z++)for(let x=0;x<layout.size;x++)if(!layout.grid[z][x]&&!closets.has(`${x},${z}`)){const p=worldPoint({x,z}),w=mazeWallHalf(layout,x,z)*2;box(p.x,floor+height/2,p.z,w,height,w);}
+ for(let z=layout.mazeStart;z<layout.size;z++)for(let x=0;x<layout.size;x++)if(!layout.grid[z][x]&&!closets.has(`${x},${z}`)&&!secretWallCells.has(`${x},${z}`)){const p=worldPoint({x,z}),w=mazeWallHalf(layout,x,z)*2;box(p.x,floor+height/2,p.z,w,height,w);}
  for(const c of layout.closets){const p=worldPoint(c),n=c.normal,w=mazeWallHalf(layout,c.x,c.z)*2,side=(w-1.12)/2;
   const local=(x,y,z,sx,sy,sz)=>box(p.x+n.z*x+n.x*z,floor+y,p.z-n.x*x+n.z*z,Math.abs(n.z)*sx+Math.abs(n.x)*sz,sy,Math.abs(n.x)*sx+Math.abs(n.z)*sz);
   for(const sign of [-1,1])local(sign*(.56+side/2),height/2,0,side,height,w);

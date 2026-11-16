@@ -12,26 +12,37 @@ import './secretroom.css';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const v3 = (x, y, z) => new T.Vector3(x, y, z);
 
-export function startSecretRoom(container,{autostart=false}={}) {
-  document.title = 'MONOCHROME — The Secret Room';
+export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
+  if(!embedded)document.title = 'MONOCHROME — The Secret Room';
   document.body.classList.add('secretroom-page');
-  container.setAttribute('aria-label', 'A small enclosed Backrooms room containing an old television and VHS cassette');
+  if(!embedded)container.setAttribute('aria-label', 'A small enclosed Backrooms room containing an old television and VHS cassette');
 
-  const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
-  renderer.outputColorSpace = T.SRGBColorSpace;
-  renderer.toneMapping = T.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.12;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = T.PCFSoftShadowMap;
+  const renderer = embedded?.renderer ?? new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  if(!embedded){
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.6));
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.12;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = T.PCFSoftShadowMap;
+    container.append(renderer.domElement);
+  }
   renderer.domElement.tabIndex = 0;
-  renderer.domElement.setAttribute('aria-label', 'Secret room game view');
-  container.append(renderer.domElement);
-
-  const world = createSecretRoomWorld();
+  renderer.domElement.setAttribute('aria-label', embedded ? 'Main game view — Secret Room' : 'Secret room game view');
+  const world = createSecretRoomWorld(embedded ? {
+    parent: embedded.scene,
+    position: embedded.position,
+    rotationY: embedded.rotationY
+  } : {});
+  const renderScene = embedded?.scene ?? world.scene;
+  const roomRoot = world.root ?? world.scene;
   const post = createBackroomsPost(renderer);
-  const camera = new T.PerspectiveCamera(68, 1, 0.06, 60);
+  const camera = embedded?.camera ?? new T.PerspectiveCamera(68, 1, 0.06, 60);
   camera.rotation.order = 'YXZ';
+  const originalSceneBackground = embedded?.scene?.background ?? null;
+  const originalSceneFog = embedded?.scene?.fog ?? null;
+  const originalRendererExposure = renderer.toneMappingExposure;
+  let sceneActivated = false;
   const player = { x: 0, y: 0, z: 2.55, speed: 0, sprint: false, crouch: false };
   let hazmatViewmodel=null,hazmatViewmodelError=null;
   const hazmatGripPosition=new T.Vector3(),hazmatGripQuaternion=new T.Quaternion();
@@ -67,7 +78,7 @@ export function startSecretRoom(container,{autostart=false}={}) {
   const tapeModel = world.createVhsModel();
   tapeModel.position.set(0.86, 0.115, 1.02);
   tapeModel.rotation.set(0.045, 0.28, 0.16);
-  world.scene.add(tapeModel);
+  roomRoot.add(tapeModel);
   const body = createVhsBody(
     { x: tapeModel.position.x, y: tapeModel.position.y, z: tapeModel.position.z },
     { x: tapeModel.quaternion.x, y: tapeModel.quaternion.y, z: tapeModel.quaternion.z, w: tapeModel.quaternion.w }
@@ -78,6 +89,21 @@ export function startSecretRoom(container,{autostart=false}={}) {
   const handPosition = new T.Vector3(0.31, -0.23, -0.58);
   const tempPosition = new T.Vector3();
   const tempQuaternion = new T.Quaternion();
+  const roomWorldQuaternion = () => {
+    roomRoot.updateMatrixWorld(true);
+    return roomRoot.getWorldQuaternion(new T.Quaternion());
+  };
+  const worldPointToRoom = value => {
+    roomRoot.updateMatrixWorld(true);
+    return roomRoot.worldToLocal(value.clone());
+  };
+  const roomPointToWorld = value => {
+    roomRoot.updateMatrixWorld(true);
+    return roomRoot.localToWorld(value.clone());
+  };
+  const worldQuaternionToRoom = value => roomWorldQuaternion().invert().multiply(value.clone());
+  const roomQuaternionToWorld = value => roomWorldQuaternion().multiply(value.clone());
+  const worldDirectionToRoom = value => value.clone().applyQuaternion(roomWorldQuaternion().invert()).normalize();
   const hazmatViewmodelReady=loadPlayerAvatarAsset().then(asset=>{
     if(disposed)return null;
     let avatar=null;
@@ -165,6 +191,7 @@ export function startSecretRoom(container,{autostart=false}={}) {
       '</section>' +
     '</div>';
   document.body.append(root);
+  if(embedded)root.hidden = true;
 
   const el = selector => root.querySelector(selector);
   const on = (target, event, callback, options) => {
@@ -204,8 +231,8 @@ export function startSecretRoom(container,{autostart=false}={}) {
     if(!tvReturnPose)tvReturnPose={position:camera.position.clone(),quaternion:camera.quaternion.clone(),fov:camera.fov};
     tvCameraLocked=true;keys.clear();document.exitPointerLock?.();root.classList.add('sr-tv-focus');
     world.tv.screen.updateWorldMatrix(true,false);
-    const screen=world.tv.screen.getWorldPosition(new T.Vector3());
-    const normal=world.tv.screen.getWorldDirection(new T.Vector3()).normalize();
+    const screen=worldPointToRoom(world.tv.screen.getWorldPosition(new T.Vector3()));
+    const normal=worldDirectionToRoom(world.tv.screen.getWorldDirection(new T.Vector3()));
     const distance=.52;
     const halfViewHeight=Math.max(.326/2,.456/(2*camera.aspect));
     const fov=2*Math.atan(halfViewHeight/distance)*180/Math.PI;
@@ -264,7 +291,7 @@ export function startSecretRoom(container,{autostart=false}={}) {
   function resize() {
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
-    renderer.setSize(width, height);
+    if(!embedded)renderer.setSize(width, height);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     post.resize(width, height);
@@ -309,7 +336,7 @@ export function startSecretRoom(container,{autostart=false}={}) {
 
   function cameraDirection() {
     camera.getWorldDirection(worldDirection);
-    return worldDirection.normalize();
+    return worldDirectionToRoom(worldDirection);
   }
 
   function pointTarget(position, maxDistance, minFacing) {
@@ -358,9 +385,9 @@ export function startSecretRoom(container,{autostart=false}={}) {
     tapeModel.getWorldPosition(tempPosition);
     tapeModel.getWorldQuaternion(tempQuaternion);
     camera.remove(tapeModel);
-    world.scene.add(tapeModel);
-    tapeModel.position.copy(tempPosition);
-    tapeModel.quaternion.copy(tempQuaternion);
+    roomRoot.add(tapeModel);
+    tapeModel.position.copy(worldPointToRoom(tempPosition));
+    tapeModel.quaternion.copy(worldQuaternionToRoom(tempQuaternion));
   }
 
   function startInsertion(mode) {
@@ -371,19 +398,19 @@ export function startSecretRoom(container,{autostart=false}={}) {
       tapeModel.getWorldPosition(from);
       tapeModel.getWorldQuaternion(fromQuaternion);
       camera.remove(tapeModel);
-      world.scene.add(tapeModel);
-      tapeModel.position.copy(from);
-      tapeModel.quaternion.copy(fromQuaternion);
+      roomRoot.add(tapeModel);
+      tapeModel.position.copy(worldPointToRoom(from));
+      tapeModel.quaternion.copy(worldQuaternionToRoom(fromQuaternion));
     } else {
       from.copy(tapeModel.position);
       fromQuaternion.copy(tapeModel.quaternion);
     }
     const to = mode === 'insert'
       ? world.tv.slot.position.clone().add(v3(0, 0, -0.045))
-      : camera.localToWorld(handPosition.clone());
+      : worldPointToRoom(camera.localToWorld(handPosition.clone()));
     const toQuaternion = mode === 'insert'
       ? new T.Quaternion()
-      : camera.getWorldQuaternion(new T.Quaternion());
+      : worldQuaternionToRoom(camera.getWorldQuaternion(new T.Quaternion()));
     insertion = {
       mode,
       progress: 0,
@@ -605,25 +632,21 @@ export function startSecretRoom(container,{autostart=false}={}) {
       yaw:0,pitch:clamp(pitch,-1.1,1.1),torch:false,moving:false
     },delta);
     if(plugAnimation){
-      // Keep the real forearm and glove attached while the plug is pressed
-      // into the socket. The existing right-arm IK reaches the moving item.
-      hazmatViewmodel.setGripWorldTransform(world.power.plug.position,world.power.plug.quaternion);
+      hazmatViewmodel.setGripWorldTransform(roomPointToWorld(world.power.plug.position),roomQuaternionToWorld(world.power.plug.quaternion));
       return;
     }
     if(!powerCableHeld||powerCableConnected)return;
     hazmatViewmodel.getGripWorldTransform(hazmatGripPosition,hazmatGripQuaternion);
-    let position=hazmatGripPosition,quaternion=hazmatGripQuaternion;
+    let position=worldPointToRoom(hazmatGripPosition),quaternion=worldQuaternionToRoom(hazmatGripQuaternion);
     if(cablePickupAnimation){
       cablePickupAnimation.elapsed+=delta;
       const p=clamp(cablePickupAnimation.elapsed/cablePickupAnimation.duration,0,1),e=p*p*(3-2*p);
-      position=tempPosition.lerpVectors(cablePickupAnimation.from,hazmatGripPosition,e);
-      quaternion=tempQuaternion.copy(cablePickupAnimation.fromQuaternion).slerp(hazmatGripQuaternion,e);
+      position=tempPosition.lerpVectors(cablePickupAnimation.from,position,e);
+      quaternion=tempQuaternion.copy(cablePickupAnimation.fromQuaternion).slerp(quaternion,e);
       if(p>=1)cablePickupAnimation=null;
     }
     world.power.setHeldPose(position,quaternion);
-    // Keep the actual right palm aligned with the moving plug through both
-    // the lift from the carpet and the held first-person pose.
-    hazmatViewmodel.setGripWorldTransform(position,quaternion);
+    hazmatViewmodel.setGripWorldTransform(roomPointToWorld(position),roomQuaternionToWorld(quaternion));
   }
 
   function updateCameraAndPower(delta){
@@ -712,22 +735,20 @@ export function startSecretRoom(container,{autostart=false}={}) {
     updateTapeState();
   }
 
-  function frame() {
-    const now = performance.now();
-    const delta = Math.min(0.08, Math.max(0, (now - previous) / 1000));
-    previous = now;
+  function update(delta) {
+    const step = Math.min(0.08, Math.max(0, delta));
     if (!paused && !disposed) {
-      time += delta;
-      updateCameraAndPower(delta);
+      time += step;
+      updateCameraAndPower(step);
       if (!tvCameraLocked && !cameraTween) {
-        updatePlayer(delta);
-        updateCarriedPowerCable(delta);
-        updateInteraction(delta);
+        updatePlayer(step);
+        updateCarriedPowerCable(step);
+        updateInteraction(step);
       }
-      updateInsertion(delta);
-      updateTvSequence(delta);
+      updateInsertion(step);
+      updateTvSequence(step);
       if (tvMode === 'teaser' && teaserPlayback) {
-        playbackElapsed += delta;
+        playbackElapsed += step;
         teaserPlayback.render(playbackElapsed);
         if (playbackElapsed >= teaserPlayback.duration) {
           teaserPlayback.pause(); tvMode = 'finished'; world.setTvTexture(tvTexture); drawTvScreen();
@@ -735,19 +756,45 @@ export function startSecretRoom(container,{autostart=false}={}) {
           returnCameraFromTv(() => { announce('The Monochrome 2 Backrooms recording has reached its end.'); setTvLabel('TV: PLAYBACK COMPLETE'); });
         }
       }
-      updatePhysics(delta);
-      world.update(time, delta, player);
-      ambience.update({ delta, sprinting: player.sprint, hidden: false, threat: 0, huntElapsed: 0 });
+      updatePhysics(step);
+      world.update(time, step, player);
+      ambience.update({ delta: step, sprinting: player.sprint, hidden: false, threat: 0, huntElapsed: 0 });
       el('[data-clock]').textContent = clockText(time);
     }
-    post.render(world.scene, camera, time, { vhs: vhsEnabled, reduced: reduced.matches });
   }
-  renderer.setAnimationLoop(frame);
+  function render() {
+    post.render(renderScene, camera, time, { vhs: vhsEnabled, reduced: reduced.matches });
+  }
+  function frame() {
+    const now = performance.now();
+    const delta = Math.min(0.08, Math.max(0, (now - previous) / 1000));
+    previous = now;
+    update(delta);
+    render();
+  }
+  if(!embedded)renderer.setAnimationLoop(frame);
+
+  function activate() {
+    if(!embedded||disposed)return false;
+    if(camera.parent!==roomRoot)roomRoot.add(camera);
+    camera.position.set(player.x,1.68,player.z);
+    camera.rotation.set(pitch,yaw,0,'YXZ');
+    camera.fov=68;
+    camera.updateProjectionMatrix();
+    renderScene.background=world.scene.background;
+    renderScene.fog=world.scene.fog;
+    renderer.toneMappingExposure=1.12;
+    sceneActivated=true;
+    root.hidden=false;
+    setPause(false);
+    embedded.onActivate?.();
+    return true;
+  }
 
   function dispose() {
     if (disposed) return;
     disposed = true;
-    renderer.setAnimationLoop(null);
+    if(!embedded)renderer.setAnimationLoop(null);
     document.exitPointerLock?.();
     for (const remove of listeners) remove();
     ambience.dispose();
@@ -756,14 +803,17 @@ export function startSecretRoom(container,{autostart=false}={}) {
     teaserPlayback?.dispose();
     tvTexture?.dispose();
     post.dispose();
+    if(camera.parent===roomRoot)camera.removeFromParent();
     world.dispose();
-    renderer.dispose();
-    renderer.domElement.remove();
+    if(!embedded){
+      renderer.dispose();
+      renderer.domElement.remove();
+    }
     root.remove();
     document.body.classList.remove('secretroom-page');
   }
   on(window, 'pagehide', dispose, { once: true });
-  if(autostart){
+  if(autostart&&!embedded){
     setPause(false);
     const reveal=document.createElement('div');
     reveal.className='sr-entry-reveal';
@@ -771,7 +821,7 @@ export function startSecretRoom(container,{autostart=false}={}) {
     document.body.append(reveal);
     window.setTimeout(()=>reveal.remove(),1250);
     renderer.domElement.focus({preventScroll:true});
-  }else{
+  }else if(!embedded){
     el('[data-action="start"]').focus();
   }
 
@@ -784,6 +834,9 @@ export function startSecretRoom(container,{autostart=false}={}) {
     tv: world.tv,
     get held() { return held; },
     get inserted() { return inserted; },
+    activate,
+    update,
+    render,
     setTvTexture: texture => world.setTvTexture(texture),
     setTvVideo: video => world.setTvVideo(video),
     ejectVhs: () => { if (inserted && !insertion) startInsertion('eject'); },

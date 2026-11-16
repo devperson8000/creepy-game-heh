@@ -4,7 +4,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 const ROOM = Object.freeze({ half: 3.36, height: 3.42 });
 const v3 = (x, y, z) => new T.Vector3(x, y, z);
 
-export function createSecretRoomWorld() {
+export function createSecretRoomWorld({parent=null,position=null,rotationY=0}={}) {
   const scene = new T.Scene();
   scene.background = new T.Color(0x8b8363);
   scene.fog = new T.FogExp2(0xa39b79, 0.008);
@@ -165,7 +165,7 @@ export function createSecretRoomWorld() {
   box(roomSpan, 0.08, roomSpan, 0, ROOM.height + 0.04, 0, ceilingMaterial);
   const walls = [
     { x: 0, z: -half, w: roomSpan, d: 0.18 },
-    { x: 0, z: half, w: roomSpan, d: 0.18 },
+    { x: 0, z: half, w: roomSpan, d: 0.2 },
     { x: -half, z: 0, w: 0.18, d: roomSpan },
     { x: half, z: 0, w: 0.18, d: roomSpan }
   ];
@@ -746,6 +746,14 @@ export function createSecretRoomWorld() {
   scene.add(dust);
   resources.add(dustGeometry, dustMaterial);
 
+  const root = new T.Group();
+  root.name = 'secret-room-in-world';
+  root.add(...scene.children);
+  if (position) root.position.set(position.x ?? 0, position.y ?? 0, position.z ?? 0);
+  root.rotation.y = rotationY;
+  if (parent) parent.add(root);
+  else scene.add(root);
+
   const tvApi = {
     group: tv,
     screen,
@@ -786,10 +794,13 @@ export function createSecretRoomWorld() {
   }
   function dispose() {
     for (const resource of resources) resource.dispose();
+    root.removeFromParent();
+    root.clear();
     scene.clear();
   }
   return {
     scene,
+    root,
     obstacles,
     tv: tvApi,
     power: powerApi,

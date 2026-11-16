@@ -1,4 +1,5 @@
 import {randomSource,shuffled,pathBetween} from './level.js';
+import {SECRET_ROOM_LAYOUT,SECRET_ROOM_BOUNDS} from './secret-entry.js';
 const directions=[[1,0],[-1,0],[0,1],[0,-1]];
 export function createMazeLayout(seed,{playerCount=1}={}){
  const size=playerCount>=4?53:playerCount>=3?49:45,rng=randomSource(seed^0xA1102026),grid=Array.from({length:size},()=>Array(size).fill(0));
@@ -13,6 +14,9 @@ export function createMazeLayout(seed,{playerCount=1}={}){
   for(let i=1;i<4;i++)grid[z+dz*i][x+dx*i]=1;
  }
  for(let z=6;z<=9;z++)grid[z][7]=1;
+ for(let z=SECRET_ROOM_LAYOUT.minCellZ;z<=SECRET_ROOM_LAYOUT.maxCellZ;z++){
+  for(let x=SECRET_ROOM_LAYOUT.interiorMinCellX;x<=SECRET_ROOM_LAYOUT.interiorMaxCellX;x++)grid[z][x]=1;
+ }
  const adjacent=(x,z)=>directions.filter(([dx,dz])=>grid[z+dz]?.[x+dx]===1);
  function candidates(){const a=[];for(let z=8;z<size-2;z++)for(let x=2;x<size-2;x++)if(!grid[z][x]&&adjacent(x,z).length===1)a.push({x,z});return shuffled(a,rng);}
  const rooms=[],roomCount=playerCount>=4?23:playerCount>=3?20:17;
@@ -28,5 +32,5 @@ export function createMazeLayout(seed,{playerCount=1}={}){
   if(adjacent(p.x,p.z).length!==1||rooms.some(r=>Math.hypot(r.x-p.x,r.z-p.z)<2.5)||closets.some(r=>Math.hypot(r.x-p.x,r.z-p.z)<5))continue;
   const [dx,dz]=adjacent(p.x,p.z)[0];closets.push({...p,normal:{x:dx,z:dz},atEnd:atEnd(p)});
  }
- return {...layout,closets};
+ return {...layout,closets,secretRoomBounds:SECRET_ROOM_BOUNDS,secretRoomLayout:SECRET_ROOM_LAYOUT};
 }
