@@ -32,3 +32,23 @@ body.monochrome2-intro>.grain,body.monochrome2-intro>.vignette,body.monochrome2-
 .m2-grain{position:fixed;inset:0;z-index:20;pointer-events:none;opacity:.1;mix-blend-mode:screen;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23n)' opacity='.6' d='M0 0h180v180H0z'/%3E%3C/svg%3E")}
 @media(max-width:600px){.m2-topline{top:16px;left:16px;right:16px;font-size:8px;letter-spacing:.16em}.m2-subtitle{bottom:72px;width:90vw;font-size:13px}.m2-sound{right:15px;bottom:17px}.m2-progress{bottom:24px}.m2-start-card{padding:18px}.m2-title-inner{padding:20px}}
 @media(prefers-reduced-motion:reduce){.m2-subtitle,.m2-start,.m2-title,.m2-title-inner,.m2-play,.m2-replay{transition:none}}
+/* MONOCHROME 2 — final title reveal: title first, subtitle second. */
+.m2-title{background:#020303}
+.m2-title-inner{opacity:1;transform:none;transition:none}
+.m2-title h2{opacity:0;transform:translateY(10px);transition:opacity .9s ease .12s,transform .9s ease .12s}
+.m2-title.visible h2{opacity:1;transform:translateY(0)}
+.m2-title h2 span{opacity:0;transform:translateY(7px);transition:opacity .85s ease 1.15s,transform .85s ease 1.15s}
+.m2-title.visible h2 span{opacity:1;transform:translateY(0)}
+.m2-title .m2-rule{opacity:0;transition:opacity .7s ease 1.9s}
+.m2-title.visible .m2-rule{opacity:.68}
+.m2-title .m2-replay{opacity:0;transition:opacity .7s ease 2.35s}
+.m2-title.visible .m2-replay{opacity:1}
+.m2-title .m2-kicker{display:none}
+@media(prefers-reduced-motion:reduce){
+ .m2-title h2,.m2-title h2 span,.m2-title .m2-rule,.m2-title .m2-replay{transition:none}
+}
+
+
+/* Fade the full frame before the two-line title is introduced. */
+.m2-fade{position:absolute;inset:0;z-index:1;background:#020303;opacity:0;pointer-events:none}
+.m2-title{z-index:2}

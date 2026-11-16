@@ -59,7 +59,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
  const findBone=key=>{
   let found;model.traverse(object=>{if(object.isBone&&object.name.replace(/[._-]/g,'').toLowerCase()===key)found=object;});return found;
  };
- const chest=findBone('spine003'),hand=findBone('handr'),forearm=findBone('forearmr'),upperArm=findBone('upperarmr');
+ const chest=findBone('spine003'),headBone=findBone('spine006'),hand=findBone('handr'),forearm=findBone('forearmr'),upperArm=findBone('upperarmr');
  root.updateMatrixWorld(true);
 
  // Calculate a rest-pose attachment once, then let the real skeleton animate it.
@@ -230,7 +230,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   beam.intensity=lit?72:0;glow.intensity=lit?.65:0;lensMaterial.color.setHex(lit?0xdfe8d6:0x313832);
  }
 
- function sampleCinematic({clip='Idle',time=0,position=[0,0,0],yaw=0,action='none',progress=0,handTarget=null}={}){
+ function sampleCinematic({clip='Idle',time=0,position=[0,0,0],yaw=0,action='none',progress=0,handTarget=null,headTurn=0,headTilt=0,torsoLean=0}={}){
   if(disposed)return;
   const p=THREE.MathUtils.clamp(progress,0,1);
   mixer.stopAllAction();
@@ -255,6 +255,10 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
    root.position.add(pivot.sub(turned));
   }
   if(action==='brace'&&chest)chest.rotation.x+=.14;
+  // The upper-spine joint is the survivor rig's head/helmet pivot. These small
+  // local rotations let the cinematic place an ear against the wall naturally.
+  if(chest&&torsoLean)chest.rotation.x-=THREE.MathUtils.clamp(finite(torsoLean),0,.7);
+  if(headBone){headBone.rotation.y+=THREE.MathUtils.clamp(finite(headTurn),-.7,.7);headBone.rotation.z+=THREE.MathUtils.clamp(finite(headTilt),-.8,.8);}
   root.updateMatrixWorld(true);
   if(handTarget&&hand&&forearm&&upperArm){
    upperArm.getWorldPosition(shoulderPosition);hand.getWorldPosition(wristGoal);wristGoal.lerp(new THREE.Vector3().fromArray(handTarget),p);

@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
+import {createBackroomsWorld} from './backrooms-world.js';
 import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 const root=document.querySelector('#scene');
 if(!root)throw new Error('MONOCHROME 2 intro requires #scene');
+document.title='MONOCHROME 2 — In the Backrooms';
 document.body.classList.add('monochrome2-intro');
 root.setAttribute('aria-label','MONOCHROME 2: Into the Backrooms cinematic');
 const ui=document.createElement('div');
@@ -13,15 +15,17 @@ ui.innerHTML=
  '<div class="m2-topline"><strong>MONOCHROME ARCHIVE</strong><span>FIELD RECORDING / 002</span></div>'+
  '<div class="m2-subtitle" aria-live="polite"><b></b><span></span></div>'+
  '<div class="m2-progress"><i></i></div>'+
- '<div class="m2-start"><div class="m2-start-card"><div class="m2-kicker">A NEW STORY BEGINS</div><h1>THE WAY OUT<br>WAS NOT THE END.</h1><p>Three survivors. One supply run. A wall that should not have been there.</p><button class="m2-play" type="button" disabled>LOADING SURVIVORS…</button></div></div>'+
+ '<div class="m2-start"><div class="m2-start-card"><div class="m2-kicker">AFTER THE ESCAPE</div><h1>JUST ONE<br>QUICK SUPPLY RUN.</h1><p>Three survivors. A little food. A wall that should not be there.</p><button class="m2-play" type="button" disabled>LOADING SURVIVORS…</button></div></div>'+
  '<button class="m2-sound" type="button" aria-pressed="false">SOUND ON</button>'+
- '<div class="m2-title hidden"><div class="m2-title-inner"><div class="m2-kicker">THE NEXT CHAPTER</div><h2>MONOCHROME 2<span>IN THE BACKROOMS</span></h2><div class="m2-rule"></div><button class="m2-replay" type="button">REPLAY INTRO</button></div></div>';
+ '<div class="m2-fade" aria-hidden="true"></div>'+
+ '<div class="m2-title hidden"><div class="m2-title-inner"><h2>MONOCHROME 2<span>IN THE BACKROOMS</span></h2><div class="m2-rule"></div><button class="m2-replay" type="button">REPLAY INTRO</button></div></div>';
 document.body.append(ui);
 const startButton=ui.querySelector('.m2-play');
 const replayButton=ui.querySelector('.m2-replay');
 const soundButton=ui.querySelector('.m2-sound');
 const startPanel=ui.querySelector('.m2-start');
 const titlePanel=ui.querySelector('.m2-title');
+const fadeLayer=ui.querySelector('.m2-fade');
 const subtitle=ui.querySelector('.m2-subtitle');
 const subtitleSpeaker=subtitle.querySelector('b');
 const subtitleText=subtitle.querySelector('span');
@@ -39,13 +43,15 @@ renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 root.append(renderer.domElement);
 
 const scene=new THREE.Scene();
-scene.background=new THREE.Color(0x202a2a);
-scene.fog=new THREE.FogExp2(0x65716d,.0125);
+const introBackground=new THREE.Color(0x202a2a),introFogColor=new THREE.Color(0x65716d);
+scene.background=introBackground.clone();
+scene.fog=new THREE.FogExp2(introFogColor,.0125);
 const camera=new THREE.PerspectiveCamera(48,window.innerWidth/window.innerHeight,.08,160);
 scene.add(camera);
 const geometries=new Set(),materials=new Set(),textures=new Set(),actors=[];
 let disposed=false,started=false,startAt=0,lastFrame=0,lastCaption='',muted=false,audio=null;
 let previousPoseTime=null,previousActorPositions=[null,null,null],walkAnimationTimes=[0,0,0],leadTravelDistance=0,nextFootstepDistance=.72;
+let voiceChoices=new Map();
 const shotSounds=new Set();
 
 function mat(options){const value=new THREE.MeshStandardMaterial({roughness:.88,...options});materials.add(value);return value;}
@@ -105,21 +111,7 @@ function addProduct(x,surfaceY,z,index){
  if(index%3===0){const bottle=mat({color,roughness:.38,metalness:.05});const body=box(.16,.42,.16,x,surfaceY+.21,z,bottle);body.rotation.z=(index%2?.08:-.08);box(.075,.1,.075,x,surfaceY+.47,z,mat({color:0x363d39}));}
  else box(.28,.35,.22,x,surfaceY+.175,z,mat({color,roughness:.86}));
 }
-function makeWallpaper(){
- return canvasTex(512,512,(c,s)=>{
-  c.fillStyle='#b9b078';c.fillRect(0,0,s,s);
-  for(let x=0;x<s;x+=30){c.strokeStyle='#80784e55';c.lineWidth=2;c.beginPath();c.moveTo(x,0);c.lineTo(x,s);c.stroke();for(let y=0;y<s;y+=54){c.beginPath();c.moveTo(x+5,y+30);c.lineTo(x+15,y+18);c.lineTo(x+25,y+30);c.stroke();}}
-  for(let i=0;i<19000;i++){c.fillStyle=i%2?'#fff3be12':'#30281512';c.fillRect(Math.random()*s,Math.random()*s,1,2);}
- });
-}
-function makeCarpet(){
- return canvasTex(512,512,(c,s)=>{
-  c.fillStyle='#a99b72';c.fillRect(0,0,s,s);
-  for(let i=0;i<85000;i++){c.fillStyle=i%3?'#64583a28':'#e0cb8a35';c.fillRect(Math.random()*s,Math.random()*s,1,2);}
- });
-}
-
-// The outdoor escape route, beginning immediately outside the original elevator.
+// The survivors are already outside, walking together toward the supply store.
 const asphalt=mat({color:0x292f30,roughness:1}),curb=mat({color:0x777b72,roughness:1}),grass=mat({color:0x42533f,roughness:1}),roadLine=mat({color:0xb2b5a6,roughness:1});
 ground(22,52,0,-.01,-4,asphalt);
 ground(2.1,52,-5.4,-.01,-4,curb);ground(2.1,52,5.4,-.01,-4,curb);
@@ -130,15 +122,6 @@ addStreetBuilding(-12,-1,5.5,7,7.8,0x4e5a55,0x80958b);
 addStreetBuilding(12,-9,6,8,8.5,0x59635c,0x8a9889);
 addStreetBuilding(-12,-20,5.8,6.5,7.5,0x4c5752,0x83948b);
 for(let z=14;z>-25;z-=4)makeCrate(-6.5,.28,z,0x72664d);
-const elevatorWall=mat({color:0x333c3c,metalness:.48,roughness:.56});
-const elevatorDoor=mat({color:0x68716d,metalness:.68,roughness:.34});
-const elevatorTrim=mat({color:0x151c1b,metalness:.5,roughness:.5});
-box(1.05,5.1,.35,-1.68,2.5,13,elevatorWall);box(1.05,5.1,.35,1.68,2.5,13,elevatorWall);box(2.3,1.15,.35,0,4.48,13,elevatorWall);
-box(.12,4.3,.16,-1.2,2.15,12.78,elevatorTrim);box(.12,4.3,.16,1.2,2.15,12.78,elevatorTrim);
-const elevatorDoors=[box(1.15,3.9,.16,-.58,2,12.72,elevatorDoor),box(1.15,3.9,.16,.58,2,12.72,elevatorDoor)];
-box(2.5,.16,.24,0,4.22,12.7,elevatorTrim);
-textPanel('ELEVATOR  /  EXIT',0,4.68,12.78,2.9,.42,{background:'#1a2220',color:'#d7ded3'});
-const elevatorLight=new THREE.PointLight(0xb9d2c2,2.4,8,2);elevatorLight.position.set(0,3.5,11.9);scene.add(elevatorLight);
 
 // The shop front opens into a small, believable convenience store.
 const shopWall=mat({color:0x77786a,roughness:.95}),shopFloor=mat({color:0x77796e,roughness:.95});
@@ -175,43 +158,33 @@ const rampSide=mat({color:0x343c39,roughness:1});
 box(.14,3.7,11.2,1.17,-.15,-34.55,rampSide,[rampAngle,0,0]);
 box(.14,3.7,11.2,3.67,-.15,-34.55,rampSide,[rampAngle,0,0]);
 for(const z of [-31,-34,-37])box(2.3,.035,.06,2.42,(z+29)*.238+.08,z,mat({color:0x69736a,emissive:0x1b241e,emissiveIntensity:.3}));
-const rampEnd=mat({color:0x383d39,roughness:1,transparent:true,opacity:1});
-box(2.55,3.9,.3,2.42,-.66,-40.18,rampEnd);
-const crackMaterial=basicMat({color:0xffe3ae,transparent:true,opacity:1,toneMapped:false});
-const crack=box(.018,.28,.012,2.39,-2.48,-39.99,crackMaterial);
-const crackGlow=new THREE.PointLight(0xffd7a1,0,2.8,2);crackGlow.position.set(2.4,-2.48,-39.65);scene.add(crackGlow);
+const rampEnd=mat({color:0x535b55,roughness:1,transparent:true,opacity:1,depthWrite:false});
+const rampEndWall=box(2.55,3.9,.3,2.42,-.66,-40.18,rampEnd);
+rampEndWall.castShadow=false;rampEndWall.receiveShadow=false;
+const crackMaterial=basicMat({color:0xffd99a,transparent:true,opacity:1,toneMapped:false,depthWrite:false});
+const crack=box(.009,3.9,.016,2.39,-.66,-39.99,crackMaterial);
+crack.castShadow=false;crack.receiveShadow=false;
+const crackGlow=new THREE.PointLight(0xffd7a1,0,2.8,2);crackGlow.position.set(2.4,-.66,-39.65);scene.add(crackGlow);
 const wallLight=new THREE.PointLight(0x9aa89b,1.1,5,2);wallLight.position.set(2.4,-.1,-37);scene.add(wallLight);
-for(let i=0;i<5;i++)box(.05,.12,.15,1.16,-.45-i*.55,-31.2-i*1.7,mat({color:0x7e8277}));
+const rampFill=new THREE.PointLight(0xdde6df,0,9,2);scene.add(rampFill);
 
-// The first glimpse beyond the wall: the familiar yellow Level 0 palette.
-const wallpaperMap=makeWallpaper(),carpetMap=makeCarpet();
-const backWall=mat({color:0xffffff,map:wallpaperMap,roughness:1}),backCarpet=mat({color:0xffffff,map:carpetMap,roughness:1});
-const ceilingMat=mat({color:0xd4cfb7,roughness:1});
-// The carpet begins immediately beyond the ramp wall and shares its floor height.
-ground(14,13.8,2.5,-2.655,-46.9,backCarpet);
-box(.2,4.5,13,-4.5,-.4,-46.9,backWall);box(.2,4.5,13,9.5,-.4,-46.9,backWall);
-box(14,4.5,.2,2.5,-.4,-53.4,backWall);
-// Leave the wall facing the ramp open so the seam is a real passage, not a teleport.
-box(14,.12,13,2.5,1.92,-46.9,ceilingMat);
-const backLights=[];
-for(const [x,z] of [[-1.5,-44.4],[2.8,-49.2],[6.4,-44.6]]){
- box(1.35,.055,.44,x,1.8,z,mat({color:0xdce4ca,emissive:0xdce4c2,emissiveIntensity:1.7}));
- const light=new THREE.PointLight(0xd9e4c8,15,8,2);light.position.set(x,1.55,z);scene.add(light);backLights.push(light);
-}
-for(const x of [-1.5,6.4])for(const z of [-51.4,-48.4,-45.4,-42.4])box(.035,3.9,.035,x,-.6,z,mat({color:0x8f885e}));
+// Bring the real Level Zero world into the cinematic. Its authored walls,
+// ceiling grid, wallpaper, lighting and layout are the same ones used in-game.
+const levelZero=createBackroomsWorld();
+const backroomsGroup=new THREE.Group();backroomsGroup.name='real-level-zero-map';
+backroomsGroup.position.set(9.55,-2.62,-58.3);backroomsGroup.visible=false;
+for(const child of [...levelZero.scene.children])backroomsGroup.add(child);
+const backroomsFloorGeometry=new THREE.PlaneGeometry(72,72);
+backroomsFloorGeometry.rotateX(-Math.PI/2);geometries.add(backroomsFloorGeometry);
+const backroomsFloor=new THREE.Mesh(backroomsFloorGeometry,mat({map:levelZero.surfaces.carpetTexture,roughness:1}));
+backroomsFloor.position.set(6,.004,-6);backroomsFloor.receiveShadow=true;backroomsGroup.add(backroomsFloor);
+scene.add(backroomsGroup);
 
 // World lighting, atmospheric dust, and the two very different colour temperatures.
 scene.add(new THREE.HemisphereLight(0xb9c7bd,0x1c2722,.92));
 const moon=new THREE.DirectionalLight(0xb8c6c2,1.15);moon.position.set(-8,14,11);moon.castShadow=true;
 moon.shadow.mapSize.set(1024,1024);moon.shadow.camera.left=-25;moon.shadow.camera.right=25;moon.shadow.camera.top=25;moon.shadow.camera.bottom=-25;scene.add(moon);
 const streetGlow=new THREE.PointLight(0x8fae9d,2.8,24,2);streetGlow.position.set(-1,5,2);scene.add(streetGlow);
-const dustCount=260,dustPositions=new Float32Array(dustCount*3),dustGeometry=new THREE.BufferGeometry();
-for(let i=0;i<dustCount;i++){dustPositions[i*3]=(Math.random()-.5)*12;dustPositions[i*3+1]=.25+Math.random()*3.8;dustPositions[i*3+2]=-49-Math.random()*11;}
-const dustBase=dustPositions.slice();
-dustGeometry.setAttribute('position',new THREE.BufferAttribute(dustPositions,3));geometries.add(dustGeometry);
-const dustMaterial=basicMat({color:0xe0d8b9,transparent:true,opacity:.25,size:.025,depthWrite:false});
-const dust=new THREE.Points(dustGeometry,dustMaterial);scene.add(dust);
-
 function createSoundscape(){
  const C=window.AudioContext||window.webkitAudioContext;
  if(!C)return {start(){},setMuted(){},footstep(){},fx(){},dispose(){}};
@@ -242,7 +215,6 @@ function createSoundscape(){
  function footstep(){if(context.state!=='running')return;oscillator(76,'triangle',.045,.12,28);oscillator(118,'sine',.018,.08,50);}
  function fx(kind){
   if(context.state!=='running')return;
-  if(kind==='elevator'){oscillator(78,'sawtooth',.045,1.5,29);oscillator(160,'sine',.016,.6,62);}
   if(kind==='store'){oscillator(740,'sine',.028,.34,520);setTimeout(()=>oscillator(990,'sine',.02,.32,720),110);}
   if(kind==='liminal'){oscillator(52,'sine',.075,2.1,24);oscillator(410,'triangle',.025,.7,92);}
   if(kind==='transition'){oscillator(130,'sine',.055,1.5,34);oscillator(680,'sine',.018,.8,180);}
@@ -256,34 +228,74 @@ function lerp(a,b,t){return a+(b-a)*THREE.MathUtils.clamp(t,0,1);}
 function ease(t){const v=THREE.MathUtils.clamp(t,0,1);return v*v*(3-2*v);}
 function cameraFor(time,lead){
  const look=new THREE.Vector3(),position=new THREE.Vector3();
- if(time<7){position.set(3.5,2.7,18.2);look.set(0,1.25,11.6);}
- else if(time<24){position.set(2.7,2.75,lead.z+5.4);look.set(0,1.35,lead.z-2.8);}
- else if(time<29){position.set(3.6,2.75,-16.8);look.set(0,1.45,-21.5);}
- else if(time<37.5){position.set(1.6,2.7,-21.6);look.set(1.0,1.3,-29.2);}
- else if(time<48.5){position.set(5.65,lead.y+1.55,lead.z+3.15);look.set(lead.x,lead.y+.78,lead.z-1.55);}
- else if(time<49.5){position.set(4.5,-.88,-37.1);look.set(2.4,-2.15,-40.02);}
- else if(time<52){position.set(4.12,-.92,-37.45);look.set(2.4,-1.9,-40.18);}
- else if(time<56.5){
-  const p=ease((time-52)/4.5);
-  position.lerpVectors(new THREE.Vector3(4.05,-.9,-37.5),new THREE.Vector3(5.3,.95,-41.1),p);
-  look.lerpVectors(new THREE.Vector3(2.4,-1.9,-40.0),new THREE.Vector3(2.55,-1.45,-45.2),p);
- }else{position.set(5.7,.95,-41.6);look.set(2.55,-1.55,-45.3);}
- if(prefersReducedMotion&&time>7&&time<56.5)position.x=THREE.MathUtils.damp(camera.position.x,position.x,5,1/60);
+ let fov=48;
+ if(time<34){
+  // Calm shoulder-height tracking while all three survivors walk to the store.
+  position.set(lead.x+1.4,lead.y+2.45,lead.z+5.6);
+  look.set(lead.x,lead.y+1.05,lead.z-2.3);
+  if(time<18){position.x=lead.x+2.4;position.y=2.8;}
+ }else if(time<43.4){
+  // Directly behind the lead, centred between the rails so nothing crosses the frame.
+  position.set(lead.x,lead.y+2.05,lead.z+5.15);
+  look.set(lead.x,lead.y+.95,lead.z-1.7);fov=46;
+ }else if(time<45.2){
+  // Profile from just beyond the ramp's right rail. Stay outside the wall slab.
+  position.set(lead.x+3.7,lead.y+1.5,lead.z+.55);
+  look.set(lead.x,lead.y+1.42,lead.z-.12);fov=40;
+ }else if(time<48.4){
+  // Tight side close-up from the open edge, keeping both visor and reaching hand clear.
+  position.set(lead.x+3.8,lead.y+1.5,lead.z+.55);
+  look.set(lead.x+.08,lead.y+1.18,lead.z-.12);fov=33;
+ }else if(time<53.5){
+  // Track beside his face as the camera crosses the opening after the wall fades.
+  position.set(lead.x+3.1,lead.y+1.15,lead.z+1.75);
+  look.set(lead.x,lead.y+1.05,lead.z-.3);fov=39;
+ }else{
+  // Rise to an overhead rear three-quarter view without crossing back through
+  // the arrival partition or clipping the existing Level Zero ceiling.
+  const p=ease((time-53.5)/5.5);
+  position.lerpVectors(
+   new THREE.Vector3(lead.x+3.1,lead.y+1.15,lead.z+1.75),
+   new THREE.Vector3(lead.x+3.2,lead.y+2.42,lead.z+3.6),p
+  );
+  look.lerpVectors(
+   new THREE.Vector3(lead.x,lead.y+1.05,lead.z-.3),
+   new THREE.Vector3(lead.x,lead.y+.78,lead.z-1.1),p
+  );fov=lerp(39,62,p);
+ }
+ camera.fov=fov;camera.updateProjectionMatrix();
  camera.position.copy(position);camera.lookAt(look);
 }
 function captionFor(time){return MONOCHROME2_DIALOGUE.find(cue=>time>=cue.at&&time<cue.end)??null;}
-function chooseVoice(speaker){
- const voices=window.speechSynthesis?.getVoices?.()??[],english=voices.filter(voice=>/^en/i.test(voice.lang));
- if(!english.length)return null;
- const au=english.filter(voice=>/en[-_]AU/i.test(voice.lang)),preferred=au.length?au:english;
- const index=speaker==='lead'?0:speaker==='friend1'?Math.min(1,preferred.length-1):Math.min(2,preferred.length-1);
- return preferred[index]??english[0]??null;
+function refreshVoices(){
+ const all=window.speechSynthesis?.getVoices?.()??[];
+ const english=all.filter(voice=>/^en[-_]/i.test(voice.lang));
+ if(!english.length)return;
+ const preferred=english.slice().sort((a,b)=>{
+  const rank=voice=>(/en[-_]AU/i.test(voice.lang)?4:/en[-_]GB/i.test(voice.lang)?3:/en[-_]US/i.test(voice.lang)?2:1);
+  return rank(b)-rank(a);
+ });
+ const profiles=[
+  ['lead',[/daniel|alex|oliver|arthur|fred|aaron|tom/i]],
+  ['friend1',[/karen|moira|samantha|tessa|fiona|victoria|serena/i]],
+  ['friend2',[/eddy|lee|rishi|google.*english|ava|zoe|susan/i]]
+ ];
+ const used=new Set(),next=new Map();
+ for(const [speaker,patterns] of profiles){
+  let voice=null;
+  for(const pattern of patterns){voice=preferred.find(item=>pattern.test(item.name)&&!used.has(item.name));if(voice)break;}
+  if(!voice)voice=preferred.find(item=>!used.has(item.name));
+  if(voice){used.add(voice.name);next.set(speaker,voice);}
+ }
+ voiceChoices=next;
 }
+window.speechSynthesis?.getVoices?.();
+if('speechSynthesis'in window){window.speechSynthesis.addEventListener?.('voiceschanged',refreshVoices);refreshVoices();}
 function say(cue){
  if(muted||!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window))return;
- const utterance=new SpeechSynthesisUtterance(cue.text),voice=chooseVoice(cue.voice);
+ const utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
  if(voice)utterance.voice=voice;
- utterance.lang=voice?.lang??'en-AU';utterance.rate=cue.rate??.94;utterance.pitch=cue.pitch??1;utterance.volume=.9;
+ utterance.lang=voice?.lang??'en-AU';utterance.rate=cue.rate??.94;utterance.pitch=cue.pitch??1;utterance.volume=.98;
  window.speechSynthesis.speak(utterance);
 }
 function updateNarration(time){
@@ -297,7 +309,9 @@ function reset(){
  shotSounds.clear();lastCaption='';subtitle.classList.remove('visible');
  titlePanel.classList.remove('visible');titlePanel.classList.add('hidden');startPanel.classList.add('hidden');
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
- started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);if(!muted&&audio)audio.fx('elevator');
+ backroomsGroup.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
+ scene.background.copy(introBackground);scene.fog.color.copy(introFogColor);scene.fog.density=.0125;
+ started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);
 }
 function update(t){
  const state=sampleMonochrome2(t),poses=sampleMonochrome2Actors(t);
@@ -306,42 +320,48 @@ function update(t){
   const p=poses[index],position=new THREE.Vector3(p.x,p.y,p.z),previous=previousActorPositions[index];
   const travel=previous?position.distanceTo(previous):0;
   if(p.clip==='Walk'&&frameDelta>0&&travel>0){
-   // Advance the baked walk cycle from measured distance, not a global timer.
+   // Drive the baked foot cycle and footsteps from actual ground distance.
    walkAnimationTimes[index]+=travel/2.5;
-   if(index===0&&t<56.5){
+   if(index===0&&t<53.5){
     leadTravelDistance+=travel;
     while(leadTravelDistance>=nextFootstepDistance){audio?.footstep();nextFootstepDistance+=.72;}
    }
   }
-  const animationTime=p.clip==='Walk'?walkAnimationTimes[index]:t*.42;
-  const options={clip:p.clip,time:animationTime,position:[p.x,p.y,p.z],yaw:p.yaw,action:p.action??'none',progress:p.progress??0};
-  if(index===0&&t>=49.2&&t<52){options.handTarget=[2.42,-1.28,-40.16];options.progress=ease((t-49.2)/1.8);}
-  if(index===1&&t>=33&&t<35.3){options.handTarget=[-3.35,1.15,-26.15];options.progress=ease((t-33)/1.4);}
-  if(index===2&&t>=33.2&&t<36){options.handTarget=[3.38,1.1,-28.0];options.progress=ease((t-33.2)/1.4);}
+  const options={
+   clip:p.clip,time:p.clip==='Walk'?walkAnimationTimes[index]:t*.42,
+   position:[p.x,p.y,p.z],yaw:p.yaw,action:p.action??'none',progress:p.progress??0,
+   headTurn:p.headTurn??0,headTilt:p.headTilt??0,torsoLean:p.torsoLean??0
+  };
+  if(p.handTarget){options.handTarget=p.handTarget;options.progress=p.handProgress??0;}
   actor.sampleCinematic(options);
   previousActorPositions[index]=position;
  });
  previousPoseTime=t;
  cameraFor(t,poses[0]);
- const doorOpen=ease(t/1.4);
- elevatorDoors[0].position.x=lerp(-.58,-1.55,doorOpen);elevatorDoors[1].position.x=lerp(.58,1.55,doorOpen);
- elevatorLight.intensity=t>=7?.4:2.4;
- shopLights.forEach(light=>{light.intensity=t>29?17:4;});
+ shopLights.forEach(light=>{light.intensity=t>22?17:4;});
  const crackDistance=Math.hypot(poses[0].x-2.39,poses[0].z+39.99);
- const crackVisibility=state.crack*ease((crackDistance-.06)/.28);
- crackMaterial.opacity=crackVisibility;crackGlow.intensity=crackVisibility*3.3;crack.visible=crackVisibility>.015;
- wallLight.intensity=t>49.2?1.2:.8;
- rampEnd.opacity=1-state.noclip*.95;
- backLights.forEach((light,index)=>{light.intensity=t>=56.5?14+Math.sin(t*5+index)*.25:0;});
- const attr=dustGeometry.attributes.position;
- for(let i=0;i<dustCount;i++)attr.array[i*3+1]=dustBase[i*3+1]+Math.sin(t*.7+i)*.08;
- attr.needsUpdate=true;
+ const crackVisibility=state.crack*ease((crackDistance-.005)/.055);
+ crackMaterial.opacity=crackVisibility;crackGlow.intensity=crackVisibility*2.6;crack.visible=crackVisibility>.015;
+ wallLight.intensity=t>44.2?1.55:.95;
+ rampFill.position.set(poses[0].x+2.8,poses[0].y+2.1,poses[0].z+2.0);
+ rampFill.intensity=t>=34&&t<54?3.8:0;
+ rampEnd.opacity=1-state.fallThrough;rampEndWall.visible=state.fallThrough<.995;
+ backroomsGroup.visible=state.backrooms>.001;
+ if(state.backrooms>0){
+  const localPlayer={x:poses[0].x-backroomsGroup.position.x,y:0,z:poses[0].z-backroomsGroup.position.z};
+  levelZero.update(t,localPlayer,prefersReducedMotion);
+  scene.background.lerpColors(introBackground,levelZero.scene.background,state.backrooms);
+  scene.fog.color.lerpColors(introFogColor,levelZero.scene.fog.color,state.backrooms);
+  scene.fog.density=lerp(.0125,levelZero.scene.fog.density,state.backrooms);
+  streetGlow.intensity=lerp(2.8,.12,state.backrooms);
+ }
  if(t>=29&&!shotSounds.has('store')){shotSounds.add('store');audio?.fx('store');}
- if(t>=49&&!shotSounds.has('liminal')){shotSounds.add('liminal');audio?.fx('liminal');}
- if(t>=52&&!shotSounds.has('transition')){shotSounds.add('transition');audio?.fx('transition');}
+ if(t>=44&&!shotSounds.has('liminal')){shotSounds.add('liminal');audio?.fx('liminal');}
+ if(t>=48.4&&!shotSounds.has('transition')){shotSounds.add('transition');audio?.fx('transition');}
  updateNarration(t);
  progressBar.style.width=(100*t/MONOCHROME2_DURATION)+'%';
- if(t>=64)showTitle();
+ fadeLayer.style.opacity=state.fade.toFixed(3);
+ if(t>=64.5)showTitle();
  renderer.render(scene,camera);
 }
 function animate(now){
@@ -357,7 +377,7 @@ function resize(){
 function cleanup(){
  if(disposed)return;disposed=true;renderer.setAnimationLoop(null);window.removeEventListener('resize',resize);window.removeEventListener('pagehide',cleanup);
  if(window.speechSynthesis)window.speechSynthesis.cancel();
- audio?.dispose();actors.forEach(actor=>actor.dispose());
+ audio?.dispose();actors.forEach(actor=>actor.dispose());levelZero.dispose();
  geometries.forEach(geometry=>geometry.dispose());materials.forEach(material=>material.dispose());
  textures.forEach(texture=>texture.dispose());renderer.dispose();renderer.domElement.remove();ui.remove();document.body.classList.remove('monochrome2-intro');
 }
