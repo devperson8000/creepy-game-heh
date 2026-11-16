@@ -81,7 +81,7 @@ export function createMazeWorld(run){
   }
   g.traverse(m=>{if(m.isMesh&&!m.userData.interactId){if(rows===1)m.userData.interactId=`drawer-${index}`;else{m.userData.cabinetIndex=index;m.userData.cabinetFloor=floor;}}});
   collider(g.position.x,g.position.z,Math.abs(n.x)? .6:.94,Math.abs(n.z)?.6:.94);
-  const at={x:p.x+n.x*1.335,z:p.z+n.z*1.335};sign(run.halloween?.rooms[0]===index?'— / —':String(index+1).padStart(2,'0'),.35,.065,at.x,floor+2.59,at.z,{rotation:Math.atan2(n.x,n.z),size:130});
+  const at={x:p.x+n.x*1.335,z:p.z+n.z*1.335};sign(String(index+1).padStart(2,'0'),.35,.065,at.x,floor+2.59,at.z,{rotation:Math.atan2(n.x,n.z),size:130});
   const frame=new THREE.Group();frame.position.set(p.x+n.x*1.28,floor,p.z+n.z*1.28);frame.rotation.y=Math.atan2(n.x,n.z);scene.add(frame);for(const x of [-.92,.92])box(.06,2.6,.09,x,1.3,0,metal,frame);box(1.9,.08,.09,0,2.59,0,metal,frame);
   if(index%3===0)fixture(p.x,floor+2.5,p.z,5);
  });
