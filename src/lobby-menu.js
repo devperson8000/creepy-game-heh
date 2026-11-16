@@ -15,7 +15,7 @@ function storedName() {
 }
 
 /** Owns its connection until a started session is handed to onMultiplayer. */
-export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,onSingleplayer = () => {}, onMultiplayer = () => {}, createClient, initialPlayerName, onClient} = {}) {
+export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=false,onSingleplayer = () => {}, onMultiplayer = () => {}, createClient, initialPlayerName, onClient} = {}) {
  const root = element('main', 'lobby-menu');
  root.id = 'lobby-menu';
  root.setAttribute('aria-label', 'Monochrome game menu');
