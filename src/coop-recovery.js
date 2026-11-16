@@ -11,10 +11,10 @@ export function restoreCoopAuthority(state,checkpoint,{members,ownerId,epoch=0,n
 
 /** Session/checkpoint came from the authenticated lobby service. Preserve legacy editions. */
 export function createCoopRound(session,{localId}={}){
- const saved=session.checkpoint?.state?.run,seasonal=saved?!!saved.halloween:session.halloween===true;
- const maze=saved?saved.halloween?.maze===true:session.maze!==false,drawerRows=saved?(saved.halloween?.drawerRows===3?3:1):session.drawerRows??3;
- const state=createCoopState(session.seed,session.players,{halloween:seasonal,mapUpdate:saved?!!saved.mapUpdate:session.mapUpdate===true,maze,drawerRows,initialPlayerCount:saved?.initialPlayerCount??session.players.length});
+ const saved=session.checkpoint?.state?.run;
+ // All newly joined rounds use the current non-seasonal maze edition.
+ const state=createCoopState(session.seed,session.players,{halloween:false,mapUpdate:true,maze:true,drawerRows:3,initialPlayerCount:saved?.initialPlayerCount??session.players.length});
  state.ownerId=session.ownerId;state.ownerEpoch=session.ownerEpoch??0;
- if(session.checkpoint){restoreCoopAuthority(state,session.checkpoint,{members:session.players,ownerId:session.ownerId,epoch:session.ownerEpoch??0,rebase:localId===session.ownerId});if(state.run.halloween)Object.assign(state.run.halloween,{maze,drawerRows});}
+ if(session.checkpoint){restoreCoopAuthority(state,session.checkpoint,{members:session.players,ownerId:session.ownerId,epoch:session.ownerEpoch??0,rebase:localId===session.ownerId});delete state.run.halloween;if(state.run.phase==='halloween')state.run.phase='playing';}
  return state;
 }
