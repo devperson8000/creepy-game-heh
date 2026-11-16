@@ -23,6 +23,9 @@ import {createTorch} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {createSoundOcclusion} from './sound-occlusion.js';
 import {createArrival} from './arrival.js';
+import {createWallNoteReader} from './wall-note-reader.js';
+import {advanceSecretEntryCharge} from './secret-entry.js';
+import {createSecretEntryCinematic} from './secret-entry-cinematic.js';
 
 export function startGame(container,{seed,autostart=false,halloween=false,mapUpdate=false}={}){
  const ambience=createRoomAmbience({halloween});
@@ -43,6 +46,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);let surfaceDistance=Infinity;
  let enemy=createEnemy(run.layout),player={id:'solo',name:'You',slot:0,status:'alive',x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
+ let wallNoteFocused=false,wallNoteFDown=false,secretCharge=0,entryCinematic=null;
  const soloState={seed,run,players:new Map([['solo',player]]),closets:new Map()};let ending=null,endingAsset=null,endingFailed=false,endingFinished=false;
  function beginHouseEscape(){
   if(!beginFinale(soloState,Date.now()/1000,{requested:true}))return false;
@@ -50,8 +54,13 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
   void loadPlayerAvatarAsset().then(asset=>{endingAsset=asset;}).catch(()=>{endingFailed=true;});return true;
  }
 
- function pause(){if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
+ function pause(){if(wallNoteReader?.active){wallNoteReader.close();return;}if(ui.overlay==='keypad'){closeKeypad();return;}if(run.phase!=='playing')return;if(ui.overlay==='pause'){resume();return;}if(ui.overlay)return;showScreen('pause');}
  const input=gameInput(camera,renderer.domElement,ui,pause,()=>{void monsterAudio.resume();void ambience.resume();});
+ const wallNoteReader=createWallNoteReader({
+  root:ui.root,camera,
+  onOpen(){ui.overlay='wall-note';input.clear();document.exitPointerLock?.();monsterAudio.pause();ambience.pause();wallNoteFDown=false;},
+  onClose(){ui.overlay=null;hold=0;holdId=null;latched=false;wallNoteFDown=false;input.capture();void monsterAudio.resume();void ambience.resume();}
+ });
  const questUI=createHalloweenQuestUI(ui.root,run);
  const experience=createHalloweenExperience({renderer,camera,run,input,ui,world,torch,players:()=>[player],onReturn:()=>{if(Math.hypot(player.x,player.z-3.4)<2)interactHalloween(run,'halloween:return');},onMute:()=>toggleSound(),isMuted:()=>monsterAudio.muted});
  let inB2=false;
@@ -73,9 +82,16 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  const torchButton=ui.el('torch-toggle');
  function toggleTorch(){if(ui.overlay||run.phase!=='playing')return;torch.toggle();monsterAudio.playNoise('torch');torchButton.textContent=torch.on?'Torch on':'Torch off';torchButton.setAttribute('aria-pressed',String(torch.on));torchButton.setAttribute('aria-label',torch.on?'Turn torch off (F)':'Turn torch on (F)');}
  torchButton.addEventListener('click',toggleTorch);
- document.addEventListener('keydown',event=>{if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){event.preventDefault();toggleTorch();}});
+ document.addEventListener('keydown',event=>{
+  if(event.code==='KeyF'&&!event.repeat&&!ui.overlay){
+   event.preventDefault();
+   if(wallNoteFocused)wallNoteFDown=true;
+   else toggleTorch();
+  }
+ });
+ document.addEventListener('keyup',event=>{if(event.code==='KeyF')wallNoteFDown=false;});
  document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'||ui.overlay==='halloween'))toggleSound();});
- window.addEventListener('pagehide',()=>{arrival?.dispose();ending?.dispose();experience.dispose();questUI.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
+ window.addEventListener('pagehide',()=>{arrival?.dispose();ending?.dispose();wallNoteReader.dispose();entryCinematic?.dispose();experience.dispose();questUI.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
  function closeKeypad(){void monsterAudio.resume();void ambience.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
  function submitCode(){if(enterCode(run,buffer)){ui.feedback(run.halloween?'Code accepted. Complete the four key locks to unlock the house service exit.':'Code accepted. Complete the four key locks to open the elevator.','success');monsterAudio.playNoise('keypad');ui.toast('Code accepted.');closeKeypad();}else{ui.feedback('Access denied. Read the four digits from this run.');buffer='';ui.el('code-display').textContent='— — — —';}}
@@ -89,6 +105,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
   if(t.type==='boards'){if(run.boardsOpen)return null;label='Pry away the boards';duration=1.8;}
   if(t.type==='drawer'){const d=run.drawers[t.drawerId];label=d.opened?(d.key&&!d.taken?'Take the key':'Close searched drawer'):'Search drawer';duration=d.opened?.15:.3;}
   if(t.type==='closet'){label='Hide in closet';duration=.25;}
+  if(t.type==='wall-note')return {...t,label:'Read the reversed writing',duration:.42,hotkey:'F'};
   if(t.type==='clue'){label='Read the four-digit clue';duration=.2;}
   if(t.type==='locks'){label=run.carried.size?`Insert ${run.carried.size} ${run.carried.size===1?'key':'keys'}`:`Key panel · ${run.banked.size} / 4 filled`;duration=.6;}
   if(t.type==='keypad'){label=run.codeAccepted?'Keypad · code accepted':'Enter elevator code';duration=.15;}
@@ -104,6 +121,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
   const hit=raycaster.intersectObjects(visible,false)[0];surfaceDistance=hit?.distance??Infinity;return targetInfo(drawerTargetFromHit(world.targets,hit));
  }
  function perform(t){
+  if(t.type==='wall-note'){wallNoteReader.open(t.mesh);return;}
   if(t.type==='halloween'){player.yaw=input.yaw;player.pitch=input.pitch;const result=interactHalloween(run,t.id,{players:[player]});if(result.message)ui.toast(result.message);if(result.ok&&!result.repeated)monsterAudio.playNoise(result.reveal?'key':'clue');return;}
   const takingKey=t.type==='drawer'&&run.drawers[t.drawerId].opened&&run.drawers[t.drawerId].key&&!run.drawers[t.drawerId].taken;
   if(t.type!=='boards')emitNoise(interactionNoise(t.type,{x:player.x,z:player.z,height:player.height},{takingKey}));
@@ -125,6 +143,16 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  showScreen('menu');if(autostart){ui.hideScreen();ui.overlay='arrival';}let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),frameDelta=Math.min(clockDelta,.2);previous=now;
+  if(wallNoteReader.active){
+   wallNoteReader.update(frameDelta);
+   renderer.render(world.scene,camera);
+   return;
+  }
+  if(entryCinematic){
+   if(entryCinematic.update(frameDelta))window.location.assign('/secretroom?entry=1');
+   renderer.render(world.scene,camera);
+   return;
+  }
   questUI.update();
   if(run.finale?.variant==='house'&&!endingFinished){
    advanceFinale(soloState,Date.now()/1000);
@@ -159,9 +187,27 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
    }
    input.updateView();camera.position.set(player.x,player.height+1.65,player.z);
    threat=THREE.MathUtils.lerp(threat,player.height<1.5?Math.max(0,1-lastResult.distance/12):0,frameDelta*3);
+   const entryCharge=advanceSecretEntryCharge(secretCharge,{
+    position:{x:player.x,z:player.z,height:player.height},
+    yaw:input.yaw,forward:input.movement.forward,right:input.movement.right,
+    paused:!!ui.overlay,alive:player.status==='alive'&&!run.hidden
+   },frameDelta);
+   secretCharge=entryCharge.elapsed;
+   if(entryCharge.triggered){
+    secretCharge=0;wallNoteFDown=false;input.clear();document.exitPointerLock?.();
+    ui.overlay='secret-entry';monsterAudio.pause();ambience.pause();
+    entryCinematic=createSecretEntryCinematic({
+     scene:world.scene,camera,
+     position:{x:player.x,z:player.z,height:player.height},
+     yaw:input.yaw,
+     onComplete(){window.location.assign('/secretroom?entry=1');}
+    });
+   }
    let target=run.phase==='playing'?currentTarget():null;
-   const held=retainDrawerTarget(target,holdId,world.targets,input.interact);if(held!==target)target=targetInfo(held);
-   if(!input.interact){hold=0;holdId=null;latched=false;}
+   wallNoteFocused=target?.type==='wall-note';
+   const interactionHeld=wallNoteFocused?wallNoteFDown:input.interact;
+   const held=retainDrawerTarget(target,holdId,world.targets,interactionHeld);if(held!==target)target=targetInfo(held);
+   if(!interactionHeld){hold=0;holdId=null;latched=false;}
    else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+frameDelta/target.duration);if(hold>=1){perform(target);latched=true;hold=0;}}
    else if(!target){hold=0;holdId=null;}
    if(performance.now()>noiseUntil)player.noise='Quiet';
