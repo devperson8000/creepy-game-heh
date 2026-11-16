@@ -481,6 +481,17 @@ export function createSecretRoomWorld() {
   rounded(.003,.031,.052,-.048,.001,.001,.001,brass,powerPlug);
   const polarity = new T.Mesh(new T.SphereGeometry(.004,10,8),socketDark);
   polarity.position.set(-.018,.025,.018);powerPlug.add(polarity);resources.add(polarity.geometry);
+  const gloveMaterial=makeMaterial({color:0xa6a893,roughness:.97});
+  const gloveCuffMaterial=makeMaterial({color:0x343e34,roughness:.94});
+  const glove=new T.Group();glove.name='first-person-hazmat-glove';glove.visible=false;powerPlug.add(glove);
+  rounded(.052,.105,.105,-.205,-.026,0,.018,gloveCuffMaterial,glove);
+  rounded(.105,.093,.115,-.13,-.006,0,.027,gloveMaterial,glove);
+  for(let i=0;i<4;i++){
+    const finger=rounded(.076,.025,.021,-.058,.028,-.041+i*.027,.009,gloveMaterial,glove);
+    finger.rotation.z=-.08;
+  }
+  const thumb=rounded(.071,.026,.031,-.105,-.048,.067,.01,gloveMaterial,glove);
+  thumb.rotation.x=-.24;thumb.rotation.z=.38;
 
   function makeCordGeometry(points,segments=100){
     const curve=new T.CatmullRomCurve3(points,false,'centripetal',.5);
@@ -591,7 +602,7 @@ export function createSecretRoomWorld() {
     outletTarget:v3(3.16,.565,-1.06),
     switchTarget:v3(3.14,1.105,-1.06),
     beginCableHold(){
-      coilMesh.visible=false;fixedCableMesh.visible=false;
+      coilMesh.visible=false;fixedCableMesh.visible=false;glove.visible=true;
       if(carriedCableMesh)carriedCableMesh.visible=true;
     },
     setHeldPose(position,quaternion){
@@ -607,7 +618,7 @@ export function createSecretRoomWorld() {
       replaceCarriedCable(cablePointsTo(cableEnd));
     },
     setCablePlugged(){
-      powerPlug.position.copy(plugEnd);powerPlug.quaternion.identity();
+      powerPlug.position.copy(plugEnd);powerPlug.quaternion.identity();glove.visible=false;
       coilMesh.visible=false;fixedCableMesh.visible=false;
       refreshPluggedCable();
     },
