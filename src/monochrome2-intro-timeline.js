@@ -146,7 +146,7 @@ export function monochrome2NoclipCueGain(value,duck=1){
 // Full-frame cuts to the real Level Zero map. The opening flash lasts 0.15s;
 // later flashes are deliberately sparse so the first one is the clear standout.
 const BACKROOMS_BACKGROUND_FLASHES = Object.freeze([
- [0.08,.15],
+ [0,.15],
  [4.8,.15],
  [13.6,.15],
  [26.2,.15],
