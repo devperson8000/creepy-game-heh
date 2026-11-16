@@ -143,24 +143,18 @@ export function monochrome2NoclipCueGain(value,duck=1){
  return .72*intro*clamp(duck,0,1)*(1-blackFade);
 }
 
-// Brief, intentional light drops on Level Zero as Monochrome crosses the corridor.
-const BACKROOMS_FLICKER_PULSES = Object.freeze([
- [63.68,.065,.16],
- [63.90,.050,.12],
- [64.14,.075,.22],
- [64.41,.045,.14],
- [64.68,.070,.19],
- [64.95,.055,.11]
+// Full-frame cuts to the real Level Zero map. The opening flash lasts 0.15s;
+// later flashes are deliberately sparse so the first one is the clear standout.
+const BACKROOMS_BACKGROUND_FLASHES = Object.freeze([
+ [0.08,.15],
+ [4.8,.15],
+ [13.6,.15],
+ [26.2,.15],
+ [43.4,.15]
 ]);
-export function monochrome2BackroomsFlicker(value){
+export function monochrome2BackroomsBackgroundFlash(value){
  const time=Number.isFinite(value)?value:0;
- for(const [start,duration,minPower] of BACKROOMS_FLICKER_PULSES){
-  const local=time-start;
-  if(local<0||local>duration)continue;
-  const edge=Math.min(smooth(local/.012),smooth((duration-local)/.012));
-  return lerp(1,minPower,edge);
- }
- return 1;
+ return BACKROOMS_BACKGROUND_FLASHES.some(([start,duration])=>time>=start&&time<start+duration);
 }
 
 export function sampleMonochrome2(value){
