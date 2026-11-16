@@ -9,13 +9,7 @@ export const MONOCHROME2_DIALOGUE=[
  {id:'supplies',at:20.45,end:23.35,speaker:'JAMIE',voice:'friend2',text:'Food and water first. Then we can work out what happens next.',rate:1.0,pitch:.98},
  {id:'water',at:27.2,end:30.0,speaker:'JAMIE',voice:'friend2',text:'I found water. I am grabbing a couple of bottles.',rate:1.0,pitch:.98},
  {id:'snacks',at:30.35,end:32.8,speaker:'RILEY',voice:'friend1',text:'I have snacks. Keep an eye out while I get these.',rate:.98,pitch:1.08},
- {id:'meet',at:33.05,end:35.45,speaker:'LEAD',voice:'lead',text:'Good. Meet me near the front. I will be right there.',rate:.94,pitch:.84},
- {id:'descending',at:35.7,end:38.35,speaker:'LEAD',voice:'lead',text:'Watch your step. These stairs go further down than I thought.',rate:.91,pitch:.84},
- {id:'descending2',at:38.5,end:41.0,speaker:'JAMIE',voice:'friend2',text:'I thought this was just a service stairwell.',rate:.96,pitch:.98},
- {id:'descending3',at:41.15,end:43.25,speaker:'RILEY',voice:'friend1',text:'Guys... why is it getting colder?',rate:.94,pitch:1.08},
- {id:'sound',at:43.45,end:45.15,speaker:'LEAD',voice:'lead',text:'Wait... did you hear that?',rate:.88,pitch:.82},
- {id:'light',at:45.3,end:46.95,speaker:'LEAD',voice:'lead',text:'There is a thin line of light running down this wall.',rate:.88,pitch:.82},
- {id:'wall',at:47.1,end:49.0,speaker:'LEAD',voice:'lead',text:'Something is on the other side. I can hear it.',rate:.86,pitch:.8}
+
 ];
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -111,6 +105,15 @@ export function sampleMonochrome2Actors(value){
   if(time>=29.2&&time<32.8){friend2.handTarget=[3.45,1.22,-28.62];friend2.handProgress=smooth((time-29.2)/1.45);}
  }
  return [lead,friend1,friend2];
+}
+
+export const MONOCHROME2_STAIR_OPENING=Object.freeze({
+ left:1.0,right:3.84,front:-29,back:-36.2
+});
+
+export function monochrome2ShopDoorOpen(value){
+ const time=clamp(Number.isFinite(value)?value:0,0,MONOCHROME2_DURATION);
+ return smooth((time-18)/1.15)*(1-smooth((time-24)/1.05));
 }
 
 export function monochrome2NoclipCueGain(value,duck=1){

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
-import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain} from './monochrome2-intro-timeline.js';
+import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 const root=document.querySelector('#scene');
@@ -132,12 +132,59 @@ const shopWall=mat({color:0x77786a,roughness:.95}),shopFloor=mat({color:0x77796e
 const shelfMat=mat({color:0x51483b,roughness:.95}),shelfEdge=mat({color:0xaaa28c,roughness:.7});
 const glass=mat({color:0x8da7a4,metalness:.18,roughness:.22,transparent:true,opacity:.35});
 const darkGlass=mat({color:0x172321,roughness:.3,metalness:.22});
-ground(9,16,0,-.005,-28,shopFloor);
+// The shop floor is built around a real stairwell void. A single continuous
+// floor sheet used to cover the steps and hide the survivor below the surface.
+const stairOpening=MONOCHROME2_STAIR_OPENING;
+const openingWidth=stairOpening.right-stairOpening.left;
+const openingFrontDepth=-20-stairOpening.front;
+const openingCenterX=(stairOpening.left+stairOpening.right)/2;
+ground(stairOpening.left+4.5,16,-4.5+(stairOpening.left+4.5)/2,-.005,-28,shopFloor);
+ground(4.5-stairOpening.right,16,stairOpening.right+(4.5-stairOpening.right)/2,-.005,-28,shopFloor);
+ground(openingWidth,openingFrontDepth,openingCenterX,-.005,(-20+stairOpening.front)/2,shopFloor);
 box(.22,4.9,16,-4.45,2.4,-28,shopWall);box(.22,4.9,16,4.45,2.4,-28,shopWall);
-box(9,4.9,.25,0,2.4,-36,shopWall);box(9,.25,16,0,4.9,-28,mat({color:0x474b42}));
-box(9,.3,.5,0,4.55,-19.95,shopWall);
-box(.75,3.25,.12,-1.55,1.65,-20.05,darkGlass);box(.75,3.25,.12,1.55,1.65,-20.05,darkGlass);
-box(.07,2.6,.12,-.78,1.35,-20.06,shelfEdge);box(.07,2.6,.12,.78,1.35,-20.06,shelfEdge);
+// Continue the stairwell through the rear shop wall instead of letting the
+// character or steps pass through a solid wall at the bottom of the floor.
+box(stairOpening.left+4.5,4.9,.25,-4.5+(stairOpening.left+4.5)/2,2.4,-36,shopWall);
+box(4.5-stairOpening.right,4.9,.25,stairOpening.right+(4.5-stairOpening.right)/2,2.4,-36,shopWall);
+box(openingWidth,1.05,.25,openingCenterX,4.375,-36,shopWall);
+box(9,.25,16,0,4.9,-28,mat({color:0x474b42}));
+
+// Complete shopfront: solid piers, display glazing, and a proper double-door
+// entrance. The hinged doors swing into the store as the three survivors arrive.
+const shopFrontFrame=mat({color:0x3d4943,metalness:.48,roughness:.62});
+box(1.25,4.8,.24,-3.875,2.4,-20.05,shopWall);
+box(1.25,4.8,.24,3.875,2.4,-20.05,shopWall);
+box(9,.34,.24,0,.17,-20.05,shopWall);
+box(9,.78,.24,0,4.39,-20.05,shopWall);
+for(const x of [-2.475,2.475]){
+ box(1.55,3.1,.09,x,1.94,-20.06,glass);
+ for(const edge of [-.775,.775])box(.055,3.16,.11,x+edge,1.94,-20.035,shopFrontFrame);
+ box(1.58,.055,.11,x,.38,-20.035,shopFrontFrame);
+ box(1.58,.055,.11,x,3.5,-20.035,shopFrontFrame);
+}
+const shopDoors=[];
+for(const door of [{hingeX:-1.7,side:1},{hingeX:1.7,side:-1}]){
+ const pivot=new THREE.Group();
+ pivot.position.set(door.hingeX,.34,-20.065);
+ scene.add(pivot);
+ const leafWidth=1.7,leafHeight=2.76,leafDepth=.075;
+ const leaf=new THREE.Mesh(new THREE.BoxGeometry(leafWidth,leafHeight,leafDepth),glass);
+ geometries.add(leaf.geometry);leaf.position.set(door.side*leafWidth/2,leafHeight/2,0);
+ leaf.castShadow=false;leaf.receiveShadow=true;pivot.add(leaf);
+ const bar=(w,h,d,x,y,z)=>{
+  const geometry=new THREE.BoxGeometry(w,h,d);geometries.add(geometry);
+  const mesh=new THREE.Mesh(geometry,shopFrontFrame);mesh.position.set(x,y,z);
+  mesh.castShadow=false;mesh.receiveShadow=true;pivot.add(mesh);
+ };
+ bar(.055,leafHeight,.085,0,leafHeight/2,.045);
+ bar(.055,leafHeight,.085,door.side*leafWidth,leafHeight/2,.045);
+ bar(leafWidth,.055,.085,door.side*leafWidth/2,.03,.045);
+ bar(leafWidth,.055,.085,door.side*leafWidth/2,leafHeight-.03,.045);
+ bar(.045,.55,.09,door.side*(leafWidth-.13),1.42,.075);
+ shopDoors.push({pivot,direction:door.side});
+}
+box(.07,3.12,.14,-1.7,1.9,-20.05,shopFrontFrame);
+box(.07,3.12,.14,1.7,1.9,-20.05,shopFrontFrame);
 textPanel('NORTHWAY  /  SUPPLY',0,4.12,-19.78,5.9,.72,{background:'#1f2a27',color:'#d7dfce',border:'#788c7c'});
 const shopLights=[];
 for(const x of [-2.8,0,2.8]){
@@ -256,8 +303,10 @@ function cameraFor(time,lead,headPoint){
   if(time<18){position.x=lead.x+2.4;position.y=2.8;}
  }else if(time<43.4){
   // Rear tracking down the stairs, with both stair edges inside the frame.
-  position.set(lead.x,lead.y+2.05,lead.z+5.15);
-  look.set(lead.x,lead.y+.95,lead.z-1.7);fov=46;
+  // A higher, downward-looking follow shot keeps the stair treads in view
+  // and makes the descent readable instead of framing only the landing wall.
+  position.set(lead.x-.72,lead.y+3.4,lead.z+4.9);
+  look.set(lead.x,lead.y-.35,lead.z-2.8);fov=49;
  }else if(time<49.05){
   // The camera stays just beyond the wall's right edge, framing the head and hand.
   position.copy(headPoint).add(new THREE.Vector3(3.35,.16,.55));
@@ -394,6 +443,8 @@ function update(t){
  actors[0].getHeadWorldPosition(leadHeadPoint);
  cameraFor(t,poses[0],leadHeadPoint);
  shopLights.forEach(light=>{light.intensity=t>22?17:4;});
+ const doorOpen=monochrome2ShopDoorOpen(t);
+ shopDoors.forEach(({pivot,direction})=>{pivot.rotation.y=direction*doorOpen*(Math.PI/2);});
  const crackDistance=Math.hypot(poses[0].x-2.39,poses[0].z+39.99);
  const crackVisibility=monochrome2CrackVisibility(state.crack,crackDistance);
  crackMaterial.opacity=crackVisibility;crackGlow.intensity=crackVisibility*.14;crack.visible=crackVisibility>.015;

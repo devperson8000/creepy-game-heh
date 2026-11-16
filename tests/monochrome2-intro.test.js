@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  MONOCHROME2_DURATION,MONOCHROME2_DIALOGUE,sampleMonochrome2,sampleMonochrome2Actors,
- monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain
+ monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,MONOCHROME2_STAIR_OPENING
 } from '../src/monochrome2-intro-timeline.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
@@ -36,6 +36,28 @@ test('all survivors move at a steady pace and both friends reach for store suppl
  assert.ok(friendsAtStop[2].handTarget,'Jamie reaches for supplies');
 });
 
+test('the stairwell opening exposes the full tread run through the rear wall',()=>{
+ assert.ok(MONOCHROME2_STAIR_OPENING.left<1.15);
+ assert.ok(MONOCHROME2_STAIR_OPENING.right>3.69);
+ assert.ok(MONOCHROME2_STAIR_OPENING.front<=-29);
+ assert.ok(MONOCHROME2_STAIR_OPENING.back<=-36);
+});
+
+test('shop doors open before all three survivors cross and close after they enter',()=>{
+ assert.equal(monochrome2ShopDoorOpen(18),0);
+ assert.ok(monochrome2ShopDoorOpen(19.2)>.99);
+ assert.ok(monochrome2ShopDoorOpen(22)>.99);
+ assert.ok(monochrome2ShopDoorOpen(23.5)>.99);
+ assert.equal(monochrome2ShopDoorOpen(25.1),0);
+ const friends=sampleMonochrome2Actors(22).slice(1);
+ assert.ok(friends.every(friend=>Math.abs(friend.x)+.68<1.7),'both friends fit through the double-door opening');
+});
+
+test('dialogue stops before the stair descent begins',()=>{
+ assert.ok(MONOCHROME2_DIALOGUE.length>0);
+ assert.ok(MONOCHROME2_DIALOGUE.every(cue=>cue.end<=32.8),'no dialogue or subtitles continue into the stair sequence');
+});
+
 test('the stair path steps down and stays aligned with the visible treads',()=>{
  const start=sampleMonochrome2Actors(34)[0];
  const middle=sampleMonochrome2Actors(39)[0];
@@ -64,12 +86,6 @@ test('the soft opening cue carries through the full black-screen fade',()=>{
  assert.ok(monochrome2NoclipCueGain(58.7)>.7,'the cue remains live beyond its first 12 seconds');
  assert.ok(monochrome2NoclipCueGain(67)>0,'the cue continues during the fade to black');
  assert.equal(monochrome2NoclipCueGain(68.5),0,'the cue fades out at full black');
-});
-
-test('three separate dialogue beats run during the stair descent',()=>{
- const cues=MONOCHROME2_DIALOGUE.filter(cue=>cue.id.startsWith('descending'));
- assert.deepEqual(cues.map(cue=>cue.speaker),['LEAD','JAMIE','RILEY']);
- assert.ok(cues[0].at>=34&&cues[2].end<=43.4);
 });
 
 test('the hairline only appears close to the wall and disappears after contact',()=>{
