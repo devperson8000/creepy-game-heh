@@ -149,7 +149,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
    return;
   }
   if(entryCinematic){
-   if(entryCinematic.update(frameDelta))window.location.assign('/secretroom?entry=1');
+   entryCinematic.update(frameDelta);
    renderer.render(world.scene,camera);
    return;
   }
@@ -205,11 +205,18 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
    }
    let target=run.phase==='playing'?currentTarget():null;
    wallNoteFocused=target?.type==='wall-note';
-   const interactionHeld=wallNoteFocused?wallNoteFDown:input.interact;
-   const held=retainDrawerTarget(target,holdId,world.targets,interactionHeld);if(held!==target)target=targetInfo(held);
-   if(!interactionHeld){hold=0;holdId=null;latched=false;}
-   else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+frameDelta/target.duration);if(hold>=1){perform(target);latched=true;hold=0;}}
-   else if(!target){hold=0;holdId=null;}
+   if(!target&&entryCharge.aligned){
+    target={id:'secret-entry-contact',type:'secret-entry-contact',label:'Hold W to push through the wall',hotkey:'W'};
+   }
+   if(target?.type==='secret-entry-contact'){
+    hold=entryCharge.progress;holdId=target.id;latched=false;
+   }else{
+    const interactionHeld=wallNoteFocused?wallNoteFDown:input.interact;
+    const held=retainDrawerTarget(target,holdId,world.targets,interactionHeld);if(held!==target)target=targetInfo(held);
+    if(!interactionHeld){hold=0;holdId=null;latched=false;}
+    else if(target&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold=Math.min(1,hold+frameDelta/target.duration);if(hold>=1){perform(target);latched=true;hold=0;}}
+    else if(!target){hold=0;holdId=null;}
+   }
    if(performance.now()>noiseUntil)player.noise='Quiet';
    ui.update(run,player,target,hold);
    if(!run.halloween&&run.phase==='playing'&&run.exitOpen&&world.doorProgress>.8&&player.z<-33.6){run.phase='won';showScreen('won');}
