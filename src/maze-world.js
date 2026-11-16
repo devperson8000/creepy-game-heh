@@ -5,7 +5,7 @@ import {CELL,worldPoint,gridPoint,walkable,groundHeight as sampleGround,randomSo
 import {createMazeNavigator} from './maze-navigation.js';
 import {createProximityLighting} from './proximity-lighting.js';
 import {createWallNotes} from './wall-notes.js';
-import {WALL_INSCRIPTION_REVERSED,SECRET_ROOM_BOUNDS,SECRET_ROOM_PLACEMENT,SECRET_ROOM_LAYOUT} from './secret-entry.js';
+import {WALL_INSCRIPTION_REVERSED,SECRET_ROOM_BOUNDS,SECRET_ROOM_PLACEMENT,SECRET_ROOM_LAYOUT,SECRET_ENTRY} from './secret-entry.js';
 
 export function createMazeWorld(run){
  const layout=run.layout,floor=layout.floorHeight,height=layout.ceilingHeight,size=layout.size;
@@ -41,6 +41,21 @@ export function createMazeWorld(run){
  const roofStart=worldPoint({x:0,z:7}).z-CELL/2,roofEnd=last.z+CELL/2;
  const roofHole={...SECRET_ROOM_BOUNDS,minZ:Math.max(roofStart,SECRET_ROOM_BOUNDS.minZ),maxZ:Math.min(roofEnd,SECRET_ROOM_BOUNDS.maxZ)};
  slabWithOpening(floorMinX,floorMaxX,roofStart,roofEnd,roofHole,floor+height+.06,.12,concrete);
+ // The stairwell-facing surface of the hidden room must look like the maze,
+ // while the wallpaper remains visible from inside after the noclip entry.
+ const sealWidth=SECRET_ROOM_PLACEMENT.half*2+.08,sealHeight=SECRET_ROOM_PLACEMENT.height+.12;
+ const secretEntrySealGeometry=new THREE.PlaneGeometry(sealWidth,sealHeight);
+ const sealUv=secretEntrySealGeometry.attributes.uv;
+ for(let i=0;i<sealUv.count;i++)sealUv.setXY(i,sealUv.getX(i)*sealWidth/2.6,sealUv.getY(i)*sealHeight/2.6);
+ sealUv.needsUpdate=true;
+ const secretEntrySeal=new THREE.Mesh(secretEntrySealGeometry,concrete);
+ secretEntrySeal.position.set(SECRET_ENTRY.wallX+.112,SECRET_ROOM_PLACEMENT.floorY+SECRET_ROOM_PLACEMENT.height/2,SECRET_ROOM_PLACEMENT.centerZ);
+ secretEntrySeal.rotation.y=Math.PI/2;
+ secretEntrySeal.name='secret-room-concealed-concrete-wall';
+ secretEntrySeal.receiveShadow=true;
+ scene.add(secretEntrySeal);rayMeshes.push(secretEntrySeal);
+ // A real wall collider prevents normal movement from clipping into the hidden room.
+ collider(SECRET_ENTRY.wallX,SECRET_ROOM_PLACEMENT.centerZ,.22,SECRET_ROOM_PLACEMENT.half*2,()=>true,true);
  // Elevator hub, stair corridor, and enclosed cab are on the upper floor.
  box(12,.15,8,-2.6,3.525,-29,floorMat);box(12,.15,8,-2.6,7.85,-29);
  box(.2,4.4,8,-8.6,5.8,-29);box(.2,4.4,8,3.4,5.8,-29);
@@ -190,5 +205,5 @@ export function createMazeWorld(run){
   if(Math.hypot(player.x-lastX,player.z-lastZ)>.7){selection=[...lamps].sort((a,b)=>Math.hypot(a.position.x-player.x,a.position.z-player.z,a.position.height-groundHeight(player))-Math.hypot(b.position.x-player.x,b.position.z-player.z,b.position.height-groundHeight(player)));lastX=player.x;lastZ=player.z;}
   ceilingLights.forEach((light,i)=>{const source=selection[i]?.light;light.intensity=source?.intensity??0;if(source)light.position.copy(source.position);});
  }
- return {scene,targets,rayMeshes,wallSurfaces,wallNotes,canMove,groundHeight,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,cluePosition:{x:cp.x-cn.x*.65,z:cp.z-cn.z*.65},get doorProgress(){return doorProgress;}};
+ return {scene,targets,rayMeshes,wallSurfaces,wallNotes,canMove,groundHeight,enemyNavigation:{canMove:enemyCanMove,findPath:navigator.findPath,canSee},update,lighting,closets,drawerViews,secretEntrySeal,cluePosition:{x:cp.x-cn.x*.65,z:cp.z-cn.z*.65},get doorProgress(){return doorProgress;}};
 }
