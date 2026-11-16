@@ -551,6 +551,7 @@ const ready=loadPlayerAvatarAsset().then(asset=>{
  actors.forEach(actor=>scene.add(actor.root));
  startButton.disabled=false;startButton.textContent='PLAY CINEMATIC';
 }).catch(error=>{
+ if(embedded)throw error;
  console.error('MONOCHROME 2 survivor models could not load:',error);
  startButton.disabled=true;startButton.textContent='MODEL LOAD FAILED';
  subtitleSpeaker.textContent='SYSTEM';subtitleText.textContent='The survivor model could not be loaded. Please reload the page.';subtitle.classList.add('visible');
@@ -568,6 +569,7 @@ function renderEmbedded(time){
   renderer.setRenderTarget(embeddedTarget);renderer.setViewport(0,0,embeddedTarget.width,embeddedTarget.height);
   renderer.setScissorTest(false);renderer.autoClear=true;renderer.clear(true,true,true);
   renderer.setViewport(0,78,1024,576);
+  renderer.setScissor(0,78,1024,576);renderer.setScissorTest(true);
   update(Math.max(0,Math.min(MONOCHROME2_DURATION,time)));
  }finally{
   renderer.setRenderTarget(previousTarget);renderer.setViewport(previousViewport);renderer.setScissor(previousScissor);
@@ -575,7 +577,7 @@ function renderEmbedded(time){
  }
 }
 function play(){if(disposed)return;reset();}
-function pause(){noclipCue.pause();if(window.speechSynthesis)window.speechSynthesis.pause();}
+function pause(){audio?.setMuted(true);noclipCue.pause();if(window.speechSynthesis)window.speechSynthesis.pause();}
 function resume(){audio?.start();audio?.setMuted(muted);if(noclipCueStarted&&!noclipCueStopped&&!muted)noclipCue.play().catch(()=>{});if(window.speechSynthesis)window.speechSynthesis.resume();}
 function setFilmMuted(value){
  muted=!!value;audio?.setMuted(muted);noclipCue.muted=muted;
