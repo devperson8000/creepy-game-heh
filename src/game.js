@@ -195,7 +195,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
    secretCharge=entryCharge.elapsed;
    if(entryCharge.triggered){
     secretCharge=0;wallNoteFDown=false;input.clear();document.exitPointerLock?.();
-    ui.overlay='secret-entry';monsterAudio.pause();ambience.pause();
+    ui.overlay='secret-entry';ui.root.hidden=true;monsterAudio.pause();ambience.pause();
     entryCinematic=createSecretEntryCinematic({
      scene:world.scene,camera,
      position:{x:player.x,z:player.z,height:player.height},
