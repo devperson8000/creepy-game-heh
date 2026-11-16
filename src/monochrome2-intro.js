@@ -3,7 +3,7 @@ import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
 import {MONOCHROME2_SHELVES} from './monochrome2-collision.js';
-import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsFlicker,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
+import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 function createMonochrome2Runtime({embedded=false,renderer:providedRenderer=null}={}){
@@ -273,6 +273,64 @@ scene.add(new THREE.HemisphereLight(0xb9c7bd,0x1c2722,.92));
 const moon=new THREE.DirectionalLight(0xb8c6c2,1.15);moon.position.set(-8,14,11);moon.castShadow=true;
 moon.shadow.mapSize.set(1024,1024);moon.shadow.camera.left=-25;moon.shadow.camera.right=25;moon.shadow.camera.top=25;moon.shadow.camera.bottom=-25;scene.add(moon);
 const streetGlow=new THREE.PointLight(0x8fae9d,2.8,24,2);streetGlow.position.set(-1,5,2);scene.add(streetGlow);
+
+// Render a clean first-person still from the actual Level Zero geometry once.
+// It is used as a short full-frame background cut, not as a lighting dimmer.
+const backroomsBackgroundScene=new THREE.Scene();
+backroomsBackgroundScene.background=levelZero.scene.background.clone();
+backroomsBackgroundScene.fog=new THREE.FogExp2(levelZero.scene.fog.color,.008);
+const backroomsSpawn=levelZero.map.spawn;
+levelZero.update(0,{x:backroomsSpawn.x,y:0,z:backroomsSpawn.z},prefersReducedMotion,1,true);
+const backroomsBackgroundMap=backroomsGroup.clone(true);
+backroomsBackgroundMap.position.set(0,0,0);
+backroomsBackgroundScene.add(backroomsBackgroundMap);
+const backroomsBackgroundAmbient=new THREE.HemisphereLight(0xb9c7bd,0x1c2722,.92);
+backroomsBackgroundScene.add(backroomsBackgroundAmbient);
+const backroomsBackgroundMoon=new THREE.DirectionalLight(0xb8c6c2,.85);
+backroomsBackgroundMoon.position.set(-8,14,11);
+backroomsBackgroundScene.add(backroomsBackgroundMoon);
+const backroomsBackgroundCamera=new THREE.PerspectiveCamera(58,16/9,.08,160);
+const backroomsViewYaw=backroomsSpawn.yaw??0;
+backroomsBackgroundCamera.position.set(backroomsSpawn.x,1.62,backroomsSpawn.z);
+backroomsBackgroundCamera.lookAt(
+ backroomsSpawn.x-Math.sin(backroomsViewYaw)*11,
+ 1.55,
+ backroomsSpawn.z-Math.cos(backroomsViewYaw)*11
+);
+const backroomsBackgroundTarget=new THREE.WebGLRenderTarget(1280,720,{depthBuffer:true,stencilBuffer:false});
+backroomsBackgroundTarget.texture.colorSpace=THREE.SRGBColorSpace;
+const backroomsFlashMaterial=new THREE.MeshBasicMaterial({
+ map:backroomsBackgroundTarget.texture,toneMapped:false,depthTest:false,depthWrite:false
+});
+const backroomsFlashPlane=new THREE.Mesh(new THREE.PlaneGeometry(1,1),backroomsFlashMaterial);
+backroomsFlashPlane.position.set(0,0,-5.02);
+backroomsFlashPlane.renderOrder=88;
+backroomsFlashPlane.frustumCulled=false;
+backroomsFlashPlane.visible=false;
+camera.add(backroomsFlashPlane);
+overlayResources.push(backroomsFlashPlane.geometry,backroomsFlashMaterial);
+function captureBackroomsBackground(){
+ const previousTarget=renderer.getRenderTarget();
+ const previousViewport=renderer.getViewport(new THREE.Vector4());
+ const previousScissor=renderer.getScissor(new THREE.Vector4());
+ const previousScissorTest=renderer.getScissorTest();
+ const previousAutoClear=renderer.autoClear;
+ try{
+  renderer.setRenderTarget(backroomsBackgroundTarget);
+  renderer.setViewport(0,0,1280,720);
+  renderer.setScissorTest(false);
+  renderer.autoClear=true;
+  renderer.clear(true,true,true);
+  renderer.render(backroomsBackgroundScene,backroomsBackgroundCamera);
+ }finally{
+  renderer.setRenderTarget(previousTarget);
+  renderer.setViewport(previousViewport);
+  renderer.setScissor(previousScissor);
+  renderer.setScissorTest(previousScissorTest);
+  renderer.autoClear=previousAutoClear;
+ }
+}
+captureBackroomsBackground();
 function createSoundscape(){
  const C=window.AudioContext||window.webkitAudioContext;
  if(!C)return {start(){},setMuted(){},footstep(){},fx(){},dispose(){}};
@@ -421,7 +479,7 @@ function reset(){
  shotSounds.clear();lastCaption='';subtitle.classList.remove('visible');
  titlePanel.classList.remove('visible');titlePanel.classList.add('hidden');startPanel.classList.add('hidden');
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
- backroomsGroup.visible=false;monochrome.root.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
+ backroomsGroup.visible=false;monochrome.root.visible=false;backroomsFlashPlane.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
  noclipCue.pause();noclipCue.currentTime=0;noclipCue.volume=.72;noclipCueStarted=false;noclipCueStopped=false;
  scene.background.copy(introBackground);scene.fog.color.copy(introFogColor);scene.fog.density=.0125;
  started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);
@@ -462,6 +520,12 @@ function update(t){
  previousPoseTime=t;
  actors[0].getHeadWorldPosition(leadHeadPoint);
  cameraFor(t,poses[0],leadHeadPoint);
+ backroomsFlashPlane.visible=!prefersReducedMotion&&monochrome2BackroomsBackgroundFlash(t);
+ if(backroomsFlashPlane.visible){
+  const flashDistance=5.02;
+  const flashHeight=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*flashDistance;
+  backroomsFlashPlane.scale.set(camera.aspect*flashHeight*1.02,flashHeight*1.02,1);
+ }
  shopLights.forEach(light=>{light.intensity=t>22?17:4;});
  const doorOpen=monochrome2ShopDoorOpen(t);
  shopDoors.forEach(({pivot,direction})=>{pivot.rotation.y=direction*doorOpen*(Math.PI/2);});
@@ -482,7 +546,7 @@ function update(t){
  }
  if(state.backrooms>0){
   const localPlayer={x:poses[0].x-backroomsGroup.position.x,y:0,z:poses[0].z-backroomsGroup.position.z};
-  levelZero.update(t,localPlayer,prefersReducedMotion,prefersReducedMotion?1:monochrome2BackroomsFlicker(t),true);
+  levelZero.update(t,localPlayer,prefersReducedMotion,1,true);
   scene.background.lerpColors(introBackground,levelZero.scene.background,state.backrooms);
   scene.fog.color.lerpColors(introFogColor,levelZero.scene.fog.color,state.backrooms);
   scene.fog.density=lerp(.0125,levelZero.scene.fog.density,state.backrooms);
@@ -524,7 +588,7 @@ function cleanup(){
  if(!embedded){renderer.setAnimationLoop(null);window.removeEventListener('resize',resize);}
  window.removeEventListener('pagehide',cleanup);
  if(window.speechSynthesis)window.speechSynthesis.cancel();
- audio?.dispose();noclipCue.pause();actors.forEach(actor=>actor.dispose());levelZero.dispose();
+ audio?.dispose();noclipCue.pause();actors.forEach(actor=>actor.dispose());backroomsBackgroundTarget.dispose();backroomsBackgroundScene.clear();levelZero.dispose();
  geometries.forEach(geometry=>geometry.dispose());materials.forEach(material=>material.dispose());
  textures.forEach(texture=>texture.dispose());overlayResources.forEach(resource=>resource.dispose());
  if(embeddedTarget)embeddedTarget.dispose();
