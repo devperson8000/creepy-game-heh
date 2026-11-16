@@ -157,9 +157,14 @@ export function startSecretRoom(container) {
     if(!tvReturnPose)tvReturnPose={position:camera.position.clone(),quaternion:camera.quaternion.clone(),fov:camera.fov};
     tvCameraLocked=true;keys.clear();document.exitPointerLock?.();root.classList.add('sr-tv-focus');
     world.tv.screen.updateWorldMatrix(true,false);
-    const screen=world.tv.screen.getWorldPosition(new T.Vector3()),position=screen.clone().add(v3(0,.46,0));
-    const guide=new T.PerspectiveCamera(39,camera.aspect,.06,60);guide.position.copy(position);guide.lookAt(screen);
-    cameraMoveTo(position,guide.quaternion,39,1.18,done);
+    const screen=world.tv.screen.getWorldPosition(new T.Vector3());
+    const normal=world.tv.screen.getWorldDirection(new T.Vector3()).normalize();
+    const distance=.52;
+    const halfViewHeight=Math.max(.326/2,.456/(2*camera.aspect));
+    const fov=2*Math.atan(halfViewHeight/distance)*180/Math.PI;
+    const position=screen.clone().addScaledVector(normal,distance);
+    const guide=new T.PerspectiveCamera(fov,camera.aspect,.06,60);guide.position.copy(position);guide.lookAt(screen);
+    cameraMoveTo(position,guide.quaternion,fov,1.18,done);
   }
   function returnCameraFromTv(done){
     if(!tvReturnPose){tvCameraLocked=false;root.classList.remove('sr-tv-focus');done?.();return;}
