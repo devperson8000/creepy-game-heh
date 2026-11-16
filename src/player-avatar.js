@@ -60,8 +60,30 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   let found;model.traverse(object=>{if(object.isBone&&object.name.replace(/[._-]/g,'').toLowerCase()===key)found=object;});return found;
  };
  const chest=findBone('spine003'),headBone=findBone('spine006'),hand=findBone('handr'),forearm=findBone('forearmr'),upperArm=findBone('upperarmr');
- const thighL=findBone('thighl'),thighR=findBone('thighr'),shinL=findBone('shinl'),shinR=findBone('shinr'),footL=findBone('footl'),footR=findBone('footr');
+ const thighL=findBone('thighl'),thighR=findBone('thighr'),shinL=findBone('shinl'),shinR=findBone('shinr'),footL=findBone('footl'),footR=findBone('footr'),toeL=findBone('toel'),toeR=findBone('toer'),heelL=findBone('heel02l'),heelR=findBone('heel02r');
  root.updateMatrixWorld(true);
+ // Cache every boot vertex influenced by the foot, toe and heel joints.
+ // The ankle pivot alone can look clear while the boot sole still clips.
+ const footVertexSets=[];
+ model.traverse(object=>{
+  if(!object.isSkinnedMesh)return;
+  const skinIndex=object.geometry.attributes.skinIndex,skinWeight=object.geometry.attributes.skinWeight;
+  if(!skinIndex||!skinWeight)return;
+  const leftBones=new Set([footL,toeL,heelL].filter(Boolean).map(bone=>object.skeleton.bones.indexOf(bone)).filter(index=>index>=0));
+  const rightBones=new Set([footR,toeR,heelR].filter(Boolean).map(bone=>object.skeleton.bones.indexOf(bone)).filter(index=>index>=0));
+  const left=[],right=[];
+  for(let vertex=0;vertex<skinIndex.count;vertex++){
+   let leftWeight=0,rightWeight=0;
+   for(let slot=0;slot<4;slot++){
+    const boneIndex=skinIndex.getComponent(vertex,slot),weight=skinWeight.getComponent(vertex,slot);
+    if(leftBones.has(boneIndex))leftWeight+=weight;
+    if(rightBones.has(boneIndex))rightWeight+=weight;
+   }
+   if(leftWeight>.015)left.push(vertex);
+   if(rightWeight>.015)right.push(vertex);
+  }
+  if(left.length||right.length)footVertexSets.push({mesh:object,left,right});
+ });
 
  // Calculate a rest-pose attachment once, then let the real skeleton animate it.
  function attachAtModelPoint(object,bone,position){
@@ -288,10 +310,20 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
  }
  function getFootWorldPositions(){
   root.updateMatrixWorld(true);
-  return [footL,footR].filter(Boolean).map(bone=>{
+  const points=[footL,footR,toeL,toeR,heelL,heelR].filter(Boolean).map(bone=>{
    const point=bone.getWorldPosition(new THREE.Vector3());
    return [point.x,point.y,point.z];
   });
+  const point=new THREE.Vector3();
+  for(const group of footVertexSets){
+   group.mesh.skeleton.update();
+   for(const index of group.left.concat(group.right)){
+    group.mesh.getVertexPosition(index,point);
+    group.mesh.localToWorld(point);
+    points.push([point.x,point.y,point.z]);
+   }
+  }
+  return points;
  }
  function getHeadWorldPosition(target=new THREE.Vector3()){
   root.updateMatrixWorld(true);

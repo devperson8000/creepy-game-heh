@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
-import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset} from './monochrome2-intro-timeline.js';
+import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 const root=document.querySelector('#scene');
@@ -353,7 +353,7 @@ function reset(){
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
  backroomsGroup.visible=false;monochrome.root.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
  backroomsAmbience.pause();backroomsAmbience.currentTime=0;backroomsAmbience.volume=0;backroomsAmbienceStarted=false;
- noclipCue.pause();noclipCue.currentTime=0;noclipCue.volume=.72;noclipCueStarted=false;
+ noclipCue.pause();noclipCue.currentTime=0;noclipCue.volume=.72;noclipCueStarted=false;noclipCueStopped=false;
  scene.background.copy(introBackground);scene.fog.color.copy(introFogColor);scene.fog.density=.0125;
  started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);
 }
@@ -363,7 +363,8 @@ function update(t){
   noclipCueStarted=true;noclipCue.currentTime=0;noclipCue.muted=muted;noclipCue.play().catch(()=>{});
  }
  const cueDuck=activeSpeechCue&&(activeSpeechCue.id?.startsWith('descending')||['sound','light','wall'].includes(activeSpeechCue.id))?.48:1;
- noclipCue.volume=.72*ease((t-46.55)/.65)*cueDuck;
+ noclipCue.volume=monochrome2NoclipCueGain(t,cueDuck);
+ if(state.fade>=.999&&!noclipCueStopped){noclipCue.pause();noclipCue.currentTime=0;noclipCueStopped=true;}
  const frameDelta=previousPoseTime===null?0:Math.max(0,t-previousPoseTime);
  actors.forEach((actor,index)=>{
   const p=poses[index],position=new THREE.Vector3(p.x,p.y,p.z),previous=previousActorPositions[index];
@@ -453,8 +454,8 @@ const backroomsAmbience=new Audio('/audio/halloween/sfx/room-dread.mp3');
 backroomsAmbience.loop=true;backroomsAmbience.preload='auto';backroomsAmbience.volume=0;
 let backroomsAmbienceStarted=false;
 const noclipCue=new Audio('/audio/monochrome2/noclip-build-12s.mp3');
-noclipCue.preload='auto';noclipCue.loop=false;noclipCue.volume=.72;
-let noclipCueStarted=false;
+noclipCue.preload='auto';noclipCue.loop=true;noclipCue.volume=.72;
+let noclipCueStarted=false,noclipCueStopped=false;
 startButton.addEventListener('click',()=>{if(!started){reset();startButton.blur();}});
 replayButton.addEventListener('click',()=>reset());
 soundButton.addEventListener('click',()=>{

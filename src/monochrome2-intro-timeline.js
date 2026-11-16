@@ -40,7 +40,7 @@ export function monochrome2FootPlantOffset(footPositions,targetClearance=.105){
   lowest=Math.min(lowest,foot[1]-monochrome2RampY(foot[2]));
  }
  if(!Number.isFinite(lowest))return 0;
- return clamp(targetClearance-lowest,-.18,.42);
+ return clamp(targetClearance-lowest,0,.42);
 }
 
 export function monochrome2CrackVisibility(timelineStrength,distanceToWall){
@@ -111,6 +111,13 @@ export function sampleMonochrome2Actors(value){
   if(time>=29.2&&time<32.8){friend2.handTarget=[3.45,1.22,-28.62];friend2.handProgress=smooth((time-29.2)/1.45);}
  }
  return [lead,friend1,friend2];
+}
+
+export function monochrome2NoclipCueGain(value,duck=1){
+ const time=clamp(Number.isFinite(value)?value:0,0,MONOCHROME2_DURATION);
+ const intro=smooth((time-46.55)/.65);
+ const blackFade=smooth((time-65.6)/2.9);
+ return .72*intro*clamp(duck,0,1)*(1-blackFade);
 }
 
 export function sampleMonochrome2(value){
