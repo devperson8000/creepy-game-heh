@@ -41,7 +41,7 @@ export function startCoopGame(container,{client,session}){
  const quality=createRenderQuality(renderer,{pixelRatio:Math.min(devicePixelRatio,1.4)});
  const camera=new THREE.PerspectiveCamera(66,1,.06,120),creature=createCreature();if(run.layout.narrowMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(mesh=>{if(mesh.isMesh){mesh.userData.actor=true;world.rayMeshes.push(mesh);}});
- const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
+ const torch=createTorch(world.scene,camera,{maze:!!run.layout.narrowMaze}),creatureMotion=createCreatureMotion();
  const audio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,metallic:false,onError:()=>ui.toast('Monster sound could not load.'),onScareError:()=>ui.toast('The jumpscare sound could not load.')});
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL);
  const jumpscare=createJumpscare({mouthTexture,metallic:false});
