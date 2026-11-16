@@ -47,10 +47,10 @@ export const SECRET_ENTRY = Object.freeze({
   maxZ: -1.2,
   minHeight: -5.5,
   yaw: Math.PI / 2,
-  yawTolerance: 0.68,
-  forwardThreshold: 0.8,
-  maxSideInput: 0.5,
-  holdSeconds: 0.72
+  yawTolerance: 0.3,
+  forwardThreshold: 0.96,
+  maxSideInput: 0.18,
+  holdSeconds: 0.82
 });
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
