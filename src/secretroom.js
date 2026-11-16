@@ -614,6 +614,9 @@ export function startSecretRoom(container,{autostart=false}={}) {
       if(p>=1)cablePickupAnimation=null;
     }
     world.power.setHeldPose(position,quaternion);
+    // Keep the actual right palm aligned with the moving plug through both
+    // the lift from the carpet and the held first-person pose.
+    hazmatViewmodel.setGripWorldTransform(position,quaternion);
   }
 
   function updateCameraAndPower(delta){
@@ -663,7 +666,7 @@ export function startSecretRoom(container,{autostart=false}={}) {
     player.sprint = sprinting && moved > 0;
     playerVelocity.set(delta ? (player.x - beforeX) / delta : 0, 0, delta ? (player.z - beforeZ) / delta : 0);
     player.y = 0;
-    const reachTarget = plugAnimation ? 1 : 0;
+    const reachTarget = plugAnimation || cablePickupAnimation ? 1 : 0;
     reachLean += (reachTarget - reachLean) * (1 - Math.exp(-delta * 8.5));
     const stepBob = reduced.matches ? 0 : Math.sin(distanceTravelled * 7) * 0.012;
     // Ease the player's view down toward the outlet so the real rigged arm
