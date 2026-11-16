@@ -3,7 +3,6 @@ import './style.css';
 import './lobby-menu.css';
 import './coop-game.css';
 import './waiting-room.css';
-import './arrival.css';
 import './voice-chat.css';
 import './polish.css';
 import './hunt-clock.css';
