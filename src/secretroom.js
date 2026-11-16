@@ -151,7 +151,12 @@ export function startSecretRoom(container) {
       teaserPlayback=film;
       await film.ready;
       return film;
-    }).catch(error=>{teaserLoadError=error;console.error('Monochrome 2 Backrooms footage could not be prepared:',error);return null;});
+    }).catch(error=>{
+      teaserLoadError=error;
+      teaserPlayback?.dispose();teaserPlayback=null;
+      console.error('Monochrome 2 Backrooms footage could not be prepared:',error);
+      return null;
+    });
     return teaserReadyPromise;
   }
   function cameraMoveTo(position,quaternion,fov,duration,onComplete){
