@@ -19,7 +19,7 @@ test('the stair inscription is exactly the requested sentence in reverse charact
 
 test('the secret wall requires a deliberate forward push while facing the right-hand wall at the bottom', () => {
   let state = 0;
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 8; i++) {
     const next = advanceSecretEntryCharge(state, sample(), 0.1);
     state = next.elapsed;
     assert.equal(next.triggered, false, 'the 0.82 second hold is not yet complete');
