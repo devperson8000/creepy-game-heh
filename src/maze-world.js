@@ -128,12 +128,12 @@ export function createMazeWorld(run){
   inscriptionContext.fillRect(x,y,8+rng()*38,1+rng()*2.2);
  }
  const inscriptionTexture=new THREE.CanvasTexture(inscriptionCanvas);inscriptionTexture.colorSpace=THREE.SRGBColorSpace;
- const inscriptionMaterial=new THREE.MeshBasicMaterial({map:inscriptionTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1});
+ const inscriptionMaterial=new THREE.MeshBasicMaterial({map:inscriptionTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-2});
  const stairInscription=new THREE.Mesh(new THREE.PlaneGeometry(2.05,.58),inscriptionMaterial);
  // The descending player's right-hand wall is the negative-X stair wall.
- // Its inner face is x = stair.x - stair.width / 2. The writing sits directly
- // against that face and fully within the stair wall's z range (-25 to -2.6).
- stairInscription.position.set(stair.x-stair.width/2+.001,5.08,-27.2);
+ // Place the lettering exactly on its inner face (no visible gap) and within
+ // the stair wall's z range (-25 to -2.6); polygon offset resolves z-fighting.
+ stairInscription.position.set(stair.x-stair.width/2,5.08,-27.2);
  stairInscription.rotation.y=Math.PI/2;
  stairInscription.renderOrder=1;
  stairInscription.name='reversed-stairwell-inscription';
