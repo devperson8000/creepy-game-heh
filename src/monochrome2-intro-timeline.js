@@ -1,14 +1,14 @@
 export const MONOCHROME2_DURATION=78;
 
 export const MONOCHROME2_DIALOGUE=[
- {id:'basement',at:.8,end:4.15,speaker:'LEAD',voice:'lead',text:'That place was a nightmare. I cannot believe we got out.',rate:.97,pitch:1},
- {id:'stairs',at:4.45,end:7.8,speaker:'RILEY',voice:'friend1',text:'It was right behind us. I heard it on the stairs.',rate:.98,pitch:1},
- {id:'door',at:8.15,end:12.0,speaker:'JAMIE',voice:'friend2',text:'The door almost shut. We made it because we kept moving.',rate:.98,pitch:1},
- {id:'escape',at:12.55,end:16.05,speaker:'LEAD',voice:'lead',text:'We kept moving until we were outside. That saved us.',rate:.97,pitch:1},
- {id:'food',at:17.0,end:20.0,speaker:'RILEY',voice:'friend1',text:'I just want real food. No more emergency rations.',rate:.98,pitch:1},
- {id:'supplies',at:20.45,end:23.35,speaker:'JAMIE',voice:'friend2',text:'Food and water first. Then we decide what comes next.',rate:.98,pitch:1},
- {id:'water',at:27.2,end:30.0,speaker:'JAMIE',voice:'friend2',text:'Found water. I am grabbing a couple of bottles.',rate:.98,pitch:1},
- {id:'snacks',at:30.35,end:32.8,speaker:'RILEY',voice:'friend1',text:'I found snacks. Keep watch while I get them.',rate:.98,pitch:1},
+ {id:'basement',at:.8,end:4.15,speaker:'LEAD',voice:'lead',text:'That place was a nightmare. We made it out.',rate:.97,pitch:1},
+ {id:'stairs',at:4.45,end:7.8,speaker:'RILEY',voice:'friend1',text:'It was right behind us. I heard it coming.',rate:.98,pitch:1},
+ {id:'door',at:8.15,end:12.0,speaker:'JAMIE',voice:'friend2',text:'That door almost shut. We just kept moving.',rate:.98,pitch:1},
+ {id:'escape',at:12.55,end:16.05,speaker:'LEAD',voice:'lead',text:'We did not stop until we got outside.',rate:.97,pitch:1},
+ {id:'food',at:17.0,end:20.0,speaker:'RILEY',voice:'friend1',text:'I just want real food. No more rations.',rate:.98,pitch:1},
+ {id:'supplies',at:20.45,end:23.35,speaker:'JAMIE',voice:'friend2',text:'Food and water first. Then we decide.',rate:.98,pitch:1},
+ {id:'water',at:27.2,end:30.0,speaker:'JAMIE',voice:'friend2',text:'Found water. Taking a few bottles.',rate:.98,pitch:1},
+ {id:'snacks',at:30.35,end:32.8,speaker:'RILEY',voice:'friend1',text:'Snacks here. Keep watch while I grab them.',rate:.98,pitch:1},
 
 ];
 
