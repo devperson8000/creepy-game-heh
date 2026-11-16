@@ -121,7 +121,7 @@ export function startSecretRoom(container) {
       '<section class="sr-panel" role="dialog" aria-modal="false" aria-labelledby="sr-title">' +
         '<div class="sr-eyebrow">FOUND FOOTAGE / ROOM 001</div>' +
         '<h1 id="sr-title">The Secret Room<span>LEVEL 0 — CLOSED INTERIOR</span></h1>' +
-        '<p>The lights are still humming. An old television sits on a small table. A single cassette has been left nearby. Pick it up, examine the player, and decide where it belongs.</p>' +
+        '<p>The lights are still humming. An old television sits on a small table, with its unplugged power lead coiled beside it. A VHS cassette waits nearby. Restore the TV before playing the tape.</p>' +
         '<button class="sr-start" data-action="start">Enter the room <span>↗</span></button>' +
         '<footer><span>HEADPHONES RECOMMENDED</span><span>F · INTERACT &nbsp; G · DROP</span></footer>' +
       '</section>' +
@@ -555,6 +555,8 @@ export function startSecretRoom(container) {
     if(!powerCableHeld||powerCableConnected||plugAnimation||disposed)return;
     camera.updateMatrixWorld(true);
     const position=camera.localToWorld(v3(.5,-.34,-.78));
+    position.x=clamp(position.x,-3.14,3.14);
+    position.z=clamp(position.z,-3.14,3.14);
     const quaternion=camera.getWorldQuaternion(new T.Quaternion());
     world.power.setHeldPose(position,quaternion);
   }
