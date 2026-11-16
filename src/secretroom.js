@@ -647,6 +647,9 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
     }
     world.power.setHeldPose(position,quaternion);
     hazmatViewmodel.setGripWorldTransform(roomPointToWorld(position),roomQuaternionToWorld(quaternion));
+    // Keep the actual hazmat arm hidden while the cable lifts from the floor.
+    // The arm can reappear once the pickup has settled into its carry pose.
+    hazmatViewmodel.root.visible=!cablePickupAnimation;
   }
 
   function updateCameraAndPower(delta){
