@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  MONOCHROME2_DURATION,MONOCHROME2_DIALOGUE,sampleMonochrome2,sampleMonochrome2Actors,
- monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,MONOCHROME2_STAIR_OPENING
+ monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsFlicker,MONOCHROME2_STAIR_OPENING
 } from '../src/monochrome2-intro-timeline.js';
 import {MONOCHROME2_SHELVES,monochrome2CollisionViolations} from '../src/monochrome2-collision.js';
 
@@ -18,6 +18,18 @@ test('the intro moves from the street to the two-line title in the intended orde
  ];
  for(const [time,shot] of expected)assert.equal(sampleMonochrome2(time).shot,shot);
  assert.equal(MONOCHROME2_DURATION,78);
+});
+
+test('Level Zero gets short readable flicker bursts during the Monochrome corridor crossing',()=>{
+ assert.equal(monochrome2BackroomsFlicker(63.5),1,'the reveal before the crossing stays clear');
+ for(const time of [63.7125,63.925,64.1775,64.4325,64.715,64.9775]){
+  const power=monochrome2BackroomsFlicker(time);
+  assert.ok(power>=.08&&power<.25,'each flash briefly dims the Backrooms map');
+ }
+ for(const time of [63.84,64.02,64.3,64.6,64.84,65.2]){
+  assert.equal(monochrome2BackroomsFlicker(time),1,'the map returns to full visibility between flashes');
+ }
+ assert.equal(monochrome2BackroomsFlicker(66),1,'the effect ends with the crossing');
 });
 
 test('all survivors move at a steady pace and both friends reach for store supplies',()=>{

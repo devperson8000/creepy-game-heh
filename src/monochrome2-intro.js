@@ -3,7 +3,7 @@ import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
 import {MONOCHROME2_SHELVES} from './monochrome2-collision.js';
-import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
+import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsFlicker,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 function createMonochrome2Runtime({embedded=false,renderer:providedRenderer=null}={}){
@@ -482,7 +482,7 @@ function update(t){
  }
  if(state.backrooms>0){
   const localPlayer={x:poses[0].x-backroomsGroup.position.x,y:0,z:poses[0].z-backroomsGroup.position.z};
-  levelZero.update(t,localPlayer,prefersReducedMotion);
+  levelZero.update(t,localPlayer,prefersReducedMotion,prefersReducedMotion?1:monochrome2BackroomsFlicker(t),true);
   scene.background.lerpColors(introBackground,levelZero.scene.background,state.backrooms);
   scene.fog.color.lerpColors(introFogColor,levelZero.scene.fog.color,state.backrooms);
   scene.fog.density=lerp(.0125,levelZero.scene.fog.density,state.backrooms);

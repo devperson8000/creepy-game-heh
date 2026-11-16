@@ -108,10 +108,24 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=true,o
   const rightPanel = element('div', 'lobby-right-stack');
   const comingSoon = element('aside', 'lobby-coming-soon');
   comingSoon.setAttribute('aria-label', 'Upcoming Monochrome update');
+  const signalMeta = element('div', 'lobby-coming-soon-meta');
+  signalMeta.append(
+   element('span', 'lobby-coming-soon-kicker', 'MONOCHROME II / INCOMING SIGNAL')
+  );
+  const signalBars = element('span', 'lobby-coming-soon-signal');
+  signalBars.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 3; i++) signalBars.append(element('i', '', ''));
+  signalMeta.append(signalBars);
+  const signalFooter = element('div', 'lobby-coming-soon-footer');
+  signalFooter.append(
+   element('span', '', 'LEVEL 0'),
+   element('span', '', 'ARCHIVE 02')
+  );
   comingSoon.append(
-   element('p', 'lobby-coming-soon-kicker', 'MONOCHROME / NEXT TRANSMISSION'),
+   signalMeta,
    element('h2', '', 'Halloween has passed.'),
-   element('p', 'lobby-coming-soon-copy', 'Something is coming soon.')
+   element('p', 'lobby-coming-soon-copy', 'Something is coming soon.'),
+   signalFooter
   );
   rightPanel.append(options, comingSoon);
   if(showHalloweenTest){const tests=button('Test Halloween Gameplay','halloween-test-entry',onHalloweenTest);tests.classList.add('halloween-test-entry');rightPanel.append(tests);}

@@ -143,6 +143,26 @@ export function monochrome2NoclipCueGain(value,duck=1){
  return .72*intro*clamp(duck,0,1)*(1-blackFade);
 }
 
+// Brief, intentional light drops on Level Zero as Monochrome crosses the corridor.
+const BACKROOMS_FLICKER_PULSES = Object.freeze([
+ [63.68,.065,.16],
+ [63.90,.050,.12],
+ [64.14,.075,.22],
+ [64.41,.045,.14],
+ [64.68,.070,.19],
+ [64.95,.055,.11]
+]);
+export function monochrome2BackroomsFlicker(value){
+ const time=Number.isFinite(value)?value:0;
+ for(const [start,duration,minPower] of BACKROOMS_FLICKER_PULSES){
+  const local=time-start;
+  if(local<0||local>duration)continue;
+  const edge=Math.min(smooth(local/.012),smooth((duration-local)/.012));
+  return lerp(1,minPower,edge);
+ }
+ return 1;
+}
+
 export function sampleMonochrome2(value){
  const time=clamp(Number.isFinite(value)?value:0,0,MONOCHROME2_DURATION);
  let shot='street';

@@ -23,3 +23,50 @@
 .lobby-coming-soon-copy{margin-top:7px!important;font-size:12px;letter-spacing:.025em;color:#929b96}
 @media(max-width:1200px){.lobby-right-stack{gap:13px}.lobby-coming-soon{padding:20px 22px 18px}}
 @media(prefers-reduced-motion:reduce){.lobby-coming-soon::before{box-shadow:none}}
+
+/* Post-Halloween transmission card: quiet movement, rounded glass and tiny sequel clues. */
+.lobby-coming-soon{
+ position:relative;isolation:isolate;overflow:hidden;
+ padding:24px 26px 19px;border:1px solid #d2e0d221;border-radius:17px;
+ background:
+  radial-gradient(ellipse at 92% 0%,#9eae9b17,transparent 48%),
+  linear-gradient(142deg,#1a211eee 0%,#111714f7 58%,#0a0e0df7 100%);
+ box-shadow:inset 0 1px #ffffff0c,inset 0 0 28px #c8d7c606,0 18px 48px #0006;
+ animation:lobby-signal-enter .72s cubic-bezier(.2,.75,.25,1) both;
+ transition:transform .32s ease,border-color .32s ease,box-shadow .32s ease;
+}
+.lobby-coming-soon:hover{
+ transform:translateY(-3px);
+ border-color:#c8d9c34a;
+ box-shadow:inset 0 1px #ffffff12,inset 0 0 34px #c8d7c60a,0 24px 58px #0008,0 0 28px #b5c7ad09;
+}
+.lobby-coming-soon::before{
+ content:"";position:absolute;z-index:-1;left:-42%;top:0;width:38%;height:1px;
+ background:linear-gradient(90deg,transparent,#d7e7d4a0,transparent);
+ box-shadow:0 0 12px #d7e7d44d;
+ animation:lobby-signal-sweep 7s ease-in-out 1.2s infinite;
+ pointer-events:none;
+}
+.lobby-coming-soon::after{
+ content:"";position:absolute;z-index:-1;right:-36px;bottom:-62px;width:180px;height:145px;
+ border-radius:50%;background:#9fb29a0b;filter:blur(26px);pointer-events:none;
+}
+.lobby-coming-soon-meta,.lobby-coming-soon-footer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.lobby-coming-soon-meta{min-height:12px}
+.lobby-coming-soon-kicker{font:8px/1.5 ui-monospace,monospace;letter-spacing:.16em;color:#9aa99d}
+.lobby-coming-soon-signal{display:flex;align-items:center;gap:3px;height:12px;opacity:.8}
+.lobby-coming-soon-signal i{display:block;width:3px;height:5px;border-radius:2px;background:#b4c6ae;box-shadow:0 0 7px #b4c6ae55;animation:lobby-signal-bar 1.4s ease-in-out infinite}
+.lobby-coming-soon-signal i:nth-child(2){height:9px;animation-delay:.16s}
+.lobby-coming-soon-signal i:nth-child(3){height:6px;animation-delay:.32s}
+.lobby-coming-soon h2{position:relative;margin:12px 0 0!important;font:500 clamp(21px,2vw,28px)/1.18 Georgia,serif;letter-spacing:-.03em;color:#e7ebe4}
+.lobby-coming-soon-copy{margin-top:7px!important;font-size:12px;letter-spacing:.025em;color:#a3ada5}
+.lobby-coming-soon-footer{margin-top:18px;padding-top:11px;border-top:1px solid #d7e0d312;color:#69796d;font:7px/1.5 ui-monospace,monospace;letter-spacing:.17em}
+@keyframes lobby-signal-enter{from{opacity:0;transform:translateY(9px);filter:blur(3px)}to{opacity:1;transform:translateY(0);filter:blur(0)}}
+@keyframes lobby-signal-sweep{0%,18%{left:-42%;opacity:0}27%{opacity:.9}55%,100%{left:110%;opacity:0}}
+@keyframes lobby-signal-bar{0%,100%{opacity:.42;transform:scaleY(.65)}50%{opacity:1;transform:scaleY(1.12)}}
+@media(max-width:1200px){.lobby-coming-soon{padding:21px 22px 17px}.lobby-coming-soon-footer{margin-top:14px}}
+@media(max-width:720px){.lobby-coming-soon{border-radius:15px}.lobby-coming-soon h2{font-size:22px}}
+@media(prefers-reduced-motion:reduce){
+ .lobby-coming-soon{animation:none;transition:none}
+ .lobby-coming-soon::before,.lobby-coming-soon-signal i{animation:none}
+}
