@@ -282,6 +282,7 @@ backroomsBackgroundScene.fog=new THREE.FogExp2(levelZero.scene.fog.color,.008);
 const backroomsSpawn=levelZero.map.spawn;
 levelZero.update(0,{x:backroomsSpawn.x,y:0,z:backroomsSpawn.z},prefersReducedMotion,1,true);
 const backroomsBackgroundMap=backroomsGroup.clone(true);
+backroomsBackgroundMap.visible=true;
 backroomsBackgroundMap.position.set(0,0,0);
 backroomsBackgroundScene.add(backroomsBackgroundMap);
 const backroomsBackgroundAmbient=new THREE.HemisphereLight(0xb9c7bd,0x1c2722,.92);
