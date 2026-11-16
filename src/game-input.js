@@ -4,7 +4,7 @@ export function gameInput(camera,canvas,ui,onPause,onCapture=()=>{}){
  camera.rotation.order='YXZ';
  const touchButtons=[...ui.root.querySelectorAll('[data-walk]')];
  function clearKeys(){keys.clear();drag=null;for(const button of touchButtons)button.setAttribute('aria-pressed','false');}
- function capture(){canvas.tabIndex=0;canvas.focus();if(pointerLockAllowed&&matchMedia('(pointer:fine)').matches){const p=canvas.requestPointerLock?.();p?.catch?.(()=>{});}clearKeys();onCapture();}
+ function capture(){canvas.tabIndex=0;canvas.focus();if(pointerLockAllowed&&matchMedia('(pointer:fine)').matches){try{const p=canvas.requestPointerLock?.();p?.catch?.(()=>{});}catch(error){console.debug('Pointer lock unavailable; mouse drag remains enabled.',error);}}clearKeys();onCapture();}
  canvas.addEventListener('click',()=>{if(!ui.overlay&&!document.pointerLockElement)capture();});
  function look(dx,dy){yaw-=dx*.0021*gamePreferences().sensitivity;pitch=Math.max(-1.3,Math.min(1.3,pitch-dy*.0021*gamePreferences().sensitivity));}
  document.addEventListener('mousemove',e=>{if(document.pointerLockElement===canvas&&!ui.overlay)look(e.movementX,e.movementY);});
