@@ -39,6 +39,7 @@ export function startSecretRoom(container,{autostart=false}={}) {
   let hazmatViewmodelBase=null;
   let yaw = 0;
   let pitch = -0.16;
+  let reachLean = 0;
   let time = 0;
   let distanceTravelled = 0;
   let previous = performance.now();
@@ -662,7 +663,12 @@ export function startSecretRoom(container,{autostart=false}={}) {
     player.sprint = sprinting && moved > 0;
     playerVelocity.set(delta ? (player.x - beforeX) / delta : 0, 0, delta ? (player.z - beforeZ) / delta : 0);
     player.y = 0;
-    camera.position.set(player.x, 1.68 + (reduced.matches ? 0 : Math.sin(distanceTravelled * 7) * 0.012), player.z);
+    const reachTarget = plugAnimation ? 1 : 0;
+    reachLean += (reachTarget - reachLean) * (1 - Math.exp(-delta * 8.5));
+    const stepBob = reduced.matches ? 0 : Math.sin(distanceTravelled * 7) * 0.012;
+    // Ease the player's view down toward the outlet so the real rigged arm
+    // can reach it naturally, then return smoothly to normal eye height.
+    camera.position.set(player.x, 1.68 - reachLean * 0.52 + stepBob, player.z);
     camera.rotation.set(pitch, yaw, 0, 'YXZ');
   }
 
