@@ -267,18 +267,11 @@ function createSoundscape(){
   active.add(osc);osc.onended=()=>{active.delete(osc);osc.disconnect();level.disconnect();};
   osc.start();osc.stop(context.currentTime+duration+.03);
  }
- let droneA,droneB,noiseSource;
+ // Resume the shared audio context for character footsteps and short scene
+ // effects only. Continuous synthetic drones/noise were removed so the user's
+ // supplied song is the only sustained audio bed in this cinematic.
  function start(){
-  if(context.state==='suspended')void context.resume();if(droneA)return;
-  droneA=context.createOscillator();droneB=context.createOscillator();
-  const gainA=context.createGain(),gainB=context.createGain();
-  droneA.type='sine';droneB.type='triangle';droneA.frequency.value=46;droneB.frequency.value=68;gainA.gain.value=.021;gainB.gain.value=.005;
-  droneA.connect(gainA);droneB.connect(gainB);gainA.connect(master);gainB.connect(master);droneA.start();droneB.start();
-  const buffer=context.createBuffer(1,context.sampleRate*2,context.sampleRate),data=buffer.getChannelData(0);
-  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*.11;
-  noiseSource=context.createBufferSource();noiseSource.buffer=buffer;noiseSource.loop=true;
-  const filter=context.createBiquadFilter(),noiseGain=context.createGain();filter.type='lowpass';filter.frequency.value=360;noiseGain.gain.value=.025;
-  noiseSource.connect(filter);filter.connect(noiseGain);noiseGain.connect(master);noiseSource.start();
+  if(context.state==='suspended')void context.resume();
  }
  function footstep(){if(context.state!=='running')return;oscillator(76,'triangle',.045,.12,28);oscillator(118,'sine',.018,.08,50);}
  function fx(kind){
@@ -288,7 +281,7 @@ function createSoundscape(){
   if(kind==='transition'){oscillator(130,'sine',.055,1.5,34);oscillator(680,'sine',.018,.8,180);}
  }
  function setMuted(value){master.gain.setTargetAtTime(value?0:.22,context.currentTime,.045);}
- function dispose(){try{droneA?.stop();droneB?.stop();noiseSource?.stop();}catch{}for(const node of active){try{node.stop();}catch{}}void context.close().catch(()=>{});}
+ function dispose(){for(const node of active){try{node.stop();}catch{}}void context.close().catch(()=>{});}
  return {start,setMuted,footstep,fx,dispose};
 }
 
