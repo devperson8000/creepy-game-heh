@@ -106,8 +106,7 @@ export function createMazeWorld(run){
  const clueRoom=layout.rooms[run.clueRoom],cp=worldPoint(clueRoom),cn=clueRoom.normal;
  const note=sign(run.code,.5,.21,cp.x-cn.x*1.14,floor+1.88,cp.z-cn.z*1.14,{rotation:Math.atan2(cn.x,cn.z),background:'#999681',color:'#11170e',size:145});target('clue','clue',note);
  const wallNotes=createWallNotes(layout);scene.add(...wallNotes);
- // A single, deliberately hidden inscription sits on the right-hand stair wall,
- // beside the boarded opening. Its reversed lettering is only readable up close.
+ // The reversed writing is painted directly onto the inside face of the right-hand stair wall.
  const inscriptionCanvas=document.createElement('canvas');inscriptionCanvas.width=1536;inscriptionCanvas.height=360;
  const inscriptionContext=inscriptionCanvas.getContext('2d');
  inscriptionContext.clearRect(0,0,1536,360);
@@ -122,30 +121,21 @@ export function createMazeWorld(run){
   inscriptionContext.fillStyle='rgba(7,10,7,.19)';
   inscriptionContext.fillText(line,769,y+1.5);
  });
- // Fine rubbed marks make the writing look like strokes in the wallpaper rather than a sign.
+ // Fine rubbed marks blend the lettering into the wall like old writing in the wallpaper.
  for(let i=0;i<90;i++){
   const x=rng()*1536,y=42+rng()*276;
   inscriptionContext.fillStyle=`rgba(8,10,7,${.06+rng()*.13})`;
   inscriptionContext.fillRect(x,y,8+rng()*38,1+rng()*2.2);
  }
  const inscriptionTexture=new THREE.CanvasTexture(inscriptionCanvas);inscriptionTexture.colorSpace=THREE.SRGBColorSpace;
- const inscriptionMaterial=new THREE.MeshBasicMaterial({map:inscriptionTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
+ const inscriptionMaterial=new THREE.MeshBasicMaterial({map:inscriptionTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1});
  const stairInscription=new THREE.Mesh(new THREE.PlaneGeometry(2.05,.58),inscriptionMaterial);
- stairInscription.position.set(-3.412,5.08,-26.05);stairInscription.rotation.y=Math.PI/2;
+ // The right wall's inner face is x = stair.x + stair.width / 2. Keep the writing
+ // only 2 mm into the corridor to avoid z-fighting while appearing flush to the wall.
+ stairInscription.position.set(stair.x+stair.width/2-.002,5.08,-26.05);
+ stairInscription.rotation.y=-Math.PI/2;
  stairInscription.name='reversed-stairwell-inscription';
  scene.add(stairInscription);
- // The invisible hover surface hugs only the handwritten lines, not the full wall panel.
- const stairInscriptionHitbox=new THREE.Mesh(
-  new THREE.BoxGeometry(1.35,.54,.08),
-  new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide})
- );
- stairInscriptionHitbox.position.copy(stairInscription.position);
- stairInscriptionHitbox.rotation.copy(stairInscription.rotation);
- stairInscriptionHitbox.name='reversed-stairwell-inscription-hitbox';
- stairInscriptionHitbox.userData.interactId='wall-note';
- stairInscriptionHitbox.castShadow=false;stairInscriptionHitbox.receiveShadow=false;
- scene.add(stairInscriptionHitbox);rayMeshes.push(stairInscriptionHitbox);
- targets.set('wall-note',{id:'wall-note',type:'wall-note',mesh:stairInscriptionHitbox,position:{x:-3.412,z:-26.05,height:5.08}});
  const lighting=createProximityLighting(lamps.map(l=>l.position)),ambient=new THREE.AmbientLight(0xa8b49b,.09),fill=new THREE.PointLight(0xb5bea8,.8,3,1.7);scene.add(ambient,fill);
  const ceilingLights=Array.from({length:6},()=>{const light=new THREE.PointLight(0xd7d9be,0,7,1.7);scene.add(light);return light;});
  let doorProgress=0,selection=[],lastX=Infinity,lastZ=Infinity;
