@@ -200,6 +200,7 @@ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repea
      position:{x:player.x,z:player.z,height:player.height},
      yaw:input.yaw,
      roomRoot:secretRoomExperience.world.root,
+     seal:world.secretEntrySeal,
      onComplete(){
       entryCinematic?.dispose();
       entryCinematic=null;
@@ -208,8 +209,12 @@ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repea
     });
    }
    let target=run.phase==='playing'?currentTarget():null;
-   if(!target&&entryCharge.aligned){
-    target={id:'secret-entry-contact',type:'secret-entry-contact',label:'Hold W to push through the wall',hotkey:'W'};
+   if(!target&&entryCharge.nearby){
+    target={
+     id:'secret-entry-contact',type:'secret-entry-contact',
+     label:entryCharge.aligned?'Hold W to push through the wall':'Turn right toward the wall, then hold W',
+     hotkey:'W'
+    };
    }
    if(target?.type==='secret-entry-contact'){
     hold=entryCharge.progress;holdId=target.id;latched=false;
