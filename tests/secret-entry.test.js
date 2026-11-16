@@ -30,6 +30,18 @@ test('the secret wall requires a deliberate forward push while facing the right-
   assert.equal(SECRET_ENTRY.holdSeconds, 0.82);
 });
 
+test('proximity alone does not count as an attempt to enter the hidden wall', () => {
+  const passingBy = advanceSecretEntryCharge(0, sample({ forward: 0 }), 0.1);
+  assert.equal(passingBy.nearby, true);
+  assert.equal(passingBy.aligned, false);
+  assert.equal(passingBy.elapsed, 0);
+  assert.equal(passingBy.triggered, false);
+
+  const facingButNotPushing = advanceSecretEntryCharge(0, sample({ forward: 0, right: 0 }), 0.1);
+  assert.equal(facingButNotPushing.aligned, false);
+  assert.equal(facingButNotPushing.elapsed, 0);
+});
+
 test('walking near the wall, looking elsewhere, side-stepping or being paused never opens it', () => {
   const rejected = [
     sample({ yaw: Math.PI }),
