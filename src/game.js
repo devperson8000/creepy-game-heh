@@ -22,15 +22,12 @@ import {createMonsterAudio,MONSTER_SOUND_URL} from './monster-audio.js';
 import {createTorch} from './torch.js';
 import {createJumpscare,JUMPSCARE_MOUTH_URL} from './jumpscare.js';
 import {createSoundOcclusion} from './sound-occlusion.js';
-import {createArrival} from './arrival.js';
 import {createWallNoteReader} from './wall-note-reader.js';
 import {advanceSecretEntryCharge} from './secret-entry.js';
 import {createSecretEntryCinematic} from './secret-entry-cinematic.js';
 
 export function startGame(container,{seed,autostart=false,halloween=false,mapUpdate=false}={}){
  const ambience=createRoomAmbience({halloween});
- let arrival=null,arrivalFailsafeAt=0;
- if(autostart){try{arrival=createArrival({halloween});}catch(error){console.warn('Wake-up presentation unavailable; starting gameplay directly.',error);}}
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed,{halloween,mapUpdate}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,metallic:false,onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
@@ -40,7 +37,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.narrowMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
- const torch=createTorch(world.scene,camera,{maze:!!run.layout.narrowMaze}),creatureMotion=createCreatureMotion(),arrivalTorchY=torch.model.position.y;
+ const torch=createTorch(world.scene,camera,{maze:!!run.layout.narrowMaze}),creatureMotion=createCreatureMotion();
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
  const jumpscare=createJumpscare({mouthTexture,metallic:false});
  const occlusion=createSoundOcclusion(world.rayMeshes),audioDirection=new THREE.Vector3();
@@ -92,7 +89,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  });
  document.addEventListener('keyup',event=>{if(event.code==='KeyF')wallNoteFDown=false;});
  document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repeat&&(!ui.overlay||ui.overlay==='jumpscare'||ui.overlay==='halloween'))toggleSound();});
- window.addEventListener('pagehide',()=>{arrival?.dispose();ending?.dispose();wallNoteReader.dispose();entryCinematic?.dispose();experience.dispose();questUI.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
+ window.addEventListener('pagehide',()=>{ending?.dispose();wallNoteReader.dispose();entryCinematic?.dispose();experience.dispose();questUI.dispose();jumpscare.dispose();world.halloween?.dispose();monsterAudio.dispose();ambience.dispose();renderer.setAnimationLoop(null);},{once:true});
  ui.el('pause-game').addEventListener('click',()=>{if(!ui.overlay){showScreen('pause');}});
  function closeKeypad(){void monsterAudio.resume();void ambience.resume();ui.el('keypad-dialog').hidden=true;ui.overlay=null;input.clear();input.capture();}
  function submitCode(){if(enterCode(run,buffer)){ui.feedback(run.halloween?'Code accepted. Complete the four key locks to unlock the house service exit.':'Code accepted. Complete the four key locks to open the elevator.','success');monsterAudio.playNoise('keypad');ui.toast('Code accepted.');closeKeypad();}else{ui.feedback('Access denied. Read the four digits from this run.');buffer='';ui.el('code-display').textContent='— — — —';}}
@@ -141,7 +138,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  }
  let renderDirty=true,lastOverlay;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();}resize();window.addEventListener('resize',resize);
- showScreen('menu');if(autostart){ui.hideScreen();ui.overlay=arrival?'arrival':null;if(arrival)arrivalFailsafeAt=performance.now()+4500;}let previous=performance.now(),time=0;
+ showScreen('menu');if(autostart)resume();let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),frameDelta=Math.min(clockDelta,.2);previous=now;
   if(wallNoteReader.active){
@@ -236,24 +233,6 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
   renderer.toneMappingExposure=torch.exposure*prefs.brightness;
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));
-  if(arrival?.active){
-   let finished=false;
-   try{
-    torch.model.position.y=arrivalTorchY-.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
-    torch.beam.intensity=torch.on?torch.power:0;
-    finished=arrival.update(frameDelta,camera,{...player,yaw:input.yaw},{muted:monsterAudio.muted,volume:gamePreferences().volume});
-   }catch(error){
-    console.warn('Wake-up animation failed; releasing gameplay.',error);
-    finished=true;
-   }
-   if(finished||performance.now()>=arrivalFailsafeAt){
-    arrival.dispose();
-    resume();
-    torch.model.position.y=arrivalTorchY;
-    torch.beam.intensity=torch.on?torch.power:0;
-   }
-   renderDirty=true;
-  }
   if(jumpscare.active){
    renderer.toneMappingExposure=1;
    jumpscare.render(renderer);
@@ -262,8 +241,8 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
    border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));
    document.documentElement.style.setProperty('--scare-glitch',`${(jumpscare.glitch*6).toFixed(2)}px`);
   }
-  else if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);if(!arrival?.active||arrival.elapsed>9.5)torch.render(renderer);renderDirty=false;}
+  else if(!ui.overlay||renderDirty||lastOverlay!==ui.overlay){renderer.render(world.scene,camera);torch.render(renderer);renderDirty=false;}
   lastOverlay=ui.overlay;
  });
- return {run,world,get ending(){return ending;},enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch,jumpscare,arrival,experience};
+ return {run,world,get ending(){return ending;},enemy:()=>enemy,get player(){return player;},camera,renderer,ui,input,monsterAudio,torch,jumpscare,experience};
 }
