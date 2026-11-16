@@ -56,7 +56,7 @@ function createFallbackSurvivor(scene, position, yaw) {
   };
 }
 
-export function createSecretEntryCinematic({ scene, camera, position, yaw, roomRoot, onComplete = () => {} }) {
+export function createSecretEntryCinematic({ scene, camera, position, yaw, roomRoot, seal = null, onComplete = () => {} }) {
   if (!roomRoot) throw new Error('The in-world Secret Room root is required for the noclip transition.');
   roomRoot.updateMatrixWorld(true);
   const start = { x: position.x, z: position.z, height: position.height };
@@ -131,6 +131,9 @@ export function createSecretEntryCinematic({ scene, camera, position, yaw, roomR
     elapsed += Math.max(0, Math.min(0.1, delta));
     const t = elapsed;
     const actor = sampleAvatar(t);
+    // Keep the maze wall opaque until the survivor's body has crossed it.
+    // The camera then follows through the same opening into the hidden room.
+    if (seal) seal.visible = actor.x > SECRET_ENTRY.wallX - 0.04;
     sampleSideCamera(actor);
 
     const sideBlend = ease(t / 0.72);
