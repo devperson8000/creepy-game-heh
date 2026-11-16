@@ -39,7 +39,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  const camera=new THREE.PerspectiveCamera(66,1,.06,85),creature=createCreature();if(run.layout.narrowMaze)creature.root.scale.setScalar(.66);world.scene.add(creature.root);
  creature.root.traverse(m=>{if(m.isMesh){m.userData.actor=true;world.rayMeshes.push(m);}});
  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
- const torch=createTorch(world.scene,camera,{halloween:!!run.layout.halloweenMaze}),creatureMotion=createCreatureMotion();
+ const torch=createTorch(world.scene,camera,{maze:!!run.layout.narrowMaze}),creatureMotion=createCreatureMotion();
  const mouthTexture=new THREE.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>ui.toast('Jumpscare mouth could not load.'));
  const jumpscare=createJumpscare({mouthTexture,metallic:false});
  const occlusion=createSoundOcclusion(world.rayMeshes),audioDirection=new THREE.Vector3();
