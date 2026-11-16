@@ -550,18 +550,18 @@ function reset(){
  titlePanel.classList.remove('visible');titlePanel.classList.add('hidden');startPanel.classList.add('hidden');
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
  backroomsGroup.visible=false;monochrome.root.visible=false;backroomsFlashPlane.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
- noclipCue.pause();noclipCue.currentTime=0;noclipCue.volume=.72;noclipCueStarted=false;noclipCueStopped=false;
+ narrationTime=0;audio?.stopLoop();noclipCueStarted=false;noclipCueStopped=false;
  scene.background.copy(introBackground);scene.fog.color.copy(introFogColor);scene.fog.density=.0125;
  started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);
 }
 function update(t){
  const state=sampleMonochrome2(t),poses=sampleMonochrome2Actors(t);
  if(t>=46.55&&!noclipCueStarted){
-  noclipCueStarted=true;noclipCue.currentTime=0;noclipCue.muted=muted;noclipCue.play().catch(()=>{});
+  noclipCueStarted=true;audio?.startLoop();
  }
  const cueDuck=activeSpeechCue&&(activeSpeechCue.id?.startsWith('descending')||['sound','light','wall'].includes(activeSpeechCue.id))?.48:1;
- noclipCue.volume=monochrome2NoclipCueGain(t,cueDuck);
- if(state.fade>=.999&&!noclipCueStopped){noclipCue.pause();noclipCue.currentTime=0;noclipCueStopped=true;}
+ audio?.setLoopGain(monochrome2NoclipCueGain(t,cueDuck));
+ if(state.fade>=.999&&!noclipCueStopped){audio?.stopLoop();noclipCueStopped=true;}
  const frameDelta=previousPoseTime===null?0:Math.max(0,t-previousPoseTime);
  actors.forEach((actor,index)=>{
   const p=poses[index],position=new THREE.Vector3(p.x,p.y,p.z),previous=previousActorPositions[index];
@@ -658,7 +658,7 @@ function cleanup(){
  if(!embedded){renderer.setAnimationLoop(null);window.removeEventListener('resize',resize);}
  window.removeEventListener('pagehide',cleanup);
  if(window.speechSynthesis)window.speechSynthesis.cancel();
- audio?.dispose();noclipCue.pause();actors.forEach(actor=>actor.dispose());backroomsBackgroundTarget.dispose();backroomsBackgroundScene.clear();levelZero.dispose();
+ audio?.dispose();actors.forEach(actor=>actor.dispose());backroomsBackgroundTarget.dispose();backroomsBackgroundScene.clear();levelZero.dispose();
  geometries.forEach(geometry=>geometry.dispose());materials.forEach(material=>material.dispose());
  textures.forEach(texture=>texture.dispose());overlayResources.forEach(resource=>resource.dispose());
  if(embeddedTarget)embeddedTarget.dispose();
@@ -666,14 +666,14 @@ function cleanup(){
 }
 if(!embedded)window.addEventListener('resize',resize);window.addEventListener('pagehide',cleanup,{once:true});
 audio=createSoundscape();
-const noclipCue=new Audio('/audio/monochrome2/noclip-build-12s.mp3');
-noclipCue.preload='auto';noclipCue.loop=true;noclipCue.volume=.72;
+/* The 12-second cue is decoded and crossfaded inside createSoundscape. */
+// Seamless loop playback is managed by the shared Web Audio soundscape.
 let noclipCueStarted=false,noclipCueStopped=false;
 startButton.addEventListener('click',()=>{if(!started){reset();startButton.blur();}});
 replayButton.addEventListener('click',()=>reset());
 soundButton.addEventListener('click',()=>{
  muted=!muted;soundButton.textContent=muted?'SOUND OFF':'SOUND ON';soundButton.setAttribute('aria-pressed',String(muted));
- audio?.setMuted(muted);noclipCue.muted=muted;if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');}
+ audio?.setMuted(muted);if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');}
 });
 const ready=loadPlayerAvatarAsset().then(asset=>{
  if(disposed)return;
@@ -711,10 +711,10 @@ function renderEmbedded(time){
  }
 }
 function play(){if(disposed)return;reset();}
-function pause(){audio?.setMuted(true);noclipCue.pause();if(window.speechSynthesis)window.speechSynthesis.pause();}
-function resume(){audio?.start();audio?.setMuted(muted);if(noclipCueStarted&&!noclipCueStopped&&!muted)noclipCue.play().catch(()=>{});if(window.speechSynthesis)window.speechSynthesis.resume();}
+function pause(){audio?.setMuted(true);if(window.speechSynthesis)window.speechSynthesis.pause();}
+function resume(){audio?.start();audio?.setMuted(muted);if(window.speechSynthesis)window.speechSynthesis.resume();}
 function setFilmMuted(value){
- muted=!!value;audio?.setMuted(muted);noclipCue.muted=muted;
+ muted=!!value;audio?.setMuted(muted);
  if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');if(subtitlePlane)subtitlePlane.visible=false;}
 }
 return {ready,dispose:cleanup,render:renderEmbedded,play,pause,resume,setMuted:setFilmMuted,texture:embeddedTarget?.texture??null,duration:MONOCHROME2_DURATION};
