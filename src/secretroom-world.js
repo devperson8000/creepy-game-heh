@@ -567,7 +567,7 @@ export function createSecretRoomWorld() {
     replaceCarriedCable([
       cableOrigin.clone(),v3(.36,.91,-.72),v3(.54,.63,-.735),v3(.565,.11,-.755),
       v3(.66,floorCableY,-.88),v3(.76,floorCableY,-1.04),v3(2.72,floorCableY,-1.06),
-      v3(3.04,.025,-1.06),plugEnd.clone()
+      v3(3.04,.025,-1.06),v3(3.06,.565,-1.06),plugEnd.clone()
     ]);
   }
 
@@ -607,14 +607,14 @@ export function createSecretRoomWorld() {
     },
     setHeldPose(position,quaternion){
       powerPlug.position.copy(position);powerPlug.quaternion.copy(quaternion);
-      const cableEnd=powerPlug.position.clone().add(v3(-.06,0,0));
+      const cableEnd=v3(-.06,0,0).applyQuaternion(powerPlug.quaternion).add(powerPlug.position);
       replaceCarriedCable(cablePointsTo(cableEnd));
     },
     setPlugInsertion(from,fromQuaternion,progress){
       const p=Math.max(0,Math.min(1,progress)),e=p*p*(3-2*p);
       powerPlug.position.lerpVectors(from,plugEnd,e);
       powerPlug.quaternion.copy(fromQuaternion).slerp(new T.Quaternion(),e);
-      const cableEnd=powerPlug.position.clone().add(v3(-.06,0,0));
+      const cableEnd=v3(-.06,0,0).applyQuaternion(powerPlug.quaternion).add(powerPlug.position);
       replaceCarriedCable(cablePointsTo(cableEnd));
     },
     setCablePlugged(){
