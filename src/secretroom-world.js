@@ -484,42 +484,8 @@ export function createSecretRoomWorld() {
   rounded(.003,.031,.052,-.048,.001,.001,.001,brass,powerPlug);
   const polarity = new T.Mesh(new T.SphereGeometry(.004,10,8),socketDark);
   polarity.position.set(-.018,.025,.018);powerPlug.add(polarity);resources.add(polarity.geometry);
-  // The player's hazmat-survivor wears a pale protective suit and dark,
-  // matte rubber gloves. Keep this hand on the camera-facing side of the plug:
-  // its fingers visibly curl over the casing instead of being hidden behind it.
-  const gloveMaterial=makeMaterial({color:0x171c1c,roughness:.985});
-  const gloveCuffMaterial=makeMaterial({color:0x9a9b8b,roughness:.98});
-  const gloveSeamMaterial=makeMaterial({color:0x454b43,roughness:.98});
-  const glove=new T.Group();
-  glove.name='first-person-hazmat-character-hand-gripping-plug';
-  glove.visible=false;
-  glove.position.set(.02,-.005,.09);
-  glove.scale.setScalar(1.12);
-  powerPlug.add(glove);
-  // Forearm enters behind the plug with the pale suit sleeve and reinforced wrist.
-  rounded(.205,.145,.158,-.245,-.035,0,.042,gloveCuffMaterial,glove);
-  rounded(.042,.126,.143,-.135,-.016,0,.014,gloveSeamMaterial,glove);
-  rounded(.014,.13,.148,-.108,-.012,0,.006,gloveCuffMaterial,glove);
-  // Palm overlaps the rear half of the plug body. Four separate fingers cross
-  // the visible front face of its casing, making the grip unmistakable.
-  rounded(.132,.101,.124,-.075,-.006,0,.038,gloveMaterial,glove);
-  for(let i=0;i<4;i++){
-    const z=-.039+i*.026;
-    const finger=rounded(.092,.026,.019,.004,.025,z,.009,gloveMaterial,glove);
-    finger.rotation.z=-.10;
-    const knuckle=rounded(.026,.028,.021,-.028,.027,z,.008,gloveMaterial,glove);
-    knuckle.rotation.z=-.10;
-    const crease=rounded(.004,.025,.021,-.012,.026,z,.002,gloveSeamMaterial,glove);
-    crease.rotation.z=-.10;
-  }
-  // Thumb folds around the near lower edge of the plug opposite the fingers.
-  const thumb=rounded(.083,.031,.041,-.055,-.046,.047,.014,gloveMaterial,glove);
-  thumb.rotation.x=-.22;thumb.rotation.z=.32;
-  const thumbTip=rounded(.036,.029,.038,-.012,-.036,.033,.012,gloveMaterial,glove);
-  thumbTip.rotation.z=.22;
-  // Explicit draw priority keeps the hand legible against the small plug model.
-  glove.traverse(part=>{if(part.isMesh){part.renderOrder=6;part.frustumCulled=false;}});
-
+  // The player's real rigged hand is rendered from hazmat-survivor.glb
+  // by the first-person viewmodel; no proxy hand is added to the plug.
 
   function makeCordGeometry(points,segments=100){
     const curve=new T.CatmullRomCurve3(points,false,'centripetal',.5);
@@ -630,7 +596,7 @@ export function createSecretRoomWorld() {
     outletTarget:v3(3.16,.565,-1.06),
     switchTarget:v3(3.14,1.105,-1.06),
     beginCableHold(){
-      coilMesh.visible=false;fixedCableMesh.visible=false;glove.visible=true;
+      coilMesh.visible=false;fixedCableMesh.visible=false;
       if(carriedCableMesh)carriedCableMesh.visible=true;
     },
     setHeldPose(position,quaternion){
@@ -646,7 +612,7 @@ export function createSecretRoomWorld() {
       replaceCarriedCable(cablePointsTo(cableEnd));
     },
     setCablePlugged(){
-      powerPlug.position.copy(plugEnd);powerPlug.quaternion.identity();glove.visible=false;
+      powerPlug.position.copy(plugEnd);powerPlug.quaternion.identity();
       coilMesh.visible=false;fixedCableMesh.visible=false;
       refreshPluggedCable();
     },
