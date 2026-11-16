@@ -49,28 +49,28 @@ export function sampleMonochrome2Actors(value){
  else if(time<22)lead.z=lerp(-13.5,-19.3,(time-18)/4);
  else if(time<30)lead.z=lerp(-19.3,-27.5,(time-22)/8);
  else if(time<34){
-  const p=smooth((time-30)/4);lead.x=lerp(0,2.38,p);lead.z=lerp(-27.5,-29,p);
+  const p=smooth((time-30)/4);lead.x=lerp(0,2.1,p);lead.z=lerp(-27.5,-29,p);
  }else if(time<43.4){
-  lead.x=2.38;lead.z=lerp(STAIR_START_Z,-39.55,(time-34)/9.4);lead.y=monochrome2RampY(lead.z);
+  lead.x=2.1;lead.z=lerp(STAIR_START_Z,-39.55,(time-34)/9.4);lead.y=monochrome2RampY(lead.z);
  }else if(time<44.2){
-  lead.x=2.38;lead.z=lerp(-39.55,-39.92,(time-43.4)/.8);lead.y=-2.62;
+  lead.x=2.1;lead.z=lerp(-39.55,-39.92,(time-43.4)/.8);lead.y=-2.62;
  }else if(time<45.2){
-  lead.x=2.38;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
+  lead.x=2.1;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
   const p=smooth((time-44.2)/1);lead.headTurn=-1.0*p;lead.headTilt=-.58*p;
  }else if(time<46){
-  lead.x=2.38;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
+  lead.x=2.1;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
   lead.headTurn=-1.0;lead.headTilt=-.58;
  }else if(time<47.2){
-  lead.x=2.38;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
+  lead.x=2.1;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
   lead.headTurn=-1.0;lead.headTilt=-.5;lead.torsoLean=lerp(.02,.14,(time-46)/1.2);
   lead.handTarget=[2.58,-1.34,-40.11];lead.handProgress=smooth((time-46)/1.2);
  }else if(time<49.05){
-  lead.x=2.38;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
+  lead.x=2.1;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
   lead.headTurn=-.88;lead.headTilt=-.4;lead.torsoLean=lerp(.14,.48,(time-47.2)/1.85);
   lead.handTarget=[2.58,-1.34,-40.11];lead.handProgress=1;
  }else if(time<50.35){
   const p=smooth((time-49.05)/1.3);
-  lead.x=lerp(2.38,2.55,p);lead.z=lerp(-39.92,-45.3,p);lead.y=-2.62;
+  lead.x=lerp(2.1,2.55,p);lead.z=lerp(-39.92,-45.3,p);lead.y=-2.62;
   lead.clip='Death';lead.action='dive';lead.progress=p;
  }else if(time<53){
   lead.x=2.55;lead.y=-2.62;lead.z=-45.3;lead.clip='Death';lead.action='prone';
@@ -89,20 +89,40 @@ export function sampleMonochrome2Actors(value){
  if(time<18)friend1.z=lerp(15.2,-13.2,time/18);
  else if(time<22)friend1.z=lerp(-13.2,-20.2,(time-18)/4);
  else if(time<27){
-  const p=smooth((time-22)/5);friend1.x=lerp(-.82,-3.2,p);friend1.z=lerp(-20.2,-24.9,p);
+  // Riley approaches the left rack from the open aisle, not through its shelves.
+  const p=smooth((time-22)/5);friend1.x=lerp(-.82,-2.0,p);friend1.z=lerp(-20.2,-24.2,p);
+ }else if(time<32.6){
+  friend1.x=-2.0;friend1.z=-24.2;friend1.yaw=Math.PI/2;friend1.clip='Idle';
+  // Her hand meets the near edge of the shelf while her body stays in the aisle.
+  if(time>=29){friend1.handTarget=[-2.72,1.27,-24.08];friend1.handProgress=smooth((time-29)/1.45);}
+ }else if(time<33.1){
+  friend1.x=-2.0;friend1.z=-24.2;friend1.yaw=Math.PI/2;friend1.clip='Idle';
+  friend1.handTarget=[-2.72,1.27,-24.08];friend1.handProgress=1-smooth((time-32.6)/.5);
  }else{
-  friend1.x=-3.2;friend1.z=-24.9;friend1.yaw=Math.PI/2;friend1.clip='Idle';
-  if(time>=29&&time<32.6){friend1.handTarget=[-3.55,1.27,-24.2];friend1.handProgress=smooth((time-29)/1.45);}
+  friend1.x=-2.0;friend1.z=-24.2;friend1.yaw=Math.PI/2;friend1.clip='Idle';
  }
 
  const friend2={x:.82,y:0,z:15.9,yaw:0,clip:'Walk'};
  if(time<18)friend2.z=lerp(15.9,-12.6,time/18);
  else if(time<22)friend2.z=lerp(-12.6,-20,(time-18)/4);
- else if(time<31){
-  const p=smooth((time-22)/9);friend2.x=lerp(.82,3.15,p);friend2.z=lerp(-20,-28.1,p);
+ else if(time<29.2){
+  // Jamie uses the clear west side of the right-hand shelving unit.
+  const p=smooth((time-22)/7.2);friend2.x=lerp(.82,1.9,p);friend2.z=lerp(-20,-28.8,p);
+ }else if(time<30.9){
+  friend2.x=1.9;friend2.z=-28.8;friend2.yaw=-Math.PI/2;friend2.clip='Idle';
+  if(time>=29.2){friend2.handTarget=[2.68,1.22,-28.66];friend2.handProgress=smooth((time-29.2)/1.45);}
+ }else if(time<31.35){
+  friend2.x=1.9;friend2.z=-28.8;friend2.yaw=-Math.PI/2;friend2.clip='Idle';
+  friend2.handTarget=[2.68,1.22,-28.66];friend2.handProgress=1-smooth((time-30.9)/.45);
+ }else if(time<32.35){
+  // Clear the shelf front before moving away; this also keeps the stair aisle free.
+  const p=smooth((time-31.35)/1);friend2.x=1.9;friend2.z=lerp(-28.8,-27.2,p);
+  friend2.yaw=-Math.PI/2;friend2.clip='Walk';
+ }else if(time<34.35){
+  const p=smooth((time-32.35)/2);friend2.x=lerp(1.9,3.75,p);friend2.z=lerp(-27.2,-26.3,p);
+  friend2.yaw=lerp(-Math.PI/2,0,p);friend2.clip='Walk';
  }else{
-  friend2.x=3.15;friend2.z=-28.1;friend2.yaw=Math.PI/2;friend2.clip='Idle';
-  if(time>=29.2&&time<32.8){friend2.handTarget=[3.45,1.22,-28.62];friend2.handProgress=smooth((time-29.2)/1.45);}
+  friend2.x=3.75;friend2.z=-26.3;friend2.yaw=0;friend2.clip='Idle';
  }
  return [lead,friend1,friend2];
 }

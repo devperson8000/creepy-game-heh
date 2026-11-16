@@ -4,6 +4,7 @@ import {
  MONOCHROME2_DURATION,MONOCHROME2_DIALOGUE,sampleMonochrome2,sampleMonochrome2Actors,
  monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,MONOCHROME2_STAIR_OPENING
 } from '../src/monochrome2-intro-timeline.js';
+import {MONOCHROME2_SHELVES,monochrome2CollisionViolations} from '../src/monochrome2-collision.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 
@@ -29,11 +30,49 @@ test('all survivors move at a steady pace and both friends reach for store suppl
    assert.ok(speed>.8&&speed<1.9,'actor '+index+' walking speed '+speed.toFixed(2)+' m/s');
   }
  });
- const friendsAtStop=sampleMonochrome2Actors(32);
+ const friendsAtStop=sampleMonochrome2Actors(30.5);
  assert.equal(friendsAtStop[1].clip,'Idle');
  assert.equal(friendsAtStop[2].clip,'Idle');
- assert.ok(friendsAtStop[1].handTarget,'Riley reaches for supplies');
- assert.ok(friendsAtStop[2].handTarget,'Jamie reaches for supplies');
+ assert.ok(friendsAtStop[1].handTarget,'Riley reaches from the aisle toward the left shelf');
+ assert.ok(friendsAtStop[2].handTarget,'Jamie reaches from the aisle toward the right shelf');
+ assert.ok(friendsAtStop[1].x>MONOCHROME2_SHELVES[0].x+.83,'Riley stays on the open side of the left rack');
+ assert.ok(friendsAtStop[2].x<MONOCHROME2_SHELVES[3].x-.83,'Jamie stays on the open side of the right rack');
+ assert.ok(sampleMonochrome2Actors(33.5)[2].z> -27,'Jamie clears the stair aisle after collecting supplies');
+});
+
+test('both shelf pickups reach, hold and release without snapping before the stair approach',()=>{
+ const rileyReach=sampleMonochrome2Actors(30.0)[1];
+ const rileyRelease=sampleMonochrome2Actors(32.85)[1];
+ const rileyRest=sampleMonochrome2Actors(33.2)[1];
+ const jamieReach=sampleMonochrome2Actors(30.0)[2];
+ const jamieRelease=sampleMonochrome2Actors(31.1)[2];
+ const jamieLeave=sampleMonochrome2Actors(31.6)[2];
+ assert.ok(rileyReach.handProgress>.5);
+ assert.ok(rileyRelease.handProgress>0&&rileyRelease.handProgress<1);
+ assert.equal(rileyRest.handTarget,undefined);
+ assert.ok(jamieReach.handProgress>.5);
+ assert.ok(jamieRelease.handProgress>0&&jamieRelease.handProgress<1);
+ assert.equal(jamieLeave.handTarget,undefined);
+ assert.equal(jamieLeave.clip,'Walk');
+});
+
+test('all three survivor routes stay outside shelves, walls, doors and each other at 60 fps',()=>{
+ let frames=0,first=null;
+ for(let time=0;time<=MONOCHROME2_DURATION;time+=1/60){
+  const poses=sampleMonochrome2Actors(time),violations=monochrome2CollisionViolations(poses,time);
+  frames++;
+  if(violations.length&&!first)first={time,violations};
+ }
+ assert.ok(frames>4600,'the complete 78-second film is sampled');
+ assert.equal(first,null,JSON.stringify(first));
+});
+
+test('only the lead may cross the marked noclip wall, and only after the lean finishes',()=>{
+ const before=sampleMonochrome2Actors(49.04),through=sampleMonochrome2Actors(49.5);
+ assert.ok(before[0].z> -40.18);
+ assert.ok(through[0].z< -40.18);
+ assert.ok(through[1].z> -40.18&&through[2].z> -40.18);
+ assert.deepEqual(monochrome2CollisionViolations(through,49.5),[]);
 });
 
 test('the stairwell opening exposes the full tread run through the rear wall',()=>{

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
+import {MONOCHROME2_SHELVES} from './monochrome2-collision.js';
 import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
@@ -196,7 +197,7 @@ function makeShelf(x,z){
  for(const y of [.38,1.12,1.86])box(1.55,.08,.72,x,y,z+.22,shelfEdge);
  for(let row=0;row<3;row++)for(let i=0;i<5;i++)addProduct(x-.57+i*.285,.42+row*.74,z+.22,(i+row*5+(x>0?2:0))%12);
 }
-makeShelf(-3.45,-24.2);makeShelf(-3.45,-29.2);makeShelf(3.4,-24.3);makeShelf(3.4,-28.8);
+for(const shelf of MONOCHROME2_SHELVES)makeShelf(shelf.x,shelf.z);
 for(const z of [-25.1,-30.1]){box(.12,3.2,.9,-4.15,1.6,z,darkGlass);for(let y=.45;y<3;y+=.75)box(.13,.035,.85,-4.05,y,z,glass);}
 box(2.1,1.02,.85,-1.3,.52,-33.5,shelfMat);box(2.1,.07,.88,-1.3,1.05,-33.5,shelfEdge);
 for(let i=0;i<7;i++)addProduct(-2.1+i*.26,1.085,-33.5,i);
