@@ -10,9 +10,12 @@ export const MONOCHROME2_DIALOGUE=[
  {id:'water',at:27.2,end:30.0,speaker:'JAMIE',voice:'friend2',text:'I found water. I am grabbing a couple of bottles.',rate:1.0,pitch:.98},
  {id:'snacks',at:30.35,end:32.8,speaker:'RILEY',voice:'friend1',text:'I have snacks. Keep an eye out while I get these.',rate:.98,pitch:1.08},
  {id:'meet',at:33.05,end:35.45,speaker:'LEAD',voice:'lead',text:'Good. Meet me near the front. I will be right there.',rate:.94,pitch:.84},
- {id:'sound',at:40.45,end:42.25,speaker:'LEAD',voice:'lead',text:'Wait... did you hear that?',rate:.88,pitch:.82},
- {id:'light',at:43.0,end:44.7,speaker:'LEAD',voice:'lead',text:'There is a thin line of light running down this wall.',rate:.88,pitch:.82},
- {id:'wall',at:45.5,end:47.4,speaker:'LEAD',voice:'lead',text:'Something is on the other side. I can hear it.',rate:.86,pitch:.8}
+ {id:'descending',at:35.7,end:38.35,speaker:'LEAD',voice:'lead',text:'Watch your step. These stairs go further down than I thought.',rate:.91,pitch:.84},
+ {id:'descending2',at:38.5,end:41.0,speaker:'JAMIE',voice:'friend2',text:'I thought this was just a service stairwell.',rate:.96,pitch:.98},
+ {id:'descending3',at:41.15,end:43.25,speaker:'RILEY',voice:'friend1',text:'Guys... why is it getting colder?',rate:.94,pitch:1.08},
+ {id:'sound',at:43.45,end:45.15,speaker:'LEAD',voice:'lead',text:'Wait... did you hear that?',rate:.88,pitch:.82},
+ {id:'light',at:45.3,end:46.95,speaker:'LEAD',voice:'lead',text:'There is a thin line of light running down this wall.',rate:.88,pitch:.82},
+ {id:'wall',at:47.1,end:49.0,speaker:'LEAD',voice:'lead',text:'Something is on the other side. I can hear it.',rate:.86,pitch:.8}
 ];
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -25,10 +28,19 @@ const STAIR_RISE=2.62/STAIR_COUNT;
 // The feet stay on each tread, with a small, eased drop at the front edge.
 export function monochrome2RampY(z){
  const progress=clamp((STAIR_START_Z-z)/STAIR_RUN,0,STAIR_COUNT);
- const index=Math.min(STAIR_COUNT-1,Math.floor(progress));
- const fraction=progress-index;
- const descend=smooth((fraction-.76)/.24);
- return -STAIR_RISE*(index+descend);
+ const index=Math.min(STAIR_COUNT,Math.floor(progress));
+ return -STAIR_RISE*index;
+}
+
+export function monochrome2FootPlantOffset(footPositions,targetClearance=.105){
+ if(!Array.isArray(footPositions)||!footPositions.length)return 0;
+ let lowest=Infinity;
+ for(const foot of footPositions){
+  if(!Array.isArray(foot)||foot.length<3||!foot.every(Number.isFinite))continue;
+  lowest=Math.min(lowest,foot[1]-monochrome2RampY(foot[2]));
+ }
+ if(!Number.isFinite(lowest))return 0;
+ return clamp(targetClearance-lowest,-.18,.42);
 }
 
 export function monochrome2CrackVisibility(timelineStrength,distanceToWall){
@@ -120,7 +132,7 @@ export function sampleMonochrome2(value){
  else if(time>=68.5&&time<69.8)shot='title-main';
  else if(time>=69.8)shot='title-subtitle';
 
- const crack=time<38?0:time<47.85?.86:time<48.3?.86*(1-smooth((time-47.85)/.45)):0;
+ const crack=time<42?0:time<46.1?.42:time<46.32?.42*(1-smooth((time-46.1)/.22)):0;
  const fallThrough=smooth((time-49.05)/.32);
  const backrooms=smooth((time-49.4)/.42);
  const reveal=smooth((time-50.35)/3);

@@ -60,7 +60,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   let found;model.traverse(object=>{if(object.isBone&&object.name.replace(/[._-]/g,'').toLowerCase()===key)found=object;});return found;
  };
  const chest=findBone('spine003'),headBone=findBone('spine006'),hand=findBone('handr'),forearm=findBone('forearmr'),upperArm=findBone('upperarmr');
- const thighL=findBone('thighl'),thighR=findBone('thighr'),shinL=findBone('shinl'),shinR=findBone('shinr');
+ const thighL=findBone('thighl'),thighR=findBone('thighr'),shinL=findBone('shinl'),shinR=findBone('shinr'),footL=findBone('footl'),footR=findBone('footr');
  root.updateMatrixWorld(true);
 
  // Calculate a rest-pose attachment once, then let the real skeleton animate it.
@@ -286,10 +286,17 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   for(const surface of ownedMaterials)surface.dispose();
   for(const texture of ownedTextures)texture.dispose();
  }
+ function getFootWorldPositions(){
+  root.updateMatrixWorld(true);
+  return [footL,footR].filter(Boolean).map(bone=>{
+   const point=bone.getWorldPosition(new THREE.Vector3());
+   return [point.x,point.y,point.z];
+  });
+ }
  function getHeadWorldPosition(target=new THREE.Vector3()){
   root.updateMatrixWorld(true);
   if(headBone)return headBone.getWorldPosition(target);
   return target.copy(root.position).add(new THREE.Vector3(0,2.05,0));
  }
- return {root,update,sampleCinematic,getHeadWorldPosition,dispose};
+ return {root,update,sampleCinematic,getHeadWorldPosition,getFootWorldPositions,dispose};
 }

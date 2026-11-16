@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
-import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility} from './monochrome2-intro-timeline.js';
+import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 const root=document.querySelector('#scene');
@@ -172,9 +172,9 @@ const rampEnd=mat({color:0x535b55,roughness:1,transparent:true,opacity:1,depthWr
 const rampEndWall=box(2.55,3.9,.3,2.42,-.66,-40.18,rampEnd);
 rampEndWall.castShadow=false;rampEndWall.receiveShadow=false;
 const crackMaterial=basicMat({color:0xffd99a,transparent:true,opacity:1,toneMapped:false,depthWrite:false});
-const crack=box(.0045,3.9,.012,2.39,-.66,-39.99,crackMaterial);
+const crack=box(.0022,3.9,.006,2.39,-.66,-39.99,crackMaterial);
 crack.castShadow=false;crack.receiveShadow=false;
-const crackGlow=new THREE.PointLight(0xffd7a1,0,1.35,2);crackGlow.position.set(2.4,-.66,-39.65);scene.add(crackGlow);
+const crackGlow=new THREE.PointLight(0xffd7a1,0,.9,2);crackGlow.position.set(2.4,-.66,-39.65);scene.add(crackGlow);
 const wallLight=new THREE.PointLight(0x9aa89b,1.1,5,2);wallLight.position.set(2.4,-.1,-37);scene.add(wallLight);
 const rampFill=new THREE.PointLight(0xdde6df,0,9,2);scene.add(rampFill);
 
@@ -353,18 +353,24 @@ function reset(){
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
  backroomsGroup.visible=false;monochrome.root.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
  backroomsAmbience.pause();backroomsAmbience.currentTime=0;backroomsAmbience.volume=0;backroomsAmbienceStarted=false;
+ noclipCue.pause();noclipCue.currentTime=0;noclipCue.volume=.72;noclipCueStarted=false;
  scene.background.copy(introBackground);scene.fog.color.copy(introFogColor);scene.fog.density=.0125;
  started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);
 }
 function update(t){
  const state=sampleMonochrome2(t),poses=sampleMonochrome2Actors(t);
+ if(t>=46.55&&!noclipCueStarted){
+  noclipCueStarted=true;noclipCue.currentTime=0;noclipCue.muted=muted;noclipCue.play().catch(()=>{});
+ }
+ const cueDuck=activeSpeechCue&&(activeSpeechCue.id?.startsWith('descending')||['sound','light','wall'].includes(activeSpeechCue.id))?.48:1;
+ noclipCue.volume=.72*ease((t-46.55)/.65)*cueDuck;
  const frameDelta=previousPoseTime===null?0:Math.max(0,t-previousPoseTime);
  actors.forEach((actor,index)=>{
   const p=poses[index],position=new THREE.Vector3(p.x,p.y,p.z),previous=previousActorPositions[index];
   const travel=previous?position.distanceTo(previous):0;
   if(p.clip==='Walk'&&frameDelta>0&&travel>0){
    // Drive the baked foot cycle and footsteps from actual ground distance.
-   walkAnimationTimes[index]+=travel/2.5;
+   walkAnimationTimes[index]+=travel/(index===0&&t>=34&&t<43.4?1.35:2.5);
    if(index===0&&t<53.5){
     leadTravelDistance+=travel;
     while(leadTravelDistance>=nextFootstepDistance){audio?.footstep();nextFootstepDistance+=.72;}
@@ -377,6 +383,10 @@ function update(t){
   };
   if(p.handTarget){options.handTarget=p.handTarget;options.progress=p.handProgress??0;}
   actor.sampleCinematic(options);
+  if(index===0&&t>=34&&t<43.4){
+   actor.root.position.y+=monochrome2FootPlantOffset(actor.getFootWorldPositions());
+   actor.root.updateMatrixWorld(true);
+  }
   previousActorPositions[index]=position;
  });
  previousPoseTime=t;
@@ -385,7 +395,7 @@ function update(t){
  shopLights.forEach(light=>{light.intensity=t>22?17:4;});
  const crackDistance=Math.hypot(poses[0].x-2.39,poses[0].z+39.99);
  const crackVisibility=monochrome2CrackVisibility(state.crack,crackDistance);
- crackMaterial.opacity=crackVisibility;crackGlow.intensity=crackVisibility*.55;crack.visible=crackVisibility>.015;
+ crackMaterial.opacity=crackVisibility;crackGlow.intensity=crackVisibility*.14;crack.visible=crackVisibility>.015;
  wallLight.intensity=t>44.2?1.55:.95;
  rampFill.position.set(poses[0].x+2.8,poses[0].y+2.1,poses[0].z+2.0);
  rampFill.intensity=t>=34&&t<54?3.8:0;
@@ -395,8 +405,7 @@ function update(t){
   backroomsAmbienceStarted=true;backroomsAmbience.currentTime=0;
   backroomsAmbience.play().catch(()=>{});
  }
- backroomsAmbience.volume=.24*state.backrooms*(1-state.fade);
- if(state.fade>=.995&&backroomsAmbienceStarted){backroomsAmbience.pause();backroomsAmbienceStarted=false;}
+ backroomsAmbience.volume=.24*state.backrooms;
  monochrome.root.visible=Boolean(state.monochromeActive)&&state.backrooms>.8;
  if(monochrome.root.visible){
   const run=state.monochromeRun;
@@ -434,7 +443,7 @@ function resize(){
 function cleanup(){
  if(disposed)return;disposed=true;renderer.setAnimationLoop(null);window.removeEventListener('resize',resize);window.removeEventListener('pagehide',cleanup);
  if(window.speechSynthesis)window.speechSynthesis.cancel();
- audio?.dispose();backroomsAmbience.pause();actors.forEach(actor=>actor.dispose());levelZero.dispose();
+ audio?.dispose();backroomsAmbience.pause();noclipCue.pause();actors.forEach(actor=>actor.dispose());levelZero.dispose();
  geometries.forEach(geometry=>geometry.dispose());materials.forEach(material=>material.dispose());
  textures.forEach(texture=>texture.dispose());renderer.dispose();renderer.domElement.remove();ui.remove();document.body.classList.remove('monochrome2-intro');
 }
@@ -443,11 +452,14 @@ audio=createSoundscape();
 const backroomsAmbience=new Audio('/audio/halloween/sfx/room-dread.mp3');
 backroomsAmbience.loop=true;backroomsAmbience.preload='auto';backroomsAmbience.volume=0;
 let backroomsAmbienceStarted=false;
+const noclipCue=new Audio('/audio/monochrome2/noclip-build-12s.mp3');
+noclipCue.preload='auto';noclipCue.loop=false;noclipCue.volume=.72;
+let noclipCueStarted=false;
 startButton.addEventListener('click',()=>{if(!started){reset();startButton.blur();}});
 replayButton.addEventListener('click',()=>reset());
 soundButton.addEventListener('click',()=>{
  muted=!muted;soundButton.textContent=muted?'SOUND OFF':'SOUND ON';soundButton.setAttribute('aria-pressed',String(muted));
- audio?.setMuted(muted);if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');}
+ audio?.setMuted(muted);noclipCue.muted=muted;if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');}
 });
 const ready=loadPlayerAvatarAsset().then(asset=>{
  if(disposed)return;

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  MONOCHROME2_DURATION,MONOCHROME2_DIALOGUE,sampleMonochrome2,sampleMonochrome2Actors,
- monochrome2RampY,monochrome2CrackVisibility
+ monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset
 } from '../src/monochrome2-intro-timeline.js';
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
@@ -51,12 +51,25 @@ test('the stair path steps down and stays aligned with the visible treads',()=>{
  }
 });
 
+test('stair placement corrects the lowest ankle to consistent clearance',()=>{
+ const feet=[[0,.2,-29.2],[0,-.08,-30.2]];
+ const offset=monochrome2FootPlantOffset(feet);
+ const clearances=feet.map(([,y,z])=>y+offset-monochrome2RampY(z));
+ assert.ok(Math.abs(Math.min(...clearances)-.105)<1e-9);
+});
+
+test('three separate dialogue beats run during the stair descent',()=>{
+ const cues=MONOCHROME2_DIALOGUE.filter(cue=>cue.id.startsWith('descending'));
+ assert.deepEqual(cues.map(cue=>cue.speaker),['LEAD','JAMIE','RILEY']);
+ assert.ok(cues[0].at>=34&&cues[2].end<=43.4);
+});
+
 test('the hairline only appears close to the wall and disappears after contact',()=>{
  assert.ok(sampleMonochrome2(45).crack>0);
  assert.equal(monochrome2CrackVisibility(sampleMonochrome2(45).crack,6),0);
  assert.ok(monochrome2CrackVisibility(sampleMonochrome2(45).crack,.3)>.8);
- assert.ok(sampleMonochrome2(46.6).crack>0);
- assert.equal(sampleMonochrome2(48.5).crack,0);
+ assert.ok(sampleMonochrome2(46.05).crack>0);
+ assert.equal(sampleMonochrome2(46.5).crack,0);
 });
 
 test('listening, face, reach and lean are separate, ordered poses',()=>{
