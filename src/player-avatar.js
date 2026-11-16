@@ -301,6 +301,93 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   root.updateMatrixWorld(true);
  }
 
+ let firstPersonViewmodelEnabled=false,firstPersonArmTriangles=0;
+ function enableFirstPersonViewmodel(){
+  if(firstPersonViewmodelEnabled)return {triangleCount:firstPersonArmTriangles};
+  if(!upperArm||!forearm||!hand)throw new Error('The hazmat survivor right-hand rig is incomplete.');
+  // Retain the actual right arm from the character GLB. Original skin weights,
+  // materials, sleeve, glove and hand deformation remain attached to its rig.
+  const armBones=new Set();
+  const includeBranch=bone=>{
+   if(!bone?.isBone||armBones.has(bone))return;
+   armBones.add(bone);
+   for(const child of bone.children)if(child.isBone)includeBranch(child);
+  };
+  includeBranch(upperArm);
+  const shoulder=upperArm.parent;
+  if(shoulder?.isBone&&/clavicle|shoulder/i.test(shoulder.name))armBones.add(shoulder);
+  let triangleCount=0,visibleMeshes=0;
+  model.traverse(object=>{
+   if(!object.isMesh)return;
+   if(!object.isSkinnedMesh){object.visible=false;return;}
+   const geometry=object.geometry,skinIndex=geometry.attributes.skinIndex,skinWeight=geometry.attributes.skinWeight;
+   if(!skinIndex||!skinWeight){object.visible=false;return;}
+   const armIndices=new Set();
+   object.skeleton.bones.forEach((bone,index)=>{if(armBones.has(bone))armIndices.add(index);});
+   if(!armIndices.size){object.visible=false;return;}
+   const source=geometry.index?.array??Array.from({length:geometry.attributes.position.count},(_,index)=>index);
+   const ranges=geometry.groups.length?geometry.groups:[{start:0,count:source.length,materialIndex:0}];
+   const influenceAt=vertex=>{
+    let value=0;
+    for(let slot=0;slot<skinIndex.itemSize;slot++){
+     if(armIndices.has(skinIndex.getComponent(vertex,slot)))value+=skinWeight.getComponent(vertex,slot);
+    }
+    return value;
+   };
+   const tiers=[{average:.38,vertex:.13},{average:.30,vertex:.08},{average:.24,vertex:.035}];
+   let selected=[],selectedGroups=[];
+   for(const tier of tiers){
+    selected=[];selectedGroups=[];
+    for(const group of ranges){
+     const groupStart=selected.length,end=Math.min(source.length,group.start+group.count);
+     for(let offset=group.start;offset+2<end;offset+=3){
+      const a=influenceAt(source[offset]),b=influenceAt(source[offset+1]),d=influenceAt(source[offset+2]);
+      const average=(a+b+d)/3,qualified=(a>=tier.vertex?1:0)+(b>=tier.vertex?1:0)+(d>=tier.vertex?1:0);
+      if(average>=tier.average&&qualified>=2)selected.push(source[offset],source[offset+1],source[offset+2]);
+     }
+     const count=selected.length-groupStart;
+     if(count)selectedGroups.push({start:groupStart,count,materialIndex:group.materialIndex??0});
+    }
+    if(selected.length>=36)break;
+   }
+   geometry.setIndex(selected);geometry.clearGroups();
+   for(const group of selectedGroups)geometry.addGroup(group.start,group.count,group.materialIndex);
+   geometry.computeBoundingSphere();
+   object.visible=selected.length>0;object.castShadow=false;object.receiveShadow=false;object.frustumCulled=false;
+   if(object.visible){visibleMeshes++;triangleCount+=selected.length/3;}
+  });
+  if(!triangleCount||!visibleMeshes)throw new Error('The hazmat survivor right arm could not be isolated from its character mesh.');
+  speakingIcon.visible=false;
+  const label=root.getObjectByName('player-name');if(label)label.visible=false;
+  torch.visible=false;root.name='hazmat-first-person-viewmodel';
+  firstPersonViewmodelEnabled=true;firstPersonArmTriangles=triangleCount;
+  return {triangleCount:firstPersonArmTriangles};
+ }
+ function getGripWorldTransform(positionTarget=new THREE.Vector3(),quaternionTarget=new THREE.Quaternion()){
+  root.updateMatrixWorld(true);torch.updateWorldMatrix(true,false);
+  torch.getWorldPosition(positionTarget);torch.getWorldQuaternion(quaternionTarget);
+  return {position:positionTarget,quaternion:quaternionTarget};
+ }
+ function setGripWorldTransform(position,quaternion){
+  if(disposed||!hand||!forearm||!upperArm||!position||!quaternion)return false;
+  root.updateMatrixWorld(true);upperArm.getWorldPosition(shoulderPosition);
+  direction.subVectors(position,shoulderPosition);
+  if(direction.lengthSq()<1e-8)return false;
+  const distance=THREE.MathUtils.clamp(direction.length(),Math.abs(upperLength-lowerLength)+.001,upperLength+lowerLength-.001);
+  direction.normalize();wristGoal.copy(shoulderPosition).addScaledVector(direction,distance);
+  pole.set(-.35,-.3,-1).transformDirection(root.matrixWorld);
+  pole.addScaledVector(direction,-pole.dot(direction)).normalize();
+  const along=(upperLength*upperLength-lowerLength*lowerLength+distance*distance)/(2*distance);
+  elbowGoal.copy(shoulderPosition).addScaledVector(direction,along)
+   .addScaledVector(pole,Math.sqrt(Math.max(0,upperLength*upperLength-along*along)));
+  orientBone(upperArm,forearm,elbowGoal);orientBone(forearm,hand,wristGoal);
+  root.updateMatrixWorld(true);
+  hand.parent.getWorldQuaternion(parentRotation).invert();
+  hand.quaternion.copy(parentRotation).multiply(quaternion).multiply(inverseGrip);
+  hand.updateWorldMatrix(false,true);root.updateMatrixWorld(true);
+  return true;
+ }
+
  function dispose(){
   if(disposed)return;disposed=true;mixer.stopAllAction();mixer.uncacheRoot(model);root.removeFromParent();
   for(const skeleton of skeletons)skeleton.dispose();
@@ -330,5 +417,5 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   if(headBone)return headBone.getWorldPosition(target);
   return target.copy(root.position).add(new THREE.Vector3(0,2.05,0));
  }
- return {root,update,sampleCinematic,getHeadWorldPosition,getFootWorldPositions,dispose};
+ return {root,update,sampleCinematic,getHeadWorldPosition,getFootWorldPositions,enableFirstPersonViewmodel,getGripWorldTransform,setGripWorldTransform,dispose};
 }
