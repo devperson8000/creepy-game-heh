@@ -428,6 +428,97 @@ export function createSecretRoomWorld() {
     { friction: 0.55, restitution: 0.12 }
   );
 
+
+  // Visible mains lead, loose plug, outlet and hinged rocker switch.
+  const cableMaterial = makeMaterial({ color: 0x171915, roughness: 0.88 });
+  const sleeveMaterial = makeMaterial({ color: 0x292b25, roughness: 0.78 });
+  const socketMaterial = makeMaterial({ color: 0x9a927d, roughness: 0.84 });
+  const socketDark = makeMaterial({ color: 0x171a16, roughness: 0.94 });
+  const plugMetal = makeMaterial({ color: 0x9b9c90, metalness: 0.82, roughness: 0.28 });
+  const switchMaterial = makeMaterial({ color: 0xaaa18a, roughness: 0.64 });
+  const switchDark = makeMaterial({ color: 0x4c4a40, roughness: 0.82 });
+  const powerGroup = new T.Group();
+  scene.add(powerGroup);
+  rounded(0.045,0.205,0.235,3.245,0.565,-1.06,0.018,socketMaterial,powerGroup);
+  for(const z of [-1.106,-1.014]){
+    const screw=new T.Mesh(new T.CylinderGeometry(.008,.008,.008,16),brass);
+    screw.rotation.z=Math.PI/2;screw.position.set(3.216,.565,z);powerGroup.add(screw);resources.add(screw.geometry);
+  }
+  for(const z of [-1.087,-1.033])rounded(.009,.042,.012,3.216,.565,z,.004,socketDark,powerGroup);
+  rounded(.009,.012,.012,3.216,.52,-1.06,.004,socketDark,powerGroup);
+
+  const powerPlug=new T.Group();
+  powerPlug.name='loose-tv-mains-plug';powerPlug.position.set(2.97,.565,-1.06);powerGroup.add(powerPlug);
+  rounded(.105,.044,.076,0,0,0,.012,sleeveMaterial,powerPlug);
+  rounded(.064,.048,.068,-.018,0,0,.014,socketMaterial,powerPlug);
+  rounded(.028,.032,.06,-.061,0,0,.01,cableMaterial,powerPlug);
+  for(const z of [-.026,.026]){
+    const prong=new T.Mesh(new T.CylinderGeometry(.004,.004,.052,12),plugMetal);
+    prong.rotation.z=Math.PI/2;prong.position.set(.076,0,z);powerPlug.add(prong);resources.add(prong.geometry);
+  }
+  for(let i=0;i<4;i++){
+    const ridge=rounded(.006,.046,.08,-.048-i*.008,0,0,.002,sleeveMaterial,powerPlug);
+    ridge.castShadow=false;
+  }
+  const cableStart=[
+    v3(.235,tvY-.10,tvZ-.235),v3(.25,.56,-.81),v3(.28,.055,-.92),
+    v3(.58,.019,-.955),v3(1.25,.016,-1.035),v3(2.08,.016,-1.06),v3(2.87,.035,-1.06)
+  ];
+  let cableMesh;
+  function refreshCable(){
+    const end=powerPlug.position.clone().add(v3(-.055,0,0));
+    const geometry=new T.TubeGeometry(new T.CatmullRomCurve3([...cableStart.map(p=>p.clone()),end]),96,.0085,9,false);
+    if(cableMesh){resources.delete(cableMesh.geometry);cableMesh.geometry.dispose();cableMesh.geometry=geometry;}
+    else{cableMesh=new T.Mesh(geometry,cableMaterial);cableMesh.castShadow=true;cableMesh.receiveShadow=true;powerGroup.add(cableMesh);}
+    resources.add(geometry);
+  }
+  refreshCable();
+  for(const x of [.42,.78,1.48,2.16,2.78]){
+    const clip=rounded(.035,.016,.026,x,.017,-1.01,.004,iron,powerGroup);clip.castShadow=false;
+  }
+
+  rounded(.045,.205,.19,3.245,1.105,-1.06,.018,switchMaterial,powerGroup);
+  for(const z of [-1.125,-.995]){
+    const screw=new T.Mesh(new T.CylinderGeometry(.006,.006,.007,14),brass);
+    screw.rotation.z=Math.PI/2;screw.position.set(3.216,1.105,z);powerGroup.add(screw);resources.add(screw.geometry);
+  }
+  rounded(.014,.105,.088,3.211,1.102,-1.06,.009,switchDark,powerGroup);
+  const switchPivot=new T.Group();switchPivot.position.set(3.199,1.103,-1.06);powerGroup.add(switchPivot);
+  rounded(.036,.071,.059,-.006,.004,0,.012,switchMaterial,switchPivot);
+  rounded(.012,.026,.037,-.026,.006,0,.006,sleeveMaterial,switchPivot);
+  const pilotMaterial=new T.MeshStandardMaterial({color:0x6f3429,emissive:0x42130d,emissiveIntensity:.32,roughness:.38,metalness:.08});
+  resources.add(pilotMaterial);
+  const pilot=new T.Mesh(new T.SphereGeometry(.009,14,10),pilotMaterial);
+  pilot.position.set(3.202,1.035,-1.06);powerGroup.add(pilot);resources.add(pilot.geometry);
+  const labelCanvas=document.createElement('canvas');labelCanvas.width=256;labelCanvas.height=96;
+  const labelCtx=labelCanvas.getContext('2d');labelCtx.fillStyle='#5a574b';labelCtx.fillRect(0,0,256,96);
+  labelCtx.fillStyle='#d2c8a8';labelCtx.font='bold 28px monospace';labelCtx.textAlign='center';labelCtx.fillText('TV / POWER',128,59);
+  const labelTexture=new T.CanvasTexture(labelCanvas);labelTexture.colorSpace=T.SRGBColorSpace;resources.add(labelTexture);
+  const labelMaterial=new T.MeshBasicMaterial({map:labelTexture,toneMapped:false});resources.add(labelMaterial);
+  const powerLabel=new T.Mesh(new T.PlaneGeometry(.145,.047),labelMaterial);
+  powerLabel.rotation.y=-Math.PI/2;powerLabel.position.set(3.195,1.205,-1.06);powerGroup.add(powerLabel);resources.add(powerLabel.geometry);
+
+  const plugStart=v3(2.97,.565,-1.06),plugEnd=v3(3.12,.565,-1.06);
+  const powerApi={
+    plug:powerPlug,switchTarget:v3(3.14,1.105,-1.06),plugStart,plugEnd,
+    setPlugProgress(value){
+      const p=Math.max(0,Math.min(1,value)),e=p*p*(3-2*p);
+      powerPlug.position.lerpVectors(plugStart,plugEnd,e);powerPlug.rotation.z=(1-e)*-.08;refreshCable();
+    },
+    setSwitchOn(on,progress=1){
+      const p=Math.max(0,Math.min(1,progress));switchPivot.rotation.z=(on?.42:0)*p;
+      pilotMaterial.color.set(on?0x76a66d:0x6f3429);
+      pilotMaterial.emissive.set(on?0x275b28:0x42130d);
+      pilotMaterial.emissiveIntensity=on?1.15:.32;
+    },
+    setTvPowerState(state){
+      const colors={off:[0x6f3429,0x42130d],booting:[0xc28a42,0x735021],ready:[0x76a66d,0x275b28],playing:[0x76a66d,0x275b28]};
+      const [color,emissive]=colors[state]??colors.off;
+      ledMaterial.color.set(color);ledMaterial.emissive.set(emissive);ledMaterial.emissiveIntensity=state==='off'?.25:1.05;
+      screenMaterial.emissive.set(state==='off'?0x020503:0x0b160f);screenMaterial.emissiveIntensity=state==='off'?.3:.62;
+    }
+  };
+
   function makeVhsLabel() {
     return texture((ctx, size) => {
       ctx.clearRect(0, 0, size, size);
@@ -588,6 +679,7 @@ export function createSecretRoomWorld() {
     scene,
     obstacles,
     tv: tvApi,
+    power: powerApi,
     table,
     room: ROOM,
     createVhsModel,

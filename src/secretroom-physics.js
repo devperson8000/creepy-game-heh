@@ -173,7 +173,9 @@ export function createVhsBody(position = { x: 0, y: 0.2, z: 0 }, quaternion = nu
     mass: 0.19,
     sleeping: false,
     sleepTime: 0,
-    contacted: false
+    contacted: false,
+    linearDamping: 0.018,
+    angularDamping: 0.045
   };
 }
 
@@ -193,8 +195,8 @@ export function stepVhsBody(body, delta, obstacles) {
     remaining -= dt;
     body.contacted = false;
     body.velocity.y -= 9.81 * dt;
-    body.velocity = scale(body.velocity, Math.exp(-0.018 * dt));
-    body.angularVelocity = scale(body.angularVelocity, Math.exp(-0.045 * dt));
+    body.velocity = scale(body.velocity, Math.exp(-(body.linearDamping ?? 0.018) * dt));
+    body.angularVelocity = scale(body.angularVelocity, Math.exp(-(body.angularDamping ?? 0.045) * dt));
     body.position = add(body.position, scale(body.velocity, dt));
     integrateRotation(body, dt);
 
@@ -212,9 +214,9 @@ export function stepVhsBody(body, delta, obstacles) {
 
     const speed = length(body.velocity);
     const spin = length(body.angularVelocity);
-    if (body.contacted && speed < 0.045 && spin < 0.075) {
+    if (body.contacted && speed < 0.075 && spin < 0.12) {
       body.sleepTime += dt;
-      if (body.sleepTime > 0.85) {
+      if (body.sleepTime > 0.48) {
         body.velocity = { x: 0, y: 0, z: 0 };
         body.angularVelocity = { x: 0, y: 0, z: 0 };
         body.sleeping = true;

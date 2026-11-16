@@ -5,6 +5,7 @@ import { createRoomAmbience } from './room-ambience.js';
 import { moveInWorld } from './level.js';
 import { createVhsBody, stepVhsBody, wakeVhsBody } from './secretroom-physics.js';
 import { reducedMotion } from './preferences.js';
+import { createTvSetupGame, paintTvCanvas } from './secretroom-tv.js';
 import './secretroom.css';
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -45,9 +46,13 @@ export function startSecretRoom(container) {
   let holdId = null;
   let latched = false;
   let held = false;
-  let inserted = false;
-  let insertion = null;
-  let vhsEnabled = true;
+  let inserted=false,insertion=null,vhsEnabled=true;
+  let powerCableConnected=false,tvPowered=false,setupComplete=false;
+  let plugAnimation=null,switchAnimation=null,tvCameraLocked=false,cameraTween=null,tvReturnPose=null;
+  let tvMode='off',tvElapsed=0,tvGame=null,tvErrorTime=0,tvCanvas=null,tvTexture=null;
+  let teaserPlayback=null,teaserReadyPromise=null,teaserLoadError=null,playbackElapsed=0;
+  const tvStaticAudio=new Audio('/audio/halloween/sfx/monitor-static.mp3');
+  tvStaticAudio.preload='auto';tvStaticAudio.loop=true;tvStaticAudio.volume=.16;
   const keys = new Set();
   const listeners = [];
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
@@ -77,7 +82,7 @@ export function startSecretRoom(container) {
   root.innerHTML =
     '<div class="sr-top">' +
       '<div class="sr-record"><span class="sr-dot"></span><strong>REC</strong><span>ARCHIVE / 001</span></div>' +
-      '<div class="sr-status"><span>LEVEL 0 — UNIDENTIFIED INTERIOR</span><strong data-tape-state>TAPE: ON FLOOR</strong></div>' +
+      '<div class="sr-status"><span>LEVEL 0 — UNIDENTIFIED INTERIOR</span><strong data-tape-state>TAPE: ON FLOOR</strong><em data-tv-state>TV: UNPLUGGED</em></div>' +
       '<div class="sr-tools">' +
         '<button data-action="sound" aria-pressed="true">Sound on</button>' +
         '<button data-action="vhs" aria-pressed="true">VHS on</button>' +
@@ -94,6 +99,10 @@ export function startSecretRoom(container) {
       '<span data-prompt></span><div class="sr-progress"><i></i></div>' +
     '</div>' +
     '<div class="sr-toast" role="status" aria-live="polite"></div>' +
+    '<div class="sr-tv-touch" hidden aria-label="TV arrow controls">' +
+      '<button data-tv-key="ArrowUp">↑</button><button data-tv-key="ArrowLeft">←</button>' +
+      '<button data-tv-key="ArrowDown">↓</button><button data-tv-key="ArrowRight">→</button>' +
+    '</div>' +
     '<div class="sr-touch" aria-label="Touch controls">' +
       '<div class="sr-pad">' +
         '<button data-key="KeyW">↑</button>' +
@@ -128,6 +137,76 @@ export function startSecretRoom(container) {
     el('.sr-toast').textContent = message;
   };
 
+  const setTvLabel = value => { const node=el('[data-tv-state]'); if(node)node.textContent=value; };
+  function ensureTvCanvas(){
+    if(tvTexture)return;tvCanvas=document.createElement('canvas');tvCanvas.width=1024;tvCanvas.height=732;
+    tvTexture=new T.CanvasTexture(tvCanvas);tvTexture.colorSpace=T.SRGBColorSpace;tvTexture.minFilter=T.LinearFilter;tvTexture.magFilter=T.LinearFilter;
+    world.setTvTexture(tvTexture);
+  }
+  function drawTvScreen(){if(!tvCanvas)return;paintTvCanvas(tvCanvas,tvMode,tvElapsed,tvGame,tvErrorTime);tvTexture.needsUpdate=true;}
+  function prepareTeaserFilm(){
+    if(teaserReadyPromise)return teaserReadyPromise;
+    teaserReadyPromise=import('./teaser-playback.js').then(async module=>{const film=module.createTeaserPlayback();teaserPlayback=film;await film.scene.ready;return film;})
+      .catch(error=>{teaserLoadError=error;console.error('Monochrome II TV footage could not be prepared:',error);return null;});
+    return teaserReadyPromise;
+  }
+  function cameraMoveTo(position,quaternion,fov,duration,onComplete){
+    cameraTween={fromPosition:camera.position.clone(),toPosition:position.clone(),fromQuaternion:camera.quaternion.clone(),toQuaternion:quaternion.clone(),fromFov:camera.fov,toFov:fov,elapsed:0,duration,onComplete};
+  }
+  function focusCameraOnTv(done){
+    if(!tvReturnPose)tvReturnPose={position:camera.position.clone(),quaternion:camera.quaternion.clone(),fov:camera.fov};
+    tvCameraLocked=true;keys.clear();document.exitPointerLock?.();root.classList.add('sr-tv-focus');
+    world.tv.screen.updateWorldMatrix(true,false);
+    const screen=world.tv.screen.getWorldPosition(new T.Vector3()),position=screen.clone().add(v3(0,.46,0));
+    const guide=new T.PerspectiveCamera(39,camera.aspect,.06,60);guide.position.copy(position);guide.lookAt(screen);
+    cameraMoveTo(position,guide.quaternion,39,1.18,done);
+  }
+  function returnCameraFromTv(done){
+    if(!tvReturnPose){tvCameraLocked=false;root.classList.remove('sr-tv-focus');done?.();return;}
+    const pose=tvReturnPose;
+    cameraMoveTo(pose.position,pose.quaternion,pose.fov,.92,()=>{tvReturnPose=null;tvCameraLocked=false;root.classList.remove('sr-tv-focus');done?.();});
+  }
+  function beginTvBoot(){
+    ensureTvCanvas();tvMode='off';tvElapsed=0;drawTvScreen();world.power.setTvPowerState('booting');setTvLabel('TV: BOOTING');void prepareTeaserFilm();
+    focusCameraOnTv(()=>{tvMode='booting';tvElapsed=0;drawTvScreen();});
+  }
+  function beginVhsPlayback(){
+    ensureTvCanvas();
+    focusCameraOnTv(()=>{tvMode='static';tvElapsed=0;drawTvScreen();world.power.setTvPowerState('playing');
+      if(!muted){tvStaticAudio.currentTime=0;tvStaticAudio.play().catch(()=>{});}void prepareTeaserFilm();});
+  }
+  function handleTvArrow(key){
+    if(tvMode!=='minigame'||!tvGame)return;const result=tvGame.input(key);
+    if(result.type==='mistake')tvErrorTime=.42;
+    else if(result.type==='stage-complete'||result.type==='complete'){tvMode='successFlash';tvElapsed=0;}
+    drawTvScreen();
+  }
+  function updateTvSequence(delta){
+    if(['off','ready','finished','returning'].includes(tvMode))return;
+    tvElapsed+=delta;
+    if(tvMode==='booting'){
+      if(tvElapsed>=3.8){tvMode='minigame';tvElapsed=0;tvGame=createTvSetupGame();tvErrorTime=0;setTvLabel('TV: SETUP REQUIRED');el('.sr-tv-touch').hidden=false;}
+      drawTvScreen();return;
+    }
+    if(tvMode==='minigame'){tvErrorTime=Math.max(0,tvErrorTime-delta);drawTvScreen();return;}
+    if(tvMode==='successFlash'&&tvElapsed>=.14){
+      tvElapsed=0;
+      if(tvGame?.complete){tvMode='readyBlack';setupComplete=true;setTvLabel('TV: READY FOR VHS');world.power.setTvPowerState('ready');el('.sr-tv-touch').hidden=true;}
+      else tvMode='minigame';
+      drawTvScreen();return;
+    }
+    if(tvMode==='readyBlack'&&tvElapsed>=.95){
+      tvElapsed=0;tvMode='returning';returnCameraFromTv(()=>{tvMode='ready';drawTvScreen();announce('TV setup complete. The black screen and green pilot light mean it is ready for the VHS cassette.');setTvLabel('TV: READY FOR VHS');});return;
+    }
+    if(tvMode==='static'&&tvElapsed>=1.5&&teaserPlayback){
+      tvStaticAudio.pause();tvStaticAudio.currentTime=0;tvMode='teaser';playbackElapsed=0;
+      world.setTvTexture(teaserPlayback.scene.target.texture);teaserPlayback.audio.resume();world.power.setTvPowerState('playing');return;
+    }
+    if(tvMode==='static'&&tvElapsed>=1.5&&teaserLoadError){tvStaticAudio.pause();tvMode='mediaError';drawTvScreen();return;}
+    if(tvMode==='static'||tvMode==='mediaError')drawTvScreen();
+  }
+
+
   function resize() {
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
@@ -156,6 +235,8 @@ export function startSecretRoom(container) {
     if (paused) {
       document.exitPointerLock?.();
       ambience.pause();
+      tvStaticAudio.pause();
+      teaserPlayback?.audio.pause();
       if (started) {
         el('#sr-title').innerHTML = 'Still here.<span>ROOM 001 — PAUSED</span>';
         el('.sr-panel p').textContent = 'The fluorescent lights continue to hum. The cassette and television are exactly where you left them.';
@@ -166,6 +247,8 @@ export function startSecretRoom(container) {
       el('.sr-panel').blur?.();
       renderer.domElement.focus();
       void ambience.resume();
+      if (tvMode === 'static' && !muted) tvStaticAudio.play().catch(() => {});
+      if (tvMode === 'teaser') { teaserPlayback?.audio.resume(); teaserPlayback?.audio.update(playbackElapsed, { muted, volume: muted ? 0 : 0.86 }); }
       capturePointer();
     }
   }
@@ -183,19 +266,16 @@ export function startSecretRoom(container) {
     return cameraDirection().dot(targetDirection) >= minFacing;
   }
 
-  function currentTarget() {
-    if (insertion) return null;
-    if (held) {
-      return pointTarget(world.tv.slot.position, 1.35, 0.68)
-        ? { id: inserted ? 'eject' : 'slot', label: inserted ? 'Eject the VHS cassette' : 'Slide VHS into the television', duration: 0.48 }
-        : null;
+  function currentTarget(){
+    if(insertion||tvCameraLocked||cameraTween||plugAnimation||switchAnimation)return null;
+    if(!powerCableConnected&&pointTarget(world.power.plug.position,2.1,.48))return{id:'plug',label:'Connect the television power cable',duration:.7};
+    if(powerCableConnected&&!tvPowered&&pointTarget(world.power.switchTarget,1.7,.55))return{id:'power',label:'Turn on the television power',duration:.42};
+    if(held){
+      if(!pointTarget(world.tv.slot.position,1.35,.68))return null;
+      return setupComplete?{id:'slot',label:'Slide VHS into the television',duration:.48}:{id:'slot-locked',label:'TV setup is not complete yet',duration:.55};
     }
-    if (!inserted && pointTarget(tapeModel.position, 2.05, 0.58)) {
-      return { id: 'pickup', label: 'Pick up VHS cassette', duration: 0.42 };
-    }
-    if (inserted && pointTarget(world.tv.slot.position, 1.35, 0.68)) {
-      return { id: 'eject', label: 'Eject the VHS cassette', duration: 0.48 };
-    }
+    if(!inserted&&pointTarget(tapeModel.position,2.05,.58))return{id:'pickup',label:'Pick up VHS cassette',duration:.42};
+    if(inserted&&['finished','mediaError'].includes(tvMode)&&pointTarget(world.tv.slot.position,1.35,.68))return{id:'eject',label:'Eject the VHS cassette',duration:.48};
     return null;
   }
 
@@ -271,9 +351,13 @@ export function startSecretRoom(container) {
       tapeModel.quaternion.copy(insertion.toQuaternion);
       inserted = true;
       held = false;
-      announce('Cassette seated in the television. The player is ready for its future playback sequence.');
+      announce('Cassette seated. The TV is reading the tape.');
+      beginVhsPlayback();
     } else {
       inserted = false;
+      tvMode = 'ready';
+      world.setTvTexture(tvTexture);
+      drawTvScreen();
       attachToHand();
       announce('VHS cassette ejected.');
     }
@@ -306,6 +390,8 @@ export function startSecretRoom(container) {
       w: tapeModel.quaternion.w
     };
     if (throwing) {
+      body.linearDamping = 0.018;
+      body.angularDamping = 0.045;
       body.velocity = {
         x: direction.x * 5.3 + playerVelocity.x * 0.35,
         y: direction.y * 5.3 + 1.1,
@@ -319,11 +405,13 @@ export function startSecretRoom(container) {
       announce('VHS thrown.');
     } else {
       body.velocity = {
-        x: playerVelocity.x * 0.45 + direction.x * 0.25,
-        y: -0.25,
-        z: playerVelocity.z * 0.45 + direction.z * 0.25
+        x: playerVelocity.x * 0.12 + direction.x * 0.055,
+        y: -0.12,
+        z: playerVelocity.z * 0.12 + direction.z * 0.055
       };
-      body.angularVelocity = { x: 0.25, y: 0.45, z: -0.18 };
+      body.angularVelocity = { x: 0.075, y: 0.12, z: -0.055 };
+      body.linearDamping = 0.3;
+      body.angularDamping = 1.35;
       announce('VHS dropped.');
     }
     wakeVhsBody(body);
@@ -338,6 +426,9 @@ export function startSecretRoom(container) {
   function interact(target) {
     if (!target) return;
     if (target.id === 'pickup') beginPickup();
+    else if (target.id === 'plug') { plugAnimation = { elapsed: 0, duration: 0.62 }; announce('Connecting the TV mains plug to the wall outlet...'); }
+    else if (target.id === 'power') { switchAnimation = { elapsed: 0, duration: 0.24 }; announce('Power switch engaged. The CRT is starting up...'); }
+    else if (target.id === 'slot-locked') announce('The television must be powered on and its setup sequence completed first.');
     else if (target.id === 'slot') startInsertion('insert');
     else if (target.id === 'eject') startInsertion('eject');
     hold = 0;
@@ -356,6 +447,9 @@ export function startSecretRoom(container) {
   on(el('[data-action="sound"]'), 'click', () => {
     muted = !muted;
     ambience.setMuted(muted);
+    tvStaticAudio.muted = muted;
+    if (tvMode === 'static' && !muted) tvStaticAudio.play().catch(() => {});
+    teaserPlayback?.audio.update(playbackElapsed, { muted, volume: muted ? 0 : 0.86 });
     el('[data-action="sound"]').textContent = muted ? 'Sound off' : 'Sound on';
     el('[data-action="sound"]').setAttribute('aria-pressed', String(!muted));
     if (!muted && !paused) void ambience.resume();
@@ -369,6 +463,9 @@ export function startSecretRoom(container) {
   on(el('[data-action="throw"]'), 'click', () => dropTape(true));
 
   on(document, 'keydown', event => {
+    if (!paused && tvMode === 'minigame' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) {
+      event.preventDefault(); if (!event.repeat) handleTvArrow(event.code); return;
+    }
     if (event.target.closest?.('input,textarea,select,button,a')) return;
     if (event.code === 'Escape' && !event.repeat) {
       event.preventDefault();
@@ -419,6 +516,7 @@ export function startSecretRoom(container) {
     event.preventDefault();
     if (!paused) dropTape(true);
   });
+  for (const button of root.querySelectorAll('[data-tv-key]')) { const key = button.dataset.tvKey; on(button, 'click', () => handleTvArrow(key)); }
   for (const button of root.querySelectorAll('[data-key]')) {
     const key = button.dataset.key;
     on(button, 'pointerdown', event => {
@@ -432,7 +530,28 @@ export function startSecretRoom(container) {
     }
   }
 
+  function updateCameraAndPower(delta){
+    if(cameraTween){
+      cameraTween.elapsed+=delta;const t=clamp(cameraTween.elapsed/cameraTween.duration,0,1),e=t*t*(3-2*t);
+      camera.position.lerpVectors(cameraTween.fromPosition,cameraTween.toPosition,e);
+      camera.quaternion.slerpQuaternions(cameraTween.fromQuaternion,cameraTween.toQuaternion,e);
+      camera.fov=T.MathUtils.lerp(cameraTween.fromFov,cameraTween.toFov,e);camera.updateProjectionMatrix();
+      if(t>=1){const done=cameraTween.onComplete;cameraTween=null;done?.();}
+    }
+    if(plugAnimation){
+      plugAnimation.elapsed+=delta;const t=clamp(plugAnimation.elapsed/plugAnimation.duration,0,1);
+      world.power.setPlugProgress(t);
+      if(t>=1){plugAnimation=null;powerCableConnected=true;setTvLabel('TV: POWER CONNECTED');announce('The plug is seated in the outlet. The TV power switch is ready.');}
+    }
+    if(switchAnimation){
+      switchAnimation.elapsed+=delta;const t=clamp(switchAnimation.elapsed/switchAnimation.duration,0,1);
+      world.power.setSwitchOn(true,t);
+      if(t>=1){switchAnimation=null;tvPowered=true;world.power.setTvPowerState('booting');beginTvBoot();}
+    }
+  }
+
   function updatePlayer(delta) {
+    if (tvCameraLocked || cameraTween) return;
     const input = {
       forward: Number(keys.has('KeyW') || keys.has('ArrowUp')) - Number(keys.has('KeyS') || keys.has('ArrowDown')),
       right: Number(keys.has('KeyD') || keys.has('ArrowRight')) - Number(keys.has('KeyA') || keys.has('ArrowLeft'))
@@ -493,9 +612,20 @@ export function startSecretRoom(container) {
     previous = now;
     if (!paused && !disposed) {
       time += delta;
-      updatePlayer(delta);
-      updateInteraction(delta);
+      updateCameraAndPower(delta);
+      if (!tvCameraLocked && !cameraTween) { updatePlayer(delta); updateInteraction(delta); }
       updateInsertion(delta);
+      updateTvSequence(delta);
+      if (tvMode === 'teaser' && teaserPlayback) {
+        playbackElapsed += delta;
+        teaserPlayback.scene.render(renderer, playbackElapsed, { quality: 'high', reducedMotion: reduced.matches, muted });
+        teaserPlayback.audio.update(playbackElapsed, { muted, volume: muted ? 0 : 0.86 });
+        if (playbackElapsed >= 40) {
+          teaserPlayback.audio.pause(); tvMode = 'finished'; world.setTvTexture(tvTexture); drawTvScreen();
+          world.power.setTvPowerState('ready');
+          returnCameraFromTv(() => { announce('The Monochrome II recording has reached its end.'); setTvLabel('TV: PLAYBACK COMPLETE'); });
+        }
+      }
       updatePhysics(delta);
       world.update(time, delta, player);
       ambience.update({ delta, sprinting: player.sprint, hidden: false, threat: 0, huntElapsed: 0 });
@@ -512,6 +642,10 @@ export function startSecretRoom(container) {
     document.exitPointerLock?.();
     for (const remove of listeners) remove();
     ambience.dispose();
+    tvStaticAudio.pause();
+    teaserPlayback?.audio.dispose();
+    teaserPlayback?.scene.dispose();
+    tvTexture?.dispose();
     post.dispose();
     world.dispose();
     renderer.dispose();
