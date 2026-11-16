@@ -47,7 +47,7 @@ export function startSecretRoom(container) {
   let latched = false;
   let held = false;
   let inserted=false,insertion=null,vhsEnabled=true;
-  let powerCableConnected=false,tvPowered=false,setupComplete=false;
+  let powerCableHeld=false,powerCableConnected=false,tvPowered=false,setupComplete=false;
   let plugAnimation=null,switchAnimation=null,tvCameraLocked=false,cameraTween=null,tvReturnPose=null;
   let tvMode='off',tvElapsed=0,tvGame=null,tvErrorTime=0,tvCanvas=null,tvTexture=null;
   let teaserPlayback=null,teaserReadyPromise=null,teaserLoadError=null,playbackElapsed=0;
@@ -146,8 +146,12 @@ export function startSecretRoom(container) {
   function drawTvScreen(){if(!tvCanvas)return;paintTvCanvas(tvCanvas,tvMode,tvElapsed,tvGame,tvErrorTime);tvTexture.needsUpdate=true;}
   function prepareTeaserFilm(){
     if(teaserReadyPromise)return teaserReadyPromise;
-    teaserReadyPromise=import('./teaser-playback.js').then(async module=>{const film=module.createTeaserPlayback();teaserPlayback=film;await film.scene.ready;return film;})
-      .catch(error=>{teaserLoadError=error;console.error('Monochrome II TV footage could not be prepared:',error);return null;});
+    teaserReadyPromise=import('./monochrome2-intro.js').then(async module=>{
+      const film=module.createMonochrome2TvFilm(renderer);
+      teaserPlayback=film;
+      await film.ready;
+      return film;
+    }).catch(error=>{teaserLoadError=error;console.error('Monochrome 2 Backrooms footage could not be prepared:',error);return null;});
     return teaserReadyPromise;
   }
   function cameraMoveTo(position,quaternion,fov,duration,onComplete){
@@ -190,22 +194,24 @@ export function startSecretRoom(container) {
     if(['off','ready','finished','returning'].includes(tvMode))return;
     tvElapsed+=delta;
     if(tvMode==='booting'){
-      if(tvElapsed>=3.8){tvMode='minigame';tvElapsed=0;tvGame=createTvSetupGame();tvErrorTime=0;setTvLabel('TV: SETUP REQUIRED');el('.sr-tv-touch').hidden=false;}
+      if(tvElapsed>=8.4){tvMode='minigame';tvElapsed=0;tvGame=createTvSetupGame();tvErrorTime=0;setTvLabel('TV: SETUP REQUIRED');el('.sr-tv-touch').hidden=false;}
       drawTvScreen();return;
     }
     if(tvMode==='minigame'){tvErrorTime=Math.max(0,tvErrorTime-delta);drawTvScreen();return;}
-    if(tvMode==='successFlash'&&tvElapsed>=.14){
+    if(tvMode==='successFlash'&&tvElapsed>=(tvGame?.complete?1.2:.58)){
       tvElapsed=0;
       if(tvGame?.complete){tvMode='readyBlack';setupComplete=true;setTvLabel('TV: READY FOR VHS');world.power.setTvPowerState('ready');el('.sr-tv-touch').hidden=true;}
       else tvMode='minigame';
       drawTvScreen();return;
     }
-    if(tvMode==='readyBlack'&&tvElapsed>=.95){
+    if(tvMode==='readyBlack'&&tvElapsed>=1.25){
       tvElapsed=0;tvMode='returning';returnCameraFromTv(()=>{tvMode='ready';drawTvScreen();announce('TV setup complete. The black screen and green pilot light mean it is ready for the VHS cassette.');setTvLabel('TV: READY FOR VHS');});return;
     }
     if(tvMode==='static'&&tvElapsed>=1.5&&teaserPlayback){
       tvStaticAudio.pause();tvStaticAudio.currentTime=0;tvMode='teaser';playbackElapsed=0;
-      world.setTvTexture(teaserPlayback.scene.target.texture);teaserPlayback.audio.resume();world.power.setTvPowerState('playing');return;
+      world.setTvTexture(teaserPlayback.texture);
+      teaserPlayback.setMuted(muted);teaserPlayback.play();
+      world.power.setTvPowerState('playing');return;
     }
     if(tvMode==='static'&&tvElapsed>=1.5&&teaserLoadError){tvStaticAudio.pause();tvMode='mediaError';drawTvScreen();return;}
     if(tvMode==='static'||tvMode==='mediaError')drawTvScreen();
@@ -241,7 +247,7 @@ export function startSecretRoom(container) {
       document.exitPointerLock?.();
       ambience.pause();
       tvStaticAudio.pause();
-      teaserPlayback?.audio.pause();
+      teaserPlayback?.pause();
       if (started) {
         el('#sr-title').innerHTML = 'Still here.<span>ROOM 001 — PAUSED</span>';
         el('.sr-panel p').textContent = 'The fluorescent lights continue to hum. The cassette and television are exactly where you left them.';
@@ -253,7 +259,7 @@ export function startSecretRoom(container) {
       renderer.domElement.focus();
       void ambience.resume();
       if (tvMode === 'static' && !muted) tvStaticAudio.play().catch(() => {});
-      if (tvMode === 'teaser') { teaserPlayback?.audio.resume(); teaserPlayback?.audio.update(playbackElapsed, { muted, volume: muted ? 0 : 0.86 }); }
+      if (tvMode === 'teaser') { teaserPlayback?.resume(); teaserPlayback?.setMuted(muted); }
       capturePointer();
     }
   }
@@ -273,7 +279,8 @@ export function startSecretRoom(container) {
 
   function currentTarget(){
     if(insertion||tvCameraLocked||cameraTween||plugAnimation||switchAnimation)return null;
-    if(!powerCableConnected&&pointTarget(world.power.plug.position,2.1,.48))return{id:'plug',label:'Connect the television power cable',duration:.7};
+    if(!powerCableHeld&&!powerCableConnected&&pointTarget(world.power.pickupTarget,2.1,.48))return{id:'cable-pickup',label:'Pick up the TV power cable',duration:.52};
+    if(powerCableHeld&&!powerCableConnected&&pointTarget(world.power.outletTarget,1.75,.48))return{id:'plug',label:'Plug the TV power cable into the outlet',duration:.72};
     if(powerCableConnected&&!tvPowered&&pointTarget(world.power.switchTarget,1.7,.55))return{id:'power',label:'Turn on the television power',duration:.42};
     if(held){
       if(!pointTarget(world.tv.slot.position,1.35,.68))return null;
@@ -431,7 +438,16 @@ export function startSecretRoom(container) {
   function interact(target) {
     if (!target) return;
     if (target.id === 'pickup') beginPickup();
-    else if (target.id === 'plug') { plugAnimation = { elapsed: 0, duration: 0.62 }; announce('Connecting the TV mains plug to the wall outlet...'); }
+    else if (target.id === 'cable-pickup') {
+      powerCableHeld=true;
+      world.power.beginCableHold();
+      updateCarriedPowerCable();
+      announce('TV power cable picked up. Carry the plug to the wall outlet on the right.');
+    }
+    else if (target.id === 'plug') {
+      plugAnimation={elapsed:0,duration:.78,from:world.power.plug.position.clone(),fromQuaternion:world.power.plug.quaternion.clone()};
+      announce('Aligning the prongs and pressing the plug fully into the wall outlet...');
+    }
     else if (target.id === 'power') { switchAnimation = { elapsed: 0, duration: 0.24 }; announce('Power switch engaged. The CRT is starting up...'); }
     else if (target.id === 'slot-locked') announce('The television must be powered on and its setup sequence completed first.');
     else if (target.id === 'slot') startInsertion('insert');
@@ -454,7 +470,7 @@ export function startSecretRoom(container) {
     ambience.setMuted(muted);
     tvStaticAudio.muted = muted;
     if (tvMode === 'static' && !muted) tvStaticAudio.play().catch(() => {});
-    teaserPlayback?.audio.update(playbackElapsed, { muted, volume: muted ? 0 : 0.86 });
+    teaserPlayback?.setMuted(muted);
     el('[data-action="sound"]').textContent = muted ? 'Sound off' : 'Sound on';
     el('[data-action="sound"]').setAttribute('aria-pressed', String(!muted));
     if (!muted && !paused) void ambience.resume();
@@ -535,6 +551,14 @@ export function startSecretRoom(container) {
     }
   }
 
+  function updateCarriedPowerCable(){
+    if(!powerCableHeld||powerCableConnected||plugAnimation||disposed)return;
+    camera.updateMatrixWorld(true);
+    const position=camera.localToWorld(v3(.5,-.34,-.78));
+    const quaternion=camera.getWorldQuaternion(new T.Quaternion());
+    world.power.setHeldPose(position,quaternion);
+  }
+
   function updateCameraAndPower(delta){
     if(cameraTween){
       cameraTween.elapsed+=delta;const t=clamp(cameraTween.elapsed/cameraTween.duration,0,1),e=t*t*(3-2*t);
@@ -545,8 +569,13 @@ export function startSecretRoom(container) {
     }
     if(plugAnimation){
       plugAnimation.elapsed+=delta;const t=clamp(plugAnimation.elapsed/plugAnimation.duration,0,1);
-      world.power.setPlugProgress(t);
-      if(t>=1){plugAnimation=null;powerCableConnected=true;setTvLabel('TV: POWER CONNECTED');announce('The plug is seated in the outlet. The TV power switch is ready.');}
+      world.power.setPlugInsertion(plugAnimation.from,plugAnimation.fromQuaternion,t);
+      if(t>=1){
+        plugAnimation=null;powerCableHeld=false;powerCableConnected=true;
+        world.power.setCablePlugged();
+        setTvLabel('TV: POWER CONNECTED');
+        announce('The plug is fully seated in the outlet. The TV power switch is ready.');
+      }
     }
     if(switchAnimation){
       switchAnimation.elapsed+=delta;const t=clamp(switchAnimation.elapsed/switchAnimation.duration,0,1);
@@ -618,17 +647,20 @@ export function startSecretRoom(container) {
     if (!paused && !disposed) {
       time += delta;
       updateCameraAndPower(delta);
-      if (!tvCameraLocked && !cameraTween) { updatePlayer(delta); updateInteraction(delta); }
+      if (!tvCameraLocked && !cameraTween) {
+        updatePlayer(delta);
+        updateCarriedPowerCable();
+        updateInteraction(delta);
+      }
       updateInsertion(delta);
       updateTvSequence(delta);
       if (tvMode === 'teaser' && teaserPlayback) {
         playbackElapsed += delta;
-        teaserPlayback.scene.render(renderer, playbackElapsed, { quality: 'high', reducedMotion: reduced.matches, muted });
-        teaserPlayback.audio.update(playbackElapsed, { muted, volume: muted ? 0 : 0.86 });
-        if (playbackElapsed >= 40) {
-          teaserPlayback.audio.pause(); tvMode = 'finished'; world.setTvTexture(tvTexture); drawTvScreen();
+        teaserPlayback.render(playbackElapsed);
+        if (playbackElapsed >= teaserPlayback.duration) {
+          teaserPlayback.pause(); tvMode = 'finished'; world.setTvTexture(tvTexture); drawTvScreen();
           world.power.setTvPowerState('ready');
-          returnCameraFromTv(() => { announce('The Monochrome II recording has reached its end.'); setTvLabel('TV: PLAYBACK COMPLETE'); });
+          returnCameraFromTv(() => { announce('The Monochrome 2 Backrooms recording has reached its end.'); setTvLabel('TV: PLAYBACK COMPLETE'); });
         }
       }
       updatePhysics(delta);
@@ -648,8 +680,7 @@ export function startSecretRoom(container) {
     for (const remove of listeners) remove();
     ambience.dispose();
     tvStaticAudio.pause();
-    teaserPlayback?.audio.dispose();
-    teaserPlayback?.scene.dispose();
+    teaserPlayback?.dispose();
     tvTexture?.dispose();
     post.dispose();
     world.dispose();
