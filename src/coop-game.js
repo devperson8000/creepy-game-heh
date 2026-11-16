@@ -383,7 +383,7 @@ export function startCoopGame(container,{client,session}){
   secretCharge=entryProgress.elapsed;
   if(entryProgress.triggered){
    secretCharge=0;input.clear();document.exitPointerLock?.();wallNoteFDown=false;
-   ui.overlay='secret-entry';audio.pause();ambience.pause();
+   ui.overlay='secret-entry';ui.root.hidden=true;audio.pause();ambience.pause();
    entryCinematic=createSecretEntryCinematic({
     scene:world.scene,camera,position:{x:own.x,z:own.z,height:own.height},yaw:input.yaw,
     onComplete(){
