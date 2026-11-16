@@ -38,17 +38,19 @@ export function secretRoomToWorld(point = {}) {
 
 export const SECRET_ENTRY = Object.freeze({
   wallX: SECRET_ROOM_PLACEMENT.centerX + SECRET_ROOM_PLACEMENT.half,
-  wallZ: -2.6,
-  minX: -3.27,
-  maxX: -3.08,
-  minZ: -3.32,
-  maxZ: -1.88,
-  minHeight: -6.55,
+  wallZ: SECRET_ROOM_PLACEMENT.centerZ,
+  // This covers the reachable right-hand edge of the stair corridor, not a
+  // tiny point the player can accidentally pass without noticing.
+  minX: -3.34,
+  maxX: -2.35,
+  minZ: -6.0,
+  maxZ: -1.2,
+  minHeight: -5.5,
   yaw: Math.PI / 2,
-  yawTolerance: 0.34,
-  forwardThreshold: 0.82,
-  maxSideInput: 0.18,
-  holdSeconds: 0.82
+  yawTolerance: 0.68,
+  forwardThreshold: 0.8,
+  maxSideInput: 0.5,
+  holdSeconds: 0.72
 });
 
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -56,17 +58,19 @@ const angleDistance = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a 
 
 export function advanceSecretEntryCharge(elapsed, sample, delta) {
   const position = sample?.position ?? {};
-  const aligned = sample?.enabled !== false &&
+  const active = sample?.enabled !== false &&
     sample?.paused !== true &&
     sample?.alive !== false &&
     Number.isFinite(position.x) &&
     Number.isFinite(position.z) &&
-    Number.isFinite(position.height) &&
+    Number.isFinite(position.height);
+  const nearby = active &&
     position.x >= SECRET_ENTRY.minX &&
     position.x <= SECRET_ENTRY.maxX &&
     position.z >= SECRET_ENTRY.minZ &&
     position.z <= SECRET_ENTRY.maxZ &&
-    position.height <= SECRET_ENTRY.minHeight &&
+    position.height <= SECRET_ENTRY.minHeight;
+  const aligned = nearby &&
     angleDistance(sample.yaw ?? 0, SECRET_ENTRY.yaw) <= SECRET_ENTRY.yawTolerance &&
     (sample.forward ?? 0) >= SECRET_ENTRY.forwardThreshold &&
     Math.abs(sample.right ?? 0) <= SECRET_ENTRY.maxSideInput;
@@ -77,6 +81,7 @@ export function advanceSecretEntryCharge(elapsed, sample, delta) {
   return {
     elapsed: next,
     progress: next / SECRET_ENTRY.holdSeconds,
+    nearby,
     aligned,
     triggered: next >= SECRET_ENTRY.holdSeconds
   };
