@@ -28,8 +28,8 @@ import {createSoundOcclusion} from './sound-occlusion.js';
 import {createArrival} from './arrival.js';
 
 export function startCoopGame(container,{client,session}){
- const ambience=createRoomAmbience({halloween:session.halloween===true});
- const arrival=createArrival({halloween:session.halloween===true,isMuted:()=>audio.muted});
+ const ambience=createRoomAmbience();
+ const arrival=createArrival({isMuted:()=>audio.muted});
  const localId=client.id;session.ownerEpoch??=0;let isHost=localId===session.ownerId;
  const state=createCoopRound(session,{localId}),run=state.run;if(session.checkpoint)arrival.dispose();
  if(!state.players.has(localId))throw new Error('You are not a member of this round.');
@@ -133,7 +133,7 @@ export function startCoopGame(container,{client,session}){
  ui.el('torch-toggle').addEventListener('click',toggleTorch);ui.el('sound-toggle').hidden=!audio.configured;ui.el('sound-toggle').addEventListener('click',toggleSound);ui.el('pause-game').addEventListener('click',pause);
  document.addEventListener('keydown',event=>{
   if(event.repeat||event.target.closest?.('input'))return;
-  if(event.code==='KeyF'&&!ui.overlay){event.preventDefault();toggleTorch();}
+  if(event.code==='KeyF'&&!ui.overlay){if(wallNoteFocused){event.preventDefault();wallNoteFDown=true;}else{event.preventDefault();toggleTorch();}}
   if(event.code==='KeyM'&&ui.overlay!=='keypad')toggleSound();
   if(event.code==='Tab'&&local()?.status!=='alive'){event.preventDefault();cycleSpectator();}
   if(ui.overlay==='keypad'){if(/^\d$/.test(event.key)){event.preventDefault();digit(event.key);}else if(event.key==='Backspace'){event.preventDefault();digit('←');}else if(event.key==='Enter'){event.preventDefault();digit('✓');}}
@@ -150,11 +150,10 @@ export function startCoopGame(container,{client,session}){
  function openKeypad(){buffer='';ui.overlay='keypad';ui.el('code-display').textContent='— — — —';ui.feedback('','');ui.el('keypad-dialog').hidden=false;input.clear();document.exitPointerLock?.();ui.root.querySelector('[data-digit="1"]').focus();}
  ui.root.querySelectorAll('[data-digit]').forEach(button=>button.addEventListener('click',()=>digit(button.dataset.digit)));ui.el('close-keypad').addEventListener('click',closeKeypad);
  function targetInfo(target){
-  if(!target)return null;if(target.type==='halloween')return halloweenTargetInfo(run,target);const labels={boards:['Pry away the boards',1.8],closet:['Hide in closet',.25],clue:['Read the four-digit clue',.2],locks:[`Bank your keys · ${run.banked.size} / 4 filled`,.6],keypad:[run.codeAccepted?'Keypad · code accepted':'Enter elevator code',.15],elevator:[run.exitOpen?'Step into the elevator':'Open elevator · four keys + code',.6]};
+  if(!target)return null;const labels={boards:['Pry away the boards',1.8],closet:['Hide in closet',.25],clue:['Read the four-digit clue',.2],locks:[`Bank your keys · ${run.banked.size} / 4 filled`,.6],keypad:[run.codeAccepted?'Keypad · code accepted':'Enter elevator code',.15],elevator:[run.exitOpen?'Step into the elevator':'Open elevator · four keys + code',.6]};
   if(target.type==='drawer'){const drawer=run.drawers[target.drawerId];return {...target,label:drawer.opened?(drawer.key&&!drawer.taken?'Take the key':'Close searched drawer'):'Search drawer',duration:drawer.opened?.15:.3};}
   if(target.type==='boards'&&run.boardsOpen)return null;
   if(target.type==='escape')return {...target,label:run.banked.size===4&&run.codeAccepted?'Open house service exit':'House exit locked · four keys + code',duration:.6};
-  if(target.type==='elevator'&&run.halloween)return {...target,label:'B2 service lift · use the pumpkin panel',duration:.4};
   if(!labels[target.type])return null;return {...target,label:labels[target.type][0],duration:labels[target.type][1]};
  }
  function currentTarget(){
