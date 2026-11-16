@@ -132,8 +132,8 @@ export function createMazeWorld(run){
  const stairInscription=new THREE.Mesh(new THREE.PlaneGeometry(2.05,.58),inscriptionMaterial);
  // The right wall's inner face is x = stair.x + stair.width / 2. Keep the writing
  // only 2 mm into the corridor to avoid z-fighting while appearing flush to the wall.
- stairInscription.position.set(stair.x+stair.width/2-.002,5.08,-26.05);
- stairInscription.rotation.y=-Math.PI/2;
+ stairInscription.position.set(stair.x-stair.width/2+.002,5.08,-26.05);
+ stairInscription.rotation.y=Math.PI/2;
  stairInscription.name='reversed-stairwell-inscription';
  scene.add(stairInscription);
  const lighting=createProximityLighting(lamps.map(l=>l.position)),ambient=new THREE.AmbientLight(0xa8b49b,.09),fill=new THREE.PointLight(0xb5bea8,.8,3,1.7);scene.add(ambient,fill);
