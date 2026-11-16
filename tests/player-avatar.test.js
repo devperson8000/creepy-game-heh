@@ -158,6 +158,35 @@ test('real hazmat grasp stays closed, anchored and aimed through locomotion and 
  other.update({moving:true,torch:true},.05);other.dispose();
 });
 
+test('first-person carrying view uses the real hazmat right arm and keeps its rigged hand on the item',async()=>{
+ const bytes=await readFile(new URL('../public/models/hazmat-survivor.glb',import.meta.url));
+ const loader=new GLTFLoader();loader.register(()=>({name:'CPUTextureDecoder',loadTexture:async()=>new THREE.Texture()}));
+ const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const avatar=createPlayerAvatar(asset,{id:'first-person-test'});
+ const model=avatar.root.getObjectByName('player-model');
+ const meshes=[];model.traverse(object=>{if(object.isSkinnedMesh)meshes.push(object);});
+ const sourceTriangleCount=meshes.reduce((sum,mesh)=>sum+(mesh.geometry.index?.count??mesh.geometry.attributes.position.count)/3,0);
+ const isolated=avatar.enableFirstPersonViewmodel();
+ assert.ok(isolated.triangleCount>0,'the real character arm should produce visible triangles');
+ assert.ok(isolated.triangleCount<=sourceTriangleCount,'the viewmodel must not add geometry');
+ assert.equal(avatar.root.name,'hazmat-first-person-viewmodel');
+ assert.equal(avatar.root.getObjectByName('player-torch').visible,false,'the flashlight mesh is hidden while its grip transform remains available');
+ assert.ok(meshes.some(mesh=>mesh.visible),'the rigged right-arm mesh remains visible');
+ let otherMeshes=0;avatar.root.traverse(object=>{if(object.isMesh&&!object.isSkinnedMesh){otherMeshes++;assert.equal(object.visible,false);}});
+ assert.ok(otherMeshes>0,'number patches and props are removed from the first-person view');
+ const camera=new THREE.Group();camera.add(avatar.root);
+ avatar.update({x:.1,height:-1.45,z:-.48,yaw:0,pitch:.1,torch:false,moving:false},1/60);
+ const position=new THREE.Vector3(),quaternion=new THREE.Quaternion();
+ avatar.getGripWorldTransform(position,quaternion);
+ const destination=position.clone().add(new THREE.Vector3(.018,-.012,-.014));
+ const orientation=quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),.06));
+ assert.equal(avatar.setGripWorldTransform(destination,orientation),true,'the actual arm IK should follow the carried item');
+ avatar.getGripWorldTransform(position,quaternion);
+ assert.ok(position.distanceTo(destination)<.025,'the palm remains aligned with the item');
+ assert.ok(quaternion.angleTo(orientation)<1e-4,'the palm orientation follows the held item');
+ avatar.dispose();
+});
+
 test('microphone icon floats above head only while speaking and disappears for hidden players',()=>{
  const avatar=createPlayerAvatar(fixture(),{id:'speaker'});
  const icon=avatar.root.getObjectByName('player-speaking');assert.ok(icon);assert.ok(icon.position.y>2);
