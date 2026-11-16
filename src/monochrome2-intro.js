@@ -401,7 +401,6 @@ function reset(){
  titlePanel.classList.remove('visible');titlePanel.classList.add('hidden');startPanel.classList.add('hidden');
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
  backroomsGroup.visible=false;monochrome.root.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
- backroomsAmbience.pause();backroomsAmbience.currentTime=0;backroomsAmbience.volume=0;backroomsAmbienceStarted=false;
  noclipCue.pause();noclipCue.currentTime=0;noclipCue.volume=.72;noclipCueStarted=false;noclipCueStopped=false;
  scene.background.copy(introBackground);scene.fog.color.copy(introFogColor);scene.fog.density=.0125;
  started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);
@@ -453,11 +452,6 @@ function update(t){
  rampFill.intensity=t>=34&&t<54?3.8:0;
  rampEnd.opacity=1-state.fallThrough;rampEndWall.visible=state.fallThrough<.995;
  backroomsGroup.visible=state.backrooms>.001;
- if(state.backrooms>.04&&!backroomsAmbienceStarted){
-  backroomsAmbienceStarted=true;backroomsAmbience.currentTime=0;
-  backroomsAmbience.play().catch(()=>{});
- }
- backroomsAmbience.volume=.24*state.backrooms;
  monochrome.root.visible=Boolean(state.monochromeActive)&&state.backrooms>.8;
  if(monochrome.root.visible){
   const run=state.monochromeRun;
@@ -495,15 +489,12 @@ function resize(){
 function cleanup(){
  if(disposed)return;disposed=true;renderer.setAnimationLoop(null);window.removeEventListener('resize',resize);window.removeEventListener('pagehide',cleanup);
  if(window.speechSynthesis)window.speechSynthesis.cancel();
- audio?.dispose();backroomsAmbience.pause();noclipCue.pause();actors.forEach(actor=>actor.dispose());levelZero.dispose();
+ audio?.dispose();noclipCue.pause();actors.forEach(actor=>actor.dispose());levelZero.dispose();
  geometries.forEach(geometry=>geometry.dispose());materials.forEach(material=>material.dispose());
  textures.forEach(texture=>texture.dispose());renderer.dispose();renderer.domElement.remove();ui.remove();document.body.classList.remove('monochrome2-intro');
 }
 window.addEventListener('resize',resize);window.addEventListener('pagehide',cleanup,{once:true});
 audio=createSoundscape();
-const backroomsAmbience=new Audio('/audio/halloween/sfx/room-dread.mp3');
-backroomsAmbience.loop=true;backroomsAmbience.preload='auto';backroomsAmbience.volume=0;
-let backroomsAmbienceStarted=false;
 const noclipCue=new Audio('/audio/monochrome2/noclip-build-12s.mp3');
 noclipCue.preload='auto';noclipCue.loop=true;noclipCue.volume=.72;
 let noclipCueStarted=false,noclipCueStopped=false;
