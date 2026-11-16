@@ -575,12 +575,13 @@ function renderEmbedded(time){
  }
 }
 function play(){if(disposed)return;reset();}
-function pause(){started=false;noclipCue.pause();if(window.speechSynthesis)window.speechSynthesis.cancel();}
+function pause(){noclipCue.pause();if(window.speechSynthesis)window.speechSynthesis.pause();}
+function resume(){audio?.start();audio?.setMuted(muted);if(noclipCueStarted&&!noclipCueStopped&&!muted)noclipCue.play().catch(()=>{});if(window.speechSynthesis)window.speechSynthesis.resume();}
 function setFilmMuted(value){
  muted=!!value;audio?.setMuted(muted);noclipCue.muted=muted;
  if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');if(subtitlePlane)subtitlePlane.visible=false;}
 }
-return {ready,dispose:cleanup,render:renderEmbedded,play,pause,setMuted:setFilmMuted,texture:embeddedTarget?.texture??null,duration:MONOCHROME2_DURATION};
+return {ready,dispose:cleanup,render:renderEmbedded,play,pause,resume,setMuted:setFilmMuted,texture:embeddedTarget?.texture??null,duration:MONOCHROME2_DURATION};
 }
 
 export function startMonochrome2Intro(){return createMonochrome2Runtime();}
