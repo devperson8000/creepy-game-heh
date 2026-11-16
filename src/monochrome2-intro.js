@@ -73,7 +73,7 @@ const geometries=new Set(),materials=new Set(),textures=new Set(),actors=[];
 let disposed=false,started=false,startAt=0,lastFrame=0,lastCaption='',muted=false,audio=null;
 let previousPoseTime=null,previousActorPositions=[null,null,null],walkAnimationTimes=[0,0,0],leadTravelDistance=0,nextFootstepDistance=.72;
 const leadHeadPoint=new THREE.Vector3();
-let voiceChoices=new Map(),activeSpeechCue=null,narrationEpoch=0;
+let voiceChoices=new Map(),activeSpeechCue=null,narrationEpoch=0,narrationTime=0;
 const subtitleTimers=new Map();
 const shotSounds=new Set();
 
@@ -334,34 +334,76 @@ function captureBackroomsBackground(){
 captureBackroomsBackground();
 function createSoundscape(){
  const C=window.AudioContext||window.webkitAudioContext;
- if(!C)return {start(){},setMuted(){},footstep(){},fx(){},dispose(){}};
+ if(!C)return {start(){},setMuted(){},footstep(){},fx(){},startLoop(){},setLoopGain(){},stopLoop(){},dispose(){}};
  const context=new C(),master=context.createGain();master.gain.value=.22;master.connect(context.destination);
- const active=new Set();
- function oscillator(freq,type='sine',gain=.01,duration=1,endFreq=null){
-  const osc=context.createOscillator(),level=context.createGain();osc.type=type;
-  osc.frequency.setValueAtTime(freq,context.currentTime);
-  if(endFreq)osc.frequency.exponentialRampToValueAtTime(Math.max(1,endFreq),context.currentTime+duration);
-  level.gain.setValueAtTime(.0001,context.currentTime);level.gain.linearRampToValueAtTime(gain,context.currentTime+.08);
-  level.gain.exponentialRampToValueAtTime(.0001,context.currentTime+duration);osc.connect(level);level.connect(master);
+ const loopBus=context.createGain();loopBus.gain.value=0;loopBus.connect(master);
+ const active=new Set();let loopBuffer=null,loopSource=null,loopRequested=false,loopTargetGain=0,disposed=false;
+ function oscillator(freq,type='sine',gain=.01,duration=1,endFreq=null,delay=0){
+  const osc=context.createOscillator(),level=context.createGain(),startAt=context.currentTime+delay;osc.type=type;
+  osc.frequency.setValueAtTime(freq,startAt);
+  if(endFreq)osc.frequency.exponentialRampToValueAtTime(Math.max(1,endFreq),startAt+duration);
+  level.gain.setValueAtTime(.0001,startAt);level.gain.linearRampToValueAtTime(gain,startAt+.025);
+  level.gain.exponentialRampToValueAtTime(.0001,startAt+duration);osc.connect(level);level.connect(master);
   active.add(osc);osc.onended=()=>{active.delete(osc);osc.disconnect();level.disconnect();};
-  osc.start();osc.stop(context.currentTime+duration+.03);
+  osc.start(startAt);osc.stop(startAt+duration+.03);
  }
- // Resume the shared audio context for character footsteps and short scene
- // effects only. Continuous synthetic drones/noise were removed so the user's
- // supplied song is the only sustained audio bed in this cinematic.
- function start(){
-  if(context.state==='suspended')void context.resume();
+ function makeSeamlessLoop(input,fadeSeconds=.38){
+  const fade=Math.max(32,Math.min(Math.floor(input.sampleRate*fadeSeconds),Math.floor(input.length/4)));
+  const middle=input.length-fade*2;if(middle<32)return input;
+  const output=context.createBuffer(input.numberOfChannels,input.length-fade,input.sampleRate);
+  for(let channel=0;channel<input.numberOfChannels;channel++){
+   const source=input.getChannelData(channel),target=output.getChannelData(channel);
+   target.set(source.subarray(fade,input.length-fade),0);
+   for(let i=0;i<fade;i++){
+    const p=i/(fade-1),tail=source[input.length-fade+i],head=source[i];
+    target[middle+i]=tail*Math.cos(p*Math.PI/2)+head*Math.sin(p*Math.PI/2);
+   }
+  }
+  return output;
+ }
+ function beginLoop(){
+  if(disposed||!loopRequested||!loopBuffer||loopSource||context.state==='closed')return;
+  const source=context.createBufferSource();source.buffer=loopBuffer;source.loop=true;source.loopStart=0;source.loopEnd=loopBuffer.duration;
+  source.connect(loopBus);source.start(context.currentTime+.025);loopSource=source;
+  loopBus.gain.cancelScheduledValues(context.currentTime);loopBus.gain.setTargetAtTime(loopTargetGain,context.currentTime,.12);
+  source.onended=()=>{if(loopSource===source)loopSource=null;};
+ }
+ async function loadLoop(){
+  try{
+   const response=await fetch('/audio/monochrome2/noclip-build-12s.mp3');
+   if(!response.ok)throw new Error('Could not load the Monochrome 2 sound loop.');
+   const decoded=await context.decodeAudioData(await response.arrayBuffer());
+   if(disposed)return;loopBuffer=makeSeamlessLoop(decoded);beginLoop();
+  }catch(error){console.warn('Monochrome 2 seamless loop unavailable:',error);}
+ }
+ void loadLoop();
+ function start(){if(context.state==='suspended')void context.resume().then(beginLoop);beginLoop();}
+ function startLoop(){loopRequested=true;start();}
+ function setLoopGain(value){
+  loopTargetGain=THREE.MathUtils.clamp(Number(value)||0,0,.8);
+  if(loopRequested)beginLoop();
+  if(loopSource&&context.state!=='closed')loopBus.gain.setTargetAtTime(loopTargetGain,context.currentTime,.055);
+ }
+ function stopLoop(){
+  loopRequested=false;if(context.state==='closed')return;
+  loopBus.gain.cancelScheduledValues(context.currentTime);loopBus.gain.setTargetAtTime(0,context.currentTime,.075);
+  const source=loopSource;loopSource=null;if(source){try{source.stop(context.currentTime+.24);}catch{}}
  }
  function footstep(){if(context.state!=='running')return;oscillator(76,'triangle',.045,.12,28);oscillator(118,'sine',.018,.08,50);}
  function fx(kind){
   if(context.state!=='running')return;
-  if(kind==='store'){oscillator(740,'sine',.028,.34,520);setTimeout(()=>oscillator(990,'sine',.02,.32,720),110);}
+  if(kind==='store'){oscillator(740,'sine',.028,.34,520);oscillator(990,'sine',.02,.32,720,.11);}
   if(kind==='liminal'){oscillator(52,'sine',.075,2.1,24);oscillator(410,'triangle',.025,.7,92);}
   if(kind==='transition'){oscillator(130,'sine',.055,1.5,34);oscillator(680,'sine',.018,.8,180);}
  }
  function setMuted(value){master.gain.setTargetAtTime(value?0:.22,context.currentTime,.045);}
- function dispose(){for(const node of active){try{node.stop();}catch{}}void context.close().catch(()=>{});}
- return {start,setMuted,footstep,fx,dispose};
+ function dispose(){
+  if(disposed)return;disposed=true;loopRequested=false;
+  if(loopSource){try{loopSource.stop();}catch{}loopSource=null;}
+  for(const node of active){try{node.stop();}catch{}}
+  void context.close().catch(()=>{});
+ }
+ return {start,setMuted,footstep,fx,startLoop,setLoopGain,stopLoop,dispose};
 }
 
 function lerp(a,b,t){return a+(b-a)*THREE.MathUtils.clamp(t,0,1);}
@@ -409,9 +451,18 @@ function showSubtitle(cue){
  activeSpeechCue=cue;subtitleSpeaker.textContent=cue.speaker;subtitleText.textContent=cue.text;subtitle.classList.add('visible');
  if(embedded&&subtitleContext&&subtitlePlane){
   const c=subtitleContext,w=subtitleCanvas.width,h=subtitleCanvas.height;c.clearRect(0,0,w,h);
-  c.fillStyle='rgba(2,7,6,.76)';c.fillRect(0,12,w,h-24);c.strokeStyle='rgba(155,191,165,.35)';c.strokeRect(8,18,w-16,h-36);
-  c.textAlign='center';c.fillStyle='#9fc1a7';c.font='bold 21px monospace';c.fillText(cue.speaker, w/2,52);
-  c.fillStyle='#f0f1e8';c.font='27px Arial, sans-serif';c.fillText(cue.text,w/2,100,940);
+  c.fillStyle='rgba(0,0,0,.88)';c.fillRect(0,8,w,h-16);
+  c.strokeStyle='rgba(155,191,165,.46)';c.lineWidth=1;c.strokeRect(9,17,w-18,h-34);
+  c.textAlign='center';c.textBaseline='alphabetic';c.fillStyle='#a9c8b1';c.font='bold 19px monospace';c.fillText(cue.speaker,w/2,43);
+  c.fillStyle='#f2f4ee';c.font='25px Arial, sans-serif';
+  const words=cue.text.split(/\s+/),lines=[];let line='';
+  for(const word of words){
+   const candidate=line?line+' '+word:word;
+   if(line&&c.measureText(candidate).width>920){lines.push(line);line=word;}else line=candidate;
+  }
+  if(line)lines.push(line);
+  const visibleLines=lines.slice(0,2),startY=83-(visibleLines.length-1)*15;
+  visibleLines.forEach((value,index)=>c.fillText(value,w/2,startY+index*31,920));
   subtitlePlane.material.map.needsUpdate=true;subtitlePlane.visible=true;
  }
 }
@@ -423,7 +474,7 @@ function clearSubtitle(cue){
 function fallbackSubtitle(cue){
  const old=subtitleTimers.get(cue.id);if(old)window.clearTimeout(old);
  showSubtitle(cue);
- const duration=Math.max(1.2,Math.min(6.5,cue.text.length/(12.5*(cue.rate??1))));
+ const duration=Math.max(1.35,Math.min(7,(cue.end??cue.at+3.5)-cue.at));
  const timer=window.setTimeout(()=>{subtitleTimers.delete(cue.id);clearSubtitle(cue);},duration*1000);
  subtitleTimers.set(cue.id,timer);
 }
@@ -431,20 +482,24 @@ function refreshVoices(){
  const all=window.speechSynthesis?.getVoices?.()??[];
  const english=all.filter(voice=>/^en[-_]/i.test(voice.lang));
  if(!english.length)return;
- const preferred=english.slice().sort((a,b)=>{
-  const rank=voice=>(/en[-_]AU/i.test(voice.lang)?4:/en[-_]GB/i.test(voice.lang)?3:/en[-_]US/i.test(voice.lang)?2:1);
-  return rank(b)-rank(a);
- });
  const profiles=[
-  ['lead',[/daniel|alex|oliver|arthur|fred|aaron|tom/i]],
-  ['friend1',[/karen|moira|samantha|tessa|fiona|victoria|serena/i]],
-  ['friend2',[/eddy|lee|rishi|google.*english|ava|zoe|susan/i]]
+  ['lead',[/daniel|alex|oliver|arthur|fred|aaron|tom|george|male/i]],
+  ['friend1',[/karen|moira|samantha|tessa|fiona|victoria|serena|female/i]],
+  ['friend2',[/eddy|lee|rishi|ava|zoe|susan|google.*english|female/i]]
  ];
  const used=new Set(),next=new Map();
+ const score=(voice,patterns)=>{
+  const name=voice.name.toLowerCase(),lang=voice.lang.toLowerCase();
+  let value=/en[-_]au/.test(lang)?34:/en[-_]gb/.test(lang)?27:/en[-_]us/.test(lang)?22:10;
+  if(/natural|neural|premium|enhanced|studio|online/i.test(name))value+=42;
+  if(!voice.localService)value+=5;
+  if(/compact|robot|novelty|whisper/i.test(name))value-=24;
+  if(patterns.some(pattern=>pattern.test(name)))value+=31;
+  if(used.has(voice.name))value-=50;
+  return value;
+ };
  for(const [speaker,patterns] of profiles){
-  let voice=null;
-  for(const pattern of patterns){voice=preferred.find(item=>pattern.test(item.name)&&!used.has(item.name));if(voice)break;}
-  if(!voice)voice=preferred.find(item=>!used.has(item.name));
+  const voice=english.slice().sort((a,b)=>score(b,patterns)-score(a,patterns))[0];
   if(voice){used.add(voice.name);next.set(speaker,voice);}
  }
  voiceChoices=next;
@@ -452,13 +507,20 @@ function refreshVoices(){
 window.speechSynthesis?.getVoices?.();
 if('speechSynthesis'in window){window.speechSynthesis.addEventListener?.('voiceschanged',refreshVoices);refreshVoices();}
 function say(cue){
- if(muted||!('speechSynthesis'in window)||!('SpeechSynthesisUtterance'in window)){fallbackSubtitle(cue);return;}
- const epoch=narrationEpoch,utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
+ const synth=window.speechSynthesis;
+ if(muted||!synth||!('SpeechSynthesisUtterance'in window)){fallbackSubtitle(cue);return;}
+ if(activeSpeechCue)clearSubtitle(activeSpeechCue);
+ synth.cancel();
+ const epoch=++narrationEpoch,utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
  if(voice)utterance.voice=voice;
- utterance.lang=voice?.lang??'en-AU';utterance.rate=cue.rate??.94;utterance.pitch=cue.pitch??1;utterance.volume=.98;
+ utterance.lang=voice?.lang??'en-AU';
+ utterance.rate=THREE.MathUtils.clamp(cue.rate??.97,.92,1.06);
+ utterance.pitch=THREE.MathUtils.clamp(cue.pitch??1,.96,1.04);
+ utterance.volume=1;
  let began=false;
  utterance.onstart=()=>{
   if(epoch!==narrationEpoch)return;
+  if(narrationTime>=(cue.end??cue.at+5)){synth.cancel();return;}
   began=true;
   const timer=subtitleTimers.get(cue.id);if(timer)window.clearTimeout(timer);
   subtitleTimers.delete(cue.id);showSubtitle(cue);
@@ -466,12 +528,19 @@ function say(cue){
  utterance.onend=()=>{if(epoch===narrationEpoch)clearSubtitle(cue);};
  utterance.onerror=()=>{
   if(epoch!==narrationEpoch)return;
-  if(!began&&!muted)fallbackSubtitle(cue);else clearSubtitle(cue);
+  if(!began&&!muted&&narrationTime<(cue.end??cue.at+5))fallbackSubtitle(cue);else clearSubtitle(cue);
  };
- window.speechSynthesis.speak(utterance);
+ synth.speak(utterance);
 }
 function updateNarration(time){
- for(const cue of MONOCHROME2_DIALOGUE)if(time>=cue.at&&!shotSounds.has('voice:'+cue.id)){shotSounds.add('voice:'+cue.id);say(cue);}
+ narrationTime=time;
+ if(activeSpeechCue&&time>=activeSpeechCue.end){
+  const expired=activeSpeechCue;narrationEpoch++;window.speechSynthesis?.cancel();clearSubtitle(expired);
+ }
+ for(const cue of MONOCHROME2_DIALOGUE){
+  const key='voice:'+cue.id;
+  if(time>=cue.at&&time<cue.end&&!shotSounds.has(key)){shotSounds.add(key);say(cue);}
+ }
 }
 function showTitle(){titlePanel.classList.remove('hidden');titlePanel.classList.add('visible');}
 function reset(){
