@@ -55,12 +55,12 @@ function makeMenu(){
    client.voice=createVoiceChat({client});
    return client;
   },
-  onSingleplayer:async()=>{
-   const done=preparing();
+  onSingleplayer:()=>{
+   // Start in the Play Solo click itself: no remote release lookup or loading
+   // overlay can leave the player staring at an empty scene.
    try{
-    window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,...await edition()});
+    window.monochrome=startGame(document.querySelector('#scene'),{autostart:true,mapUpdate:true,halloween:false});
    }catch(error){failed(error);}
-   finally{done();}
   },
   onMultiplayer:async({client,session})=>{
    const done=preparing();
