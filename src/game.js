@@ -29,7 +29,8 @@ import {createSecretEntryCinematic} from './secret-entry-cinematic.js';
 
 export function startGame(container,{seed,autostart=false,halloween=false,mapUpdate=false}={}){
  const ambience=createRoomAmbience({halloween});
- const arrival=autostart?createArrival({halloween,isMuted:()=>monsterAudio.muted}):null;
+ let arrival=null,arrivalFailsafeAt=0;
+ if(autostart){try{arrival=createArrival({halloween});}catch(error){console.warn('Wake-up presentation unavailable; starting gameplay directly.',error);}}
  seed??=crypto.getRandomValues(new Uint32Array(1))[0];
  const run=createRun(seed,{halloween,mapUpdate}),world=createWorld(run),ui=createGameUI(),groundHeight=world.groundHeight??legacyGroundHeight;
  const monsterAudio=createMonsterAudio(MONSTER_SOUND_URL,{maze:!!run.layout.halloweenMaze,metallic:false,onError:()=>ui.toast('Monster sound could not load. You can keep playing.'),onScareError:()=>ui.toast('Jumpscare sound could not load.')});
@@ -140,7 +141,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  }
  let renderDirty=true,lastOverlay;
  function resize(){renderDirty=true;renderer.setSize(container.clientWidth,container.clientHeight);camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();}resize();window.addEventListener('resize',resize);
- showScreen('menu');if(autostart){ui.hideScreen();ui.overlay='arrival';}let previous=performance.now(),time=0;
+ showScreen('menu');if(autostart){ui.hideScreen();ui.overlay=arrival?'arrival':null;if(arrival)arrivalFailsafeAt=performance.now()+4500;}let previous=performance.now(),time=0;
  renderer.setAnimationLoop(()=>{
   const now=performance.now(),clockDelta=Math.max(0,(now-previous)/1000),frameDelta=Math.min(clockDelta,.2);previous=now;
   if(wallNoteReader.active){
@@ -236,9 +237,21 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
   document.documentElement.style.setProperty('--power',String(world.lighting.visibility));
   document.documentElement.style.setProperty('--danger',String(threat*.38));
   if(arrival?.active){
-   torch.model.position.y=arrivalTorchY-.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
-   torch.beam.intensity=arrival.elapsed>6.7&&torch.on?torch.power:0;
-   if(arrival.update(frameDelta,camera,{...player,yaw:input.yaw},{muted:monsterAudio.muted,volume:gamePreferences().volume})){resume();torch.beam.intensity=torch.on?torch.power:0;}
+   let finished=false;
+   try{
+    torch.model.position.y=arrivalTorchY-.35*Math.max(0,Math.min(1,(10.7-arrival.elapsed)/1.2));
+    torch.beam.intensity=torch.on?torch.power:0;
+    finished=arrival.update(frameDelta,camera,{...player,yaw:input.yaw},{muted:monsterAudio.muted,volume:gamePreferences().volume});
+   }catch(error){
+    console.warn('Wake-up animation failed; releasing gameplay.',error);
+    finished=true;
+   }
+   if(finished||performance.now()>=arrivalFailsafeAt){
+    arrival.dispose();
+    resume();
+    torch.model.position.y=arrivalTorchY;
+    torch.beam.intensity=torch.on?torch.power:0;
+   }
    renderDirty=true;
   }
   if(jumpscare.active){
