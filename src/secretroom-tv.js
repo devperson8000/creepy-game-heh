@@ -85,7 +85,7 @@ export function paintTvCanvas(canvas,mode,elapsed,game,errorTime=0){
   let lineY=205;
   for(const [at,line] of bootLines){
    if(elapsed<at)continue;
-   const reveal=Math.min(line.length,Math.floor((elapsed-at)*33)+1);
+   const reveal=Math.min(line.length,Math.floor((elapsed-at)*42)+1);
    c.fillStyle='#6edb91';c.shadowColor='#34ed7b';c.shadowBlur=9;
    c.fillText('> '+line.slice(0,reveal),92,lineY);
    c.shadowBlur=0;
