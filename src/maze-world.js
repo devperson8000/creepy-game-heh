@@ -4,6 +4,7 @@ import {CELL,worldPoint,gridPoint,walkable,groundHeight as sampleGround,randomSo
 import {createMazeNavigator} from './maze-navigation.js';
 import {createProximityLighting} from './proximity-lighting.js';
 import {createWallNotes} from './wall-notes.js';
+import {WALL_INSCRIPTION_REVERSED} from './secret-entry.js';
 
 export function createMazeWorld(run){
  const layout=run.layout,floor=layout.floorHeight,height=layout.ceilingHeight,size=layout.size;
@@ -110,11 +111,11 @@ export function createMazeWorld(run){
  const inscriptionContext=inscriptionCanvas.getContext('2d');
  inscriptionContext.clearRect(0,0,1536,360);
  inscriptionContext.textAlign='center';inscriptionContext.textBaseline='middle';
- inscriptionContext.font='bold 38px "Courier New", monospace';
- const reversed='."ti" dnif ot thgir nrut ,mottob eht hcaer uoy nehw dna ,sriats eht nwod og';
+ inscriptionContext.font='bold 54px "Courier New", monospace';
+ const reversed=WALL_INSCRIPTION_REVERSED;
  const inscriptionLines=[reversed.slice(0,27),reversed.slice(27,54),reversed.slice(54)];
  inscriptionLines.forEach((line,index)=>{
-  const y=92+index*88;
+  const y=86+index*94;
   inscriptionContext.fillStyle='rgba(7,10,7,.88)';
   inscriptionContext.fillText(line,768,y);
   inscriptionContext.fillStyle='rgba(7,10,7,.19)';
