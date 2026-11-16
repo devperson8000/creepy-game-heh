@@ -27,10 +27,12 @@ export function createBackroomsWorld(){
  function box(w,h,d,x,y,z,m){const mesh=new T.Mesh(cube,m);mesh.scale.set(w,h,d);mesh.position.set(x,y,z);mesh.receiveShadow=true;scene.add(mesh);return mesh;}
  // Per-wall UVs preserve wallpaper scale instead of stretching a tiny motif across long walls.
  for(const w of map.walls){
-  const g=new T.BoxGeometry(w.w,map.height,w.d),uv=g.attributes.uv;
+  // Sink the wallpapered wall slightly into the carpet so its raw lower texture edge cannot show.
+  const g=new T.BoxGeometry(w.w,map.height+.02,w.d),uv=g.attributes.uv;
   for(let face=0;face<6;face++){const span=face<2?w.d:w.w;for(let i=0;i<4;i++){const n=face*4+i;uv.setXY(n,uv.getX(n)*span/2.4,uv.getY(n));}}
-  resources.add(g);const mesh=new T.Mesh(g,paper);mesh.position.set(w.x,map.height/2,w.z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
-  box(w.w+.026,.095,w.d+.026,w.x,.048,w.z,trim);
+  resources.add(g);const mesh=new T.Mesh(g,paper);mesh.position.set(w.x,map.height/2-.01,w.z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
+  // Continuous skirting overlaps the carpet by 5 mm and covers the bottom 15 cm of wallpaper.
+  box(w.w+.026,.15,w.d+.026,w.x,.065,w.z,trim);
   box(w.w+.018,.035,w.d+.018,w.x,map.height-.018,w.z,rail);
  }
  const floorMap=carpet.clone();floorMap.repeat.set(36,36);resources.add(floorMap);
