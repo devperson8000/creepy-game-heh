@@ -470,9 +470,9 @@ function refreshVoices(){
  const english=all.filter(voice=>/^en[-_]/i.test(voice.lang));
  if(!english.length)return;
  const profiles=[
-  ['lead',[/daniel|alex|oliver|arthur|fred|aaron|tom|george|male/i]],
-  ['friend1',[/karen|moira|samantha|tessa|fiona|victoria|serena|female/i]],
-  ['friend2',[/eddy|lee|rishi|ava|zoe|susan|google.*english|female/i]]
+  ['lead',[/daniel|oliver|arthur|fred|aaron|tom|george|david|james|google.*male|microsoft.*mark/i]],
+  ['friend1',[/karen|moira|samantha|tessa|fiona|victoria|serena|ava|zoe|susan|google.*female|microsoft.*zira/i]],
+  ['friend2',[/eddy|lee|rishi|matthew|liam|ryan|google.*male|microsoft.*guy/i]]
  ];
  const used=new Set(),next=new Map();
  const score=(voice,patterns)=>{
@@ -497,8 +497,9 @@ function say(cue){
  const synth=window.speechSynthesis;
  if(muted||!synth||!('SpeechSynthesisUtterance'in window)){fallbackSubtitle(cue);return;}
  if(activeSpeechCue)clearSubtitle(activeSpeechCue);
+ const epoch=++narrationEpoch;
  synth.cancel();
- const epoch=++narrationEpoch,utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
+ const utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
  if(voice)utterance.voice=voice;
  utterance.lang=voice?.lang??'en-AU';
  utterance.rate=THREE.MathUtils.clamp(cue.rate??.97,.92,1.06);
