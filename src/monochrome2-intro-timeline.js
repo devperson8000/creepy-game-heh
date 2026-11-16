@@ -1,4 +1,4 @@
-export const MONOCHROME2_DURATION=80;
+export const MONOCHROME2_DURATION=78;
 
 export const MONOCHROME2_DIALOGUE=[
  {id:'basement',at:.8,end:4.15,speaker:'LEAD',voice:'lead',text:'That whole Monochrome place was a nightmare. I cannot believe we got out.',rate:.92,pitch:.84},
@@ -18,20 +18,36 @@ export const MONOCHROME2_DIALOGUE=[
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*clamp(t,0,1);
 const smooth=v=>{const t=clamp(v,0,1);return t*t*(3-2*t);};
-export const monochrome2RampY=z=>Math.max(-2.62,Math.min(0,(z+29)*.238));
+const STAIR_COUNT=12,STAIR_START_Z=-29,STAIR_END_Z=-39.92;
+const STAIR_RUN=(STAIR_START_Z-STAIR_END_Z)/STAIR_COUNT;
+const STAIR_RISE=2.62/STAIR_COUNT;
+
+// The feet stay on each tread, with a small, eased drop at the front edge.
+export function monochrome2RampY(z){
+ const progress=clamp((STAIR_START_Z-z)/STAIR_RUN,0,STAIR_COUNT);
+ const index=Math.min(STAIR_COUNT-1,Math.floor(progress));
+ const fraction=progress-index;
+ const descend=smooth((fraction-.76)/.24);
+ return -STAIR_RISE*(index+descend);
+}
+
+export function monochrome2CrackVisibility(timelineStrength,distanceToWall){
+ const nearWall=smooth((2.35-Math.max(0,distanceToWall))/.55);
+ return clamp(timelineStrength,0,1)*nearWall;
+}
 
 export function sampleMonochrome2Actors(value){
  const time=clamp(Number.isFinite(value)?value:0,0,MONOCHROME2_DURATION);
- const lead={x:0,y:0,z:14.8,yaw:0,clip:'Walk',action:'none',progress:0,headTurn:0,headTilt:0,torsoLean:0};
+ const lead={x:0,y:0,z:14.8,yaw:0,clip:'Walk',action:'none',progress:0,headTurn:0,headTilt:0,torsoLean:0,crouch:0};
  if(time<18)lead.z=lerp(14.8,-13.5,time/18);
  else if(time<22)lead.z=lerp(-13.5,-19.3,(time-18)/4);
  else if(time<30)lead.z=lerp(-19.3,-27.5,(time-22)/8);
  else if(time<34){
   const p=smooth((time-30)/4);lead.x=lerp(0,2.38,p);lead.z=lerp(-27.5,-29,p);
  }else if(time<43.4){
-  lead.x=2.38;lead.z=lerp(-29,-39.55,(time-34)/9.4);lead.y=monochrome2RampY(lead.z);
+  lead.x=2.38;lead.z=lerp(STAIR_START_Z,-39.55,(time-34)/9.4);lead.y=monochrome2RampY(lead.z);
  }else if(time<44.2){
-  lead.x=2.38;lead.z=lerp(-39.55,-39.92,(time-43.4)/.8);lead.y=monochrome2RampY(lead.z);
+  lead.x=2.38;lead.z=lerp(-39.55,-39.92,(time-43.4)/.8);lead.y=-2.62;
  }else if(time<45.2){
   lead.x=2.38;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
   const p=smooth((time-44.2)/1);lead.headTurn=-1.0*p;lead.headTilt=-.58*p;
@@ -42,21 +58,25 @@ export function sampleMonochrome2Actors(value){
   lead.x=2.38;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
   lead.headTurn=-1.0;lead.headTilt=-.5;lead.torsoLean=lerp(.02,.14,(time-46)/1.2);
   lead.handTarget=[2.58,-1.34,-40.11];lead.handProgress=smooth((time-46)/1.2);
- }else if(time<48.4){
+ }else if(time<49.05){
   lead.x=2.38;lead.z=-39.92;lead.y=-2.62;lead.clip='Idle';
-  lead.headTurn=-.88;lead.headTilt=-.4;lead.torsoLean=lerp(.14,.48,(time-47.2)/1.2);
+  lead.headTurn=-.88;lead.headTilt=-.4;lead.torsoLean=lerp(.14,.48,(time-47.2)/1.85);
   lead.handTarget=[2.58,-1.34,-40.11];lead.handProgress=1;
- }else if(time<51.4){
-  const p=smooth((time-48.4)/3);
+ }else if(time<50.35){
+  const p=smooth((time-49.05)/1.3);
   lead.x=lerp(2.38,2.55,p);lead.z=lerp(-39.92,-45.3,p);lead.y=-2.62;
   lead.clip='Death';lead.action='dive';lead.progress=p;
- }else if(time<53.5){
+ }else if(time<53){
   lead.x=2.55;lead.y=-2.62;lead.z=-45.3;lead.clip='Death';lead.action='prone';
- }else if(time<58.1){
+ }else if(time<59){
   lead.x=2.55;lead.y=-2.62;lead.z=-45.3;lead.clip='Death';lead.action='get-up';
-  lead.progress=smooth((time-53.5)/4.6);
+  lead.progress=smooth((time-53)/6);
  }else{
+  const scan=Math.max(0,time-60);
   lead.x=2.55;lead.y=-2.62;lead.z=-45.3;lead.clip='Idle';
+  lead.headTurn=Math.sin(scan*1.72)*.42;
+  lead.headTilt=Math.sin(scan*.93+.6)*.09;
+  lead.torsoLean=.16;lead.crouch=.28*smooth((time-58.6)/1.25);
  }
 
  const friend1={x:-.82,y:0,z:15.2,yaw:0,clip:'Walk'};
@@ -86,26 +106,28 @@ export function sampleMonochrome2(value){
  let shot='street';
  if(time>=18&&time<22)shot='storefront';
  else if(time>=22&&time<34)shot='store';
- else if(time>=34&&time<43.4)shot='rear-ramp';
+ else if(time>=34&&time<43.4)shot='rear-stairs';
  else if(time>=43.4&&time<45.2)shot='ear-listen';
  else if(time>=45.2&&time<46)shot='face-closeup';
  else if(time>=46&&time<47.2)shot='hand-reach';
- else if(time>=47.2&&time<48.4)shot='lean-wall';
- else if(time>=48.4&&time<51.4)shot='fall-through';
- else if(time>=51.4&&time<53.5)shot='floor';
- else if(time>=53.5&&time<58.1)shot='get-up';
- else if(time>=58.1&&time<62)shot='backrooms-reveal';
- else if(time>=62&&time<64.5)shot='fade-black';
- else if(time>=64.5&&time<66)shot='title-main';
- else if(time>=66)shot='title-subtitle';
+ else if(time>=47.2&&time<49.05)shot='lean-wall';
+ else if(time>=49.05&&time<50.35)shot='fall-through';
+ else if(time>=50.35&&time<53)shot='floor-pan';
+ else if(time>=53&&time<59)shot='get-up';
+ else if(time>=59&&time<63.6)shot='cautious-scan';
+ else if(time>=63.6&&time<65.6)shot='monochrome-run';
+ else if(time>=65.6&&time<68.5)shot='fade-black';
+ else if(time>=68.5&&time<69.8)shot='title-main';
+ else if(time>=69.8)shot='title-subtitle';
 
- const crack=time<38?0:time<43.4?.72:time<47.05?.86:time<47.45?.86*(1-smooth((time-47.05)/.4)):0;
- const fallThrough=smooth((time-48.4)/.85);
- const backrooms=smooth((time-48.4)/1.2);
- const getUp=smooth((time-53.5)/4.6);
- const reveal=smooth((time-53.5)/5.5);
- const fade=smooth((time-62)/2.5);
- const titleMain=smooth((time-64.5)/1.15);
- const titleSubtitle=smooth((time-66)/1.2);
- return {time,shot,crack,fallThrough,backrooms,getUp,reveal,fade,titleMain,titleSubtitle,ended:time>=MONOCHROME2_DURATION};
+ const crack=time<38?0:time<47.85?.86:time<48.3?.86*(1-smooth((time-47.85)/.45)):0;
+ const fallThrough=smooth((time-49.05)/.32);
+ const backrooms=smooth((time-49.4)/.42);
+ const reveal=smooth((time-50.35)/3);
+ const monochromeRun=clamp((time-63.6)/1.5,0,1);
+ const monochromeActive=time>=63.6&&time<65.1;
+ const fade=smooth((time-65.6)/2.9);
+ const titleMain=smooth((time-68.5)/1.15);
+ const titleSubtitle=smooth((time-69.8)/1.1);
+ return {time,shot,crack,fallThrough,backrooms,reveal,monochromeRun,monochromeActive,fade,titleMain,titleSubtitle,ended:time>=MONOCHROME2_DURATION};
 }

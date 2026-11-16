@@ -60,6 +60,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   let found;model.traverse(object=>{if(object.isBone&&object.name.replace(/[._-]/g,'').toLowerCase()===key)found=object;});return found;
  };
  const chest=findBone('spine003'),headBone=findBone('spine006'),hand=findBone('handr'),forearm=findBone('forearmr'),upperArm=findBone('upperarmr');
+ const thighL=findBone('thighl'),thighR=findBone('thighr'),shinL=findBone('shinl'),shinR=findBone('shinr');
  root.updateMatrixWorld(true);
 
  // Calculate a rest-pose attachment once, then let the real skeleton animate it.
@@ -230,7 +231,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   beam.intensity=lit?72:0;glow.intensity=lit?.65:0;lensMaterial.color.setHex(lit?0xdfe8d6:0x313832);
  }
 
- function sampleCinematic({clip='Idle',time=0,position=[0,0,0],yaw=0,action='none',progress=0,handTarget=null,headTurn=0,headTilt=0,torsoLean=0}={}){
+ function sampleCinematic({clip='Idle',time=0,position=[0,0,0],yaw=0,action='none',progress=0,handTarget=null,headTurn=0,headTilt=0,torsoLean=0,crouch=0}={}){
   if(disposed)return;
   const p=THREE.MathUtils.clamp(progress,0,1);
   mixer.stopAllAction();
@@ -258,6 +259,11 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   // The upper-spine joint is the survivor rig's head/helmet pivot. These small
   // local rotations let the cinematic place an ear against the wall naturally.
   if(chest&&torsoLean)chest.rotation.x-=THREE.MathUtils.clamp(finite(torsoLean),0,.7);
+  const crouchAmount=THREE.MathUtils.clamp(finite(crouch),0,.65);
+  if(thighL)thighL.rotation.x+=crouchAmount*.24;
+  if(thighR)thighR.rotation.x+=crouchAmount*.24;
+  if(shinL)shinL.rotation.x-=crouchAmount*.58;
+  if(shinR)shinR.rotation.x-=crouchAmount*.58;
   if(headBone){headBone.rotation.y+=THREE.MathUtils.clamp(finite(headTurn),-.7,.7);headBone.rotation.z+=THREE.MathUtils.clamp(finite(headTilt),-.8,.8);}
   root.updateMatrixWorld(true);
   if(handTarget&&hand&&forearm&&upperArm){
@@ -280,5 +286,10 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
   for(const surface of ownedMaterials)surface.dispose();
   for(const texture of ownedTextures)texture.dispose();
  }
- return {root,update,sampleCinematic,dispose};
+ function getHeadWorldPosition(target=new THREE.Vector3()){
+  root.updateMatrixWorld(true);
+  if(headBone)return headBone.getWorldPosition(target);
+  return target.copy(root.position).add(new THREE.Vector3(0,2.05,0));
+ }
+ return {root,update,sampleCinematic,getHeadWorldPosition,dispose};
 }
