@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  MONOCHROME2_DURATION,MONOCHROME2_DIALOGUE,sampleMonochrome2,sampleMonochrome2Actors,
- monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsFlicker,MONOCHROME2_STAIR_OPENING
+ monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING
 } from '../src/monochrome2-intro-timeline.js';
 import {MONOCHROME2_SHELVES,monochrome2CollisionViolations} from '../src/monochrome2-collision.js';
 
@@ -20,16 +20,18 @@ test('the intro moves from the street to the two-line title in the intended orde
  assert.equal(MONOCHROME2_DURATION,78);
 });
 
-test('Level Zero gets short readable flicker bursts during the Monochrome corridor crossing',()=>{
- assert.equal(monochrome2BackroomsFlicker(63.5),1,'the reveal before the crossing stays clear');
- for(const time of [63.7125,63.925,64.1775,64.4325,64.715,64.9775]){
-  const power=monochrome2BackroomsFlicker(time);
-  assert.ok(power>=.08&&power<.25,'each flash briefly dims the Backrooms map');
+test('the real Backrooms map flashes as a 0.15-second opening background cut, then only occasionally',()=>{
+ assert.equal(monochrome2BackroomsBackgroundFlash(0),false);
+ assert.equal(monochrome2BackroomsBackgroundFlash(.079),false);
+ assert.equal(monochrome2BackroomsBackgroundFlash(.08),true,'the first map flash begins almost immediately');
+ assert.equal(monochrome2BackroomsBackgroundFlash(.229),true,'the opening flash remains visible for about 0.15 seconds');
+ assert.equal(monochrome2BackroomsBackgroundFlash(.231),false,'the original Monochrome background returns');
+ assert.equal(monochrome2BackroomsBackgroundFlash(2),false,'there is a clear gap after the opening flash');
+ for(const time of [4.8,13.6,26.2,43.4]){
+  assert.equal(monochrome2BackroomsBackgroundFlash(time),true,'a later sparse map flash is scheduled');
+  assert.equal(monochrome2BackroomsBackgroundFlash(time+.16),false,'each later flash also returns to Monochrome');
  }
- for(const time of [63.84,64.02,64.3,64.6,64.84,65.2]){
-  assert.equal(monochrome2BackroomsFlicker(time),1,'the map returns to full visibility between flashes');
- }
- assert.equal(monochrome2BackroomsFlicker(66),1,'the effect ends with the crossing');
+ assert.equal(monochrome2BackroomsBackgroundFlash(50),false,'the sparse map flashes stop before the full Backrooms reveal');
 });
 
 test('all survivors move at a steady pace and both friends reach for store supplies',()=>{
