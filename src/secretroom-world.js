@@ -484,28 +484,42 @@ export function createSecretRoomWorld() {
   rounded(.003,.031,.052,-.048,.001,.001,.001,brass,powerPlug);
   const polarity = new T.Mesh(new T.SphereGeometry(.004,10,8),socketDark);
   polarity.position.set(-.018,.025,.018);powerPlug.add(polarity);resources.add(polarity.geometry);
-  // First-person hand styled to match the game's hazmat-survivor character:
-  // dark, matte rubber glove, close-set curled fingers and the pale suit sleeve.
+  // The player's hazmat-survivor wears a pale protective suit and dark,
+  // matte rubber gloves. Keep this hand on the camera-facing side of the plug:
+  // its fingers visibly curl over the casing instead of being hidden behind it.
   const gloveMaterial=makeMaterial({color:0x171c1c,roughness:.985});
-  const gloveCuffMaterial=makeMaterial({color:0x8b8e7f,roughness:.98});
-  const gloveSeamMaterial=makeMaterial({color:0x51584e,roughness:.98});
-  const glove=new T.Group();glove.name='first-person-hazmat-character-hand';glove.visible=false;powerPlug.add(glove);
-  // Forearm sleeve and reinforced wrist transition.
-  rounded(.142,.126,.132,-.255,-.018,0,.034,gloveCuffMaterial,glove);
-  rounded(.034,.111,.118,-.177,-.012,0,.012,gloveSeamMaterial,glove);
-  rounded(.012,.116,.122,-.154,-.009,0,.005,gloveCuffMaterial,glove);
-  // Rounded rubber palm; the fingers sit together in a natural gripping curl.
-  rounded(.108,.091,.113,-.119,-.006,0,.032,gloveMaterial,glove);
+  const gloveCuffMaterial=makeMaterial({color:0x9a9b8b,roughness:.98});
+  const gloveSeamMaterial=makeMaterial({color:0x454b43,roughness:.98});
+  const glove=new T.Group();
+  glove.name='first-person-hazmat-character-hand-gripping-plug';
+  glove.visible=false;
+  glove.position.set(.02,-.005,.09);
+  glove.scale.setScalar(1.12);
+  powerPlug.add(glove);
+  // Forearm enters behind the plug with the pale suit sleeve and reinforced wrist.
+  rounded(.205,.145,.158,-.245,-.035,0,.042,gloveCuffMaterial,glove);
+  rounded(.042,.126,.143,-.135,-.016,0,.014,gloveSeamMaterial,glove);
+  rounded(.014,.13,.148,-.108,-.012,0,.006,gloveCuffMaterial,glove);
+  // Palm overlaps the rear half of the plug body. Four separate fingers cross
+  // the visible front face of its casing, making the grip unmistakable.
+  rounded(.132,.101,.124,-.075,-.006,0,.038,gloveMaterial,glove);
   for(let i=0;i<4;i++){
-    const finger=rounded(.077,.022,.021,-.056,.021,-.034+i*.022,.01,gloveMaterial,glove);
-    finger.rotation.z=-.12;
-    const crease=rounded(.004,.024,.022,-.081,.021,-.034+i*.022,.002,gloveSeamMaterial,glove);
-    crease.rotation.z=-.12;
+    const z=-.039+i*.026;
+    const finger=rounded(.092,.026,.019,.004,.025,z,.009,gloveMaterial,glove);
+    finger.rotation.z=-.10;
+    const knuckle=rounded(.026,.028,.021,-.028,.027,z,.008,gloveMaterial,glove);
+    knuckle.rotation.z=-.10;
+    const crease=rounded(.004,.025,.021,-.012,.026,z,.002,gloveSeamMaterial,glove);
+    crease.rotation.z=-.10;
   }
-  const thumb=rounded(.071,.027,.032,-.108,-.045,.062,.012,gloveMaterial,glove);
-  thumb.rotation.x=-.24;thumb.rotation.z=.38;
-  const thumbSeam=rounded(.004,.023,.029,-.128,-.045,.063,.002,gloveSeamMaterial,glove);
-  thumbSeam.rotation.x=-.24;thumbSeam.rotation.z=.38;
+  // Thumb folds around the near lower edge of the plug opposite the fingers.
+  const thumb=rounded(.083,.031,.041,-.055,-.046,.047,.014,gloveMaterial,glove);
+  thumb.rotation.x=-.22;thumb.rotation.z=.32;
+  const thumbTip=rounded(.036,.029,.038,-.012,-.036,.033,.012,gloveMaterial,glove);
+  thumbTip.rotation.z=.22;
+  // Explicit draw priority keeps the hand legible against the small plug model.
+  glove.traverse(part=>{if(part.isMesh){part.renderOrder=6;part.frustumCulled=false;}});
+
 
   function makeCordGeometry(points,segments=100){
     const curve=new T.CatmullRomCurve3(points,false,'centripetal',.5);
