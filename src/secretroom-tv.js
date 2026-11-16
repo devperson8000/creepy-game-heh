@@ -23,10 +23,8 @@ export function createTvSetupGame(){
 export function paintTvCanvas(canvas,mode,elapsed,game,errorTime=0){
  const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height;
  const phosphor='#71f69d';
- function fillBackground(base='#020905'){
-  const g=c.createRadialGradient(w*.5,h*.48,12,w*.5,h*.48,h*.82);
-  g.addColorStop(0,'#0b2817');g.addColorStop(.55,base);g.addColorStop(1,'#010402');
-  c.fillStyle=g;c.fillRect(0,0,w,h);
+ function fillBackground(){
+  c.fillStyle='#000000';c.fillRect(0,0,w,h);
  }
  function noise(amount=.04,base='#020905'){
   fillBackground(base);
@@ -63,10 +61,10 @@ export function paintTvCanvas(canvas,mode,elapsed,game,errorTime=0){
   for(let i=0;i<4;i++){const line=(Math.sin(elapsed*8+i*2.2)*.5+.5)*h;c.fillStyle='rgba(255,255,255,.09)';c.fillRect(0,line,w,1+Math.random()*2);}
   scanlines(.09);vignette();
  }else if(mode==='booting'){
-  noise(.006,'#031009');
+  c.fillStyle='#000000';c.fillRect(0,0,w,h);
   const inset=54;
   c.strokeStyle='rgba(105,248,153,.38)';c.lineWidth=2;c.strokeRect(inset,48,w-inset*2,h-96);
-  c.fillStyle='#a5ffc0';c.shadowColor='#34ed7b';c.shadowBlur=18;c.textAlign='left';
+  c.fillStyle='#baffcc';c.shadowColor='#34ed7b';c.shadowBlur=5;c.textAlign='left';
   c.font='bold 26px monospace';c.fillText('MVS // MONOCHROME VIDEO SYSTEM',86,102);
   c.shadowBlur=0;c.fillStyle='#4fae70';c.font='16px monospace';c.fillText('BOOT ROM 1.86  /  FIELD UNIT 004  /  1991',86,133);
   c.strokeStyle='rgba(118,245,155,.28)';c.beginPath();c.moveTo(86,155);c.lineTo(w-86,155);c.stroke();
@@ -86,7 +84,7 @@ export function paintTvCanvas(canvas,mode,elapsed,game,errorTime=0){
   for(const [at,line] of bootLines){
    if(elapsed<at)continue;
    const reveal=Math.min(line.length,Math.floor((elapsed-at)*42)+1);
-   c.fillStyle='#6edb91';c.shadowColor='#34ed7b';c.shadowBlur=9;
+   c.fillStyle='#82ffab';c.shadowColor='#34ed7b';c.shadowBlur=3;
    c.fillText('> '+line.slice(0,reveal),92,lineY);
    c.shadowBlur=0;
    if(reveal<line.length){c.fillStyle=phosphor;c.fillRect(96+c.measureText('> '+line.slice(0,reveal)).width,lineY-17,10,22);}
@@ -102,9 +100,9 @@ export function paintTvCanvas(canvas,mode,elapsed,game,errorTime=0){
   // Soft vertical phosphor haze, horizontal refresh lines and fine CRT grain.
   c.fillStyle='rgba(99,255,154,.035)';
   for(let x=0;x<w;x+=6)c.fillRect(x,0,1,h);
-  scanlines(.065);vignette();
+  scanlines(.018);
  }else if(mode==='minigame'){
-  noise(.006,'#04100a');
+  c.fillStyle='#000000';c.fillRect(0,0,w,h);
   c.strokeStyle='rgba(98,245,148,.36)';c.lineWidth=2;c.strokeRect(50,42,w-100,h-84);
   c.textAlign='left';c.fillStyle='#a0f4b7';c.shadowColor='#39ed86';c.shadowBlur=12;
   c.font='bold 28px monospace';c.fillText('SIGNAL ALIGNMENT',86,108);c.shadowBlur=0;
@@ -121,7 +119,7 @@ export function paintTvCanvas(canvas,mode,elapsed,game,errorTime=0){
    const x=startX+i*(tile+gap),correct=i<input;
    c.fillStyle=correct?'rgba(13,166,91,.92)':'rgba(26,75,47,.68)';
    c.strokeStyle=correct?'#a1ffc0':'rgba(105,239,151,.55)';c.lineWidth=2;
-   c.shadowColor=correct?'#3aff91':'rgba(30,190,89,.25)';c.shadowBlur=correct?20:6;
+   c.shadowColor=correct?'#3aff91':'rgba(30,190,89,.25)';c.shadowBlur=correct?5:2;
    c.fillRect(x,rowY,tile,tile);c.strokeRect(x+1,rowY+1,tile-2,tile-2);c.shadowBlur=0;
    c.textAlign='center';c.textBaseline='middle';c.font='bold '+Math.round(tile*.66)+'px Arial';
    c.fillStyle=correct?'#effff4':'#b4f5c7';c.shadowColor='#65ff9e';c.shadowBlur=correct?13:7;
@@ -131,7 +129,7 @@ export function paintTvCanvas(canvas,mode,elapsed,game,errorTime=0){
   c.fillStyle=errorTime>0?'#ff9a84':'#84d99c';c.shadowColor=errorTime>0?'#ff735b':'#36e883';c.shadowBlur=errorTime>0?12:6;
   c.fillText(errorTime>0?'INPUT ERROR  /  REPEAT THIS COMBINATION':'ENTER THE ARROWS IN THE DISPLAYED ORDER',w/2,445);
   c.shadowBlur=0;c.fillStyle='#6ebc86';c.font='15px monospace';c.fillText('USE THE ARROW KEYS',w/2,490);
-  scanlines(.055);vignette();
+  scanlines(.018);
  }else if(mode==='mediaError'){
   noise(.025,'#130906');c.textAlign='center';c.fillStyle='#ffb096';c.font='bold 28px monospace';
   c.fillText('FOOTAGE COULD NOT BE READ',w/2,h/2);c.font='17px monospace';c.fillStyle='#c37c70';
