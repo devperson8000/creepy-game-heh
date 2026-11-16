@@ -6,11 +6,10 @@ import {MONOCHROME2_SHELVES} from './monochrome2-collision.js';
 import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
+function createMonochrome2Runtime({embedded=false,renderer:providedRenderer=null}={}){
 const root=document.querySelector('#scene');
 if(!root)throw new Error('MONOCHROME 2 intro requires #scene');
-document.title='MONOCHROME 2 — In the Backrooms';
-document.body.classList.add('monochrome2-intro');
-root.setAttribute('aria-label','MONOCHROME 2: Into the Backrooms cinematic');
+if(!embedded){document.title='MONOCHROME 2 — In the Backrooms';document.body.classList.add('monochrome2-intro');root.setAttribute('aria-label','MONOCHROME 2: Into the Backrooms cinematic');}
 const ui=document.createElement('div');
 ui.className='m2-ui';
 ui.innerHTML=
@@ -21,7 +20,7 @@ ui.innerHTML=
  '<button class="m2-sound" type="button" aria-pressed="false">SOUND ON</button>'+
  '<div class="m2-fade" aria-hidden="true"></div>'+
  '<div class="m2-title hidden"><div class="m2-title-inner"><h2>MONOCHROME 2<span>IN THE BACKROOMS</span></h2><div class="m2-rule"></div><button class="m2-replay" type="button">REPLAY INTRO</button></div></div>';
-document.body.append(ui);
+if(!embedded)document.body.append(ui);else ui.style.display='none';
 const startButton=ui.querySelector('.m2-play');
 const replayButton=ui.querySelector('.m2-replay');
 const soundButton=ui.querySelector('.m2-sound');
@@ -34,22 +33,42 @@ const subtitleText=subtitle.querySelector('span');
 const progressBar=ui.querySelector('.m2-progress i');
 const prefersReducedMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches??false;
 
-const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.8));
-renderer.setSize(window.innerWidth,window.innerHeight);
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.12;
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-root.append(renderer.domElement);
+const renderer=providedRenderer??new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+if(!embedded){
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.8));renderer.setSize(window.innerWidth,window.innerHeight);
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+}
+const embeddedTarget=embedded?new THREE.WebGLRenderTarget(1024,732,{depthBuffer:true,stencilBuffer:false}):null;
+if(embeddedTarget)embeddedTarget.texture.colorSpace=THREE.SRGBColorSpace;
+if(!embedded)root.append(renderer.domElement);
 
 const scene=new THREE.Scene();
 const introBackground=new THREE.Color(0x202a2a),introFogColor=new THREE.Color(0x65716d);
 scene.background=introBackground.clone();
 scene.fog=new THREE.FogExp2(introFogColor,.0125);
-const camera=new THREE.PerspectiveCamera(48,window.innerWidth/window.innerHeight,.08,160);
+const camera=new THREE.PerspectiveCamera(48,embedded?16/9:window.innerWidth/window.innerHeight,.08,160);
 scene.add(camera);
+const overlayResources=[];
+let subtitlePlane=null,subtitleCanvas=null,subtitleContext=null,titlePlane=null,titleCanvas=null,titleContext=null,fadePlane=null,fadeMaterial=null;
+if(embedded){
+ const viewHeight=2*Math.tan(THREE.MathUtils.degToRad(48/2))*5.2,viewWidth=viewHeight*16/9;
+ const overlayGeometry=new THREE.PlaneGeometry(viewWidth,viewHeight);
+ const fadeGeometry=overlayGeometry.clone();
+ fadeMaterial=new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0,depthTest:false,depthWrite:false,toneMapped:false});
+ fadePlane=new THREE.Mesh(fadeGeometry,fadeMaterial);fadePlane.position.set(0,0,-5.18);fadePlane.renderOrder=90;camera.add(fadePlane);
+ overlayResources.push(overlayGeometry,fadeGeometry,fadeMaterial);
+ titleCanvas=document.createElement('canvas');titleCanvas.width=1024;titleCanvas.height=576;titleContext=titleCanvas.getContext('2d');
+ const titleTexture=new THREE.CanvasTexture(titleCanvas);titleTexture.colorSpace=THREE.SRGBColorSpace;
+ const titleMaterial=new THREE.MeshBasicMaterial({map:titleTexture,transparent:true,opacity:0,depthTest:false,depthWrite:false,toneMapped:false});
+ titlePlane=new THREE.Mesh(new THREE.PlaneGeometry(viewWidth,viewHeight),titleMaterial);titlePlane.position.set(0,0,-5.14);titlePlane.renderOrder=91;titlePlane.visible=false;camera.add(titlePlane);
+ overlayResources.push(titleTexture,titleMaterial,titlePlane.geometry);
+ subtitleCanvas=document.createElement('canvas');subtitleCanvas.width=1024;subtitleCanvas.height=144;subtitleContext=subtitleCanvas.getContext('2d');
+ const subtitleTexture=new THREE.CanvasTexture(subtitleCanvas);subtitleTexture.colorSpace=THREE.SRGBColorSpace;
+ const subtitleMaterial=new THREE.MeshBasicMaterial({map:subtitleTexture,transparent:true,depthTest:false,depthWrite:false,toneMapped:false});
+ subtitlePlane=new THREE.Mesh(new THREE.PlaneGeometry(viewWidth*.82,.72),subtitleMaterial);subtitlePlane.position.set(0,-1.58,-4.82);subtitlePlane.renderOrder=89;subtitlePlane.visible=false;camera.add(subtitlePlane);
+ overlayResources.push(subtitleTexture,subtitleMaterial,subtitlePlane.geometry);
+}
 const geometries=new Set(),materials=new Set(),textures=new Set(),actors=[];
 let disposed=false,started=false,startAt=0,lastFrame=0,lastCaption='',muted=false,audio=null;
 let previousPoseTime=null,previousActorPositions=[null,null,null],walkAnimationTimes=[0,0,0],leadTravelDistance=0,nextFootstepDistance=.72;
@@ -329,10 +348,18 @@ function cameraFor(time,lead,headPoint){
 }
 function showSubtitle(cue){
  activeSpeechCue=cue;subtitleSpeaker.textContent=cue.speaker;subtitleText.textContent=cue.text;subtitle.classList.add('visible');
+ if(embedded&&subtitleContext&&subtitlePlane){
+  const c=subtitleContext,w=subtitleCanvas.width,h=subtitleCanvas.height;c.clearRect(0,0,w,h);
+  c.fillStyle='rgba(2,7,6,.76)';c.fillRect(0,12,w,h-24);c.strokeStyle='rgba(155,191,165,.35)';c.strokeRect(8,18,w-16,h-36);
+  c.textAlign='center';c.fillStyle='#9fc1a7';c.font='bold 21px monospace';c.fillText(cue.speaker, w/2,52);
+  c.fillStyle='#f0f1e8';c.font='27px Arial, sans-serif';c.fillText(cue.text,w/2,100,940);
+  subtitlePlane.material.map.needsUpdate=true;subtitlePlane.visible=true;
+ }
 }
 function clearSubtitle(cue){
  if(activeSpeechCue?.id!==cue.id)return;
  activeSpeechCue=null;subtitle.classList.remove('visible');
+ if(embedded&&subtitlePlane)subtitlePlane.visible=false;
 }
 function fallbackSubtitle(cue){
  const old=subtitleTimers.get(cue.id);if(old)window.clearTimeout(old);
@@ -467,6 +494,17 @@ function update(t){
  updateNarration(t);
  progressBar.style.width=(100*t/MONOCHROME2_DURATION)+'%';
  fadeLayer.style.opacity=state.fade.toFixed(3);
+ if(embedded){
+  fadeMaterial.opacity=state.fade;
+  const alpha=state.titleMain;
+  if(alpha>0){
+   titleContext.fillStyle='#020605';titleContext.fillRect(0,0,1024,576);
+   titleContext.textAlign='center';titleContext.fillStyle='#e2e8df';titleContext.font='bold 76px Arial';titleContext.fillText('MONOCHROME 2',512,275);
+   titleContext.fillStyle='#9cb39f';titleContext.font='28px monospace';titleContext.fillText('IN THE BACKROOMS',512,340);
+   titleContext.fillStyle='rgba(141,173,149,.7)';titleContext.fillRect(320,380,384,2);
+   titlePlane.material.map.needsUpdate=true;titlePlane.material.opacity=alpha;titlePlane.visible=true;
+  }else titlePlane.visible=false;
+ }
  if(t>=68.5)showTitle();
  renderer.render(scene,camera);
 }
@@ -477,17 +515,22 @@ function animate(now){
  lastFrame=now;
 }
 function resize(){
+ if(embedded){camera.aspect=16/9;camera.updateProjectionMatrix();return;}
  camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();
  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.8));renderer.setSize(window.innerWidth,window.innerHeight);
 }
 function cleanup(){
- if(disposed)return;disposed=true;renderer.setAnimationLoop(null);window.removeEventListener('resize',resize);window.removeEventListener('pagehide',cleanup);
+ if(disposed)return;disposed=true;
+ if(!embedded){renderer.setAnimationLoop(null);window.removeEventListener('resize',resize);}
+ window.removeEventListener('pagehide',cleanup);
  if(window.speechSynthesis)window.speechSynthesis.cancel();
  audio?.dispose();noclipCue.pause();actors.forEach(actor=>actor.dispose());levelZero.dispose();
  geometries.forEach(geometry=>geometry.dispose());materials.forEach(material=>material.dispose());
- textures.forEach(texture=>texture.dispose());renderer.dispose();renderer.domElement.remove();ui.remove();document.body.classList.remove('monochrome2-intro');
+ textures.forEach(texture=>texture.dispose());overlayResources.forEach(resource=>resource.dispose());
+ if(embeddedTarget)embeddedTarget.dispose();
+ if(!embedded){renderer.dispose();renderer.domElement.remove();ui.remove();document.body.classList.remove('monochrome2-intro');}
 }
-window.addEventListener('resize',resize);window.addEventListener('pagehide',cleanup,{once:true});
+if(!embedded)window.addEventListener('resize',resize);window.addEventListener('pagehide',cleanup,{once:true});
 audio=createSoundscape();
 const noclipCue=new Audio('/audio/monochrome2/noclip-build-12s.mp3');
 noclipCue.preload='auto';noclipCue.loop=true;noclipCue.volume=.72;
@@ -513,5 +556,32 @@ const ready=loadPlayerAvatarAsset().then(asset=>{
  subtitleSpeaker.textContent='SYSTEM';subtitleText.textContent='The survivor model could not be loaded. Please reload the page.';subtitle.classList.add('visible');
 });
 void ready;
-renderer.setAnimationLoop(animate);
-export function startMonochrome2Intro(){return {ready,dispose:cleanup};}
+if(!embedded)renderer.setAnimationLoop(animate);
+function renderEmbedded(time){
+ if(!embedded||disposed||!embeddedTarget||!started)return;
+ const previousTarget=renderer.getRenderTarget();
+ const previousViewport=renderer.getViewport(new THREE.Vector4());
+ const previousScissor=renderer.getScissor(new THREE.Vector4());
+ const previousScissorTest=renderer.getScissorTest();
+ const previousAutoClear=renderer.autoClear;
+ try{
+  renderer.setRenderTarget(embeddedTarget);renderer.setViewport(0,0,embeddedTarget.width,embeddedTarget.height);
+  renderer.setScissorTest(false);renderer.autoClear=true;renderer.clear(true,true,true);
+  renderer.setViewport(0,78,1024,576);
+  update(Math.max(0,Math.min(MONOCHROME2_DURATION,time)));
+ }finally{
+  renderer.setRenderTarget(previousTarget);renderer.setViewport(previousViewport);renderer.setScissor(previousScissor);
+  renderer.setScissorTest(previousScissorTest);renderer.autoClear=previousAutoClear;
+ }
+}
+function play(){if(disposed)return;reset();}
+function pause(){started=false;noclipCue.pause();if(window.speechSynthesis)window.speechSynthesis.cancel();}
+function setFilmMuted(value){
+ muted=!!value;audio?.setMuted(muted);noclipCue.muted=muted;
+ if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');if(subtitlePlane)subtitlePlane.visible=false;}
+}
+return {ready,dispose:cleanup,render:renderEmbedded,play,pause,setMuted:setFilmMuted,texture:embeddedTarget?.texture??null,duration:MONOCHROME2_DURATION};
+}
+
+export function startMonochrome2Intro(){return createMonochrome2Runtime();}
+export function createMonochrome2TvFilm(renderer){return createMonochrome2Runtime({embedded:true,renderer});}
