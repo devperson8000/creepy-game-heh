@@ -13,14 +13,6 @@ export const MONOCHROME2_DIALOGUE=[
 ];
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-
-// SpeechSynthesis has no reliable pre-playback duration. This estimate supplies
-// the timed-caption fallback; actual utterance events take precedence.
-export function monochrome2DialogueDuration(cue){
- const words=String(cue?.text??'').trim().split(/\s+/).filter(Boolean).length;
- const rate=clamp(Number.isFinite(cue?.rate)?cue.rate:1,.92,1.06);
- return words*60/(170*rate)+.15;
-}
 const lerp=(a,b,t)=>a+(b-a)*clamp(t,0,1);
 const smooth=v=>{const t=clamp(v,0,1);return t*t*(3-2*t);};
 const STAIR_COUNT=12,STAIR_START_Z=-29,STAIR_END_Z=-39.92;
@@ -155,8 +147,15 @@ export function monochrome2NoclipCueGain(value,duck=1){
  return .72*intro*clamp(duck,0,1)*(1-blackFade);
 }
 
-// Keep Backrooms imagery hidden until the survivor has crossed the noclip wall.
-const BACKROOMS_BACKGROUND_FLASHES = Object.freeze([]);
+// Full-frame cuts to the real Level Zero map. The opening flash lasts 0.15s;
+// later flashes are deliberately sparse so the first one is the clear standout.
+const BACKROOMS_BACKGROUND_FLASHES = Object.freeze([
+ [0,.15],
+ [4.8,.15],
+ [13.6,.15],
+ [26.2,.15],
+ [43.4,.15]
+]);
 export function monochrome2BackroomsBackgroundFlash(value){
  const time=Number.isFinite(value)?value:0;
  return BACKROOMS_BACKGROUND_FLASHES.some(([start,duration])=>time>=start&&time<start+duration);

@@ -3,10 +3,8 @@ import {createDustField,sampleDustField} from './backrooms-dust.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createLevelZero,canWalkLevelZero} from './backrooms-layout.js';
 
-export function createBackroomsWorld({cinematic=false}={}){
- const map=createLevelZero({cinematic}),scene=new T.Scene(),resources=new Set(),lights=[];
- const mapWidth=map.bounds.maxX-map.bounds.minX,mapDepth=map.bounds.maxZ-map.bounds.minZ;
- const mapCenterX=(map.bounds.minX+map.bounds.maxX)/2,mapCenterZ=(map.bounds.minZ+map.bounds.maxZ)/2;
+export function createBackroomsWorld(){
+ const map=createLevelZero(),scene=new T.Scene(),resources=new Set(),lights=[];
  scene.background=new T.Color(0x8b8363);scene.fog=new T.FogExp2(0xa39b79,.008);
  let seed=190991;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  function texture(draw,size=512){const c=document.createElement('canvas');c.width=c.height=size;draw(c.getContext('2d'),size);const t=new T.CanvasTexture(c);t.colorSpace=T.SRGBColorSpace;t.wrapS=t.wrapT=T.RepeatWrapping;t.anisotropy=4;resources.add(t);return t;}
@@ -30,20 +28,20 @@ export function createBackroomsWorld({cinematic=false}={}){
  // Per-wall UVs preserve wallpaper scale instead of stretching a tiny motif across long walls.
  for(const w of map.walls){
   // Sink the wallpapered wall slightly into the carpet so its raw lower texture edge cannot show.
-  const g=new T.BoxGeometry(w.w,map.height+.2,w.d),uv=g.attributes.uv;
+  const g=new T.BoxGeometry(w.w,map.height+.02,w.d),uv=g.attributes.uv;
   for(let face=0;face<6;face++){const span=face<2?w.d:w.w;for(let i=0;i<4;i++){const n=face*4+i;uv.setXY(n,uv.getX(n)*span/2.4,uv.getY(n));}}
-  resources.add(g);const mesh=new T.Mesh(g,paper);mesh.position.set(w.x,map.height/2-.1,w.z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
-  // Deep continuous skirting sinks into the carpet and masks the wallpaper edge.
-  box(w.w+.06,.28,w.d+.06,w.x,.1,w.z,trim);
+  resources.add(g);const mesh=new T.Mesh(g,paper);mesh.position.set(w.x,map.height/2-.01,w.z);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);
+  // Continuous skirting overlaps the carpet by 5 mm and covers the bottom 15 cm of wallpaper.
+  box(w.w+.026,.15,w.d+.026,w.x,.065,w.z,trim);
   box(w.w+.018,.035,w.d+.018,w.x,map.height-.018,w.z,rail);
  }
- const floorMap=carpet.clone();floorMap.repeat.set(mapWidth/2,mapDepth/2);resources.add(floorMap);
- const floorSurface=material({map:floorMap,bumpMap:floorMap,bumpScale:.018});box(mapWidth,.1,mapDepth,mapCenterX,-.055,mapCenterZ,floorSurface);
- const tile=ceiling.clone();tile.repeat.set(mapWidth/1.2,mapDepth/1.2);resources.add(tile);
- box(mapWidth,.08,mapDepth,mapCenterX,map.height+.04,mapCenterZ,material({map:tile,bumpMap:tile,bumpScale:.012}));
+ const floorMap=carpet.clone();floorMap.repeat.set(36,36);resources.add(floorMap);
+ const floorSurface=material({map:floorMap,bumpMap:floorMap,bumpScale:.018});box(72,.1,72,6,-.055,-6,floorSurface);
+ const tile=ceiling.clone();tile.repeat.set(60,60);resources.add(tile);
+ box(72,.08,72,6,map.height+.04,-6,material({map:tile,bumpMap:tile,bumpScale:.012}));
  // Suspended ceiling T-grid: 1.2 m acoustic modules, including lamps seated inside the grid.
- for(let x=map.bounds.minX;x<=map.bounds.maxX;x+=1.2)box(.018,.018,mapDepth,x,map.height-.016,mapCenterZ,rail);
- for(let z=map.bounds.minZ;z<=map.bounds.maxZ;z+=1.2)box(mapWidth,.018,.018,mapCenterX,map.height-.016,z,rail);
+ for(let x=-30;x<=42;x+=1.2)box(.018,.018,72,x,map.height-.016,-6,rail);
+ for(let z=-42;z<=30;z+=1.2)box(72,.018,.018,6,map.height-.016,z,rail);
  const diffuser=material({map:lightmap,color:0xcdd6b6,emissive:0xe5edc5,emissiveMap:lightmap,emissiveIntensity:1.9}),housing=material({color:0x827e66});
  const dimDiffuser=diffuser.clone();dimDiffuser.emissiveIntensity=.08;resources.add(dimDiffuser);
  for(let x=-27;x<41;x+=4.8)for(let z=-39;z<29;z+=4.8){
