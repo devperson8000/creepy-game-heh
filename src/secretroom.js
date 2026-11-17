@@ -626,21 +626,18 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
   function updateCarriedPowerCable(delta=0){
     if(!hazmatViewmodel||disposed)return;
     const active=powerCableHeld||Boolean(cablePickupAnimation)||Boolean(plugAnimation);
-    // Suppress the entire first-person arm for the complete pickup/carry phase.
-    // Only reveal it again when the plug-in animation explicitly begins.
-    hazmatViewmodel.root.visible=active&&(!powerCableHeld||Boolean(plugAnimation));
+    // The hand is not part of the visible pickup, carry, or plug animations.
+    // Keep the rig available only as an invisible anchor for the cable pose.
+    hazmatViewmodel.root.visible=false;
     if(!active)return;
     camera.updateMatrixWorld(true);
     hazmatViewmodel.update({
       x:hazmatViewmodelBase.x,height:hazmatViewmodelBase.y,z:hazmatViewmodelBase.z,
-      yaw:0,pitch:clamp(pitch,-1.1,1.1),torch:false,moving:false,
-      // createPlayerAvatar.update() writes root.visible from pose.hidden, so the
-      // hidden state must be passed into that update instead of set beforehand.
-      hidden:!Boolean(plugAnimation)
+      yaw:0,pitch:clamp(pitch,-1.1,1.1),torch:false,moving:false,hidden:true
     },delta);
-    // Enforce visibility after the avatar update; pickup and carry never show
-    // any part of the rigged arm, even if another pose update changes it.
-    hazmatViewmodel.root.visible=Boolean(plugAnimation);
+    // Avatar.update() can change root visibility, so force-hide after every pose
+    // update as well. No later cable phase is allowed to reveal the arm.
+    hazmatViewmodel.root.visible=false;
     if(plugAnimation){
       hazmatViewmodel.setGripWorldTransform(roomPointToWorld(world.power.plug.position),roomQuaternionToWorld(world.power.plug.quaternion));
       return;
