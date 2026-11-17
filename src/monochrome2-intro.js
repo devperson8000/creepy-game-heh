@@ -565,7 +565,7 @@ function updateNarration(time){
  // Speech events take priority; this time-based fallback supports embedded
  // browsers that suppress SpeechSynthesis start/end notifications.
  const current=activeSpeechCue?dialogueSchedule.get(activeSpeechCue.id):null;
- if(current?.started&&!current.ended&&!current.failed&&time<current.end)return;
+ if(current?.started&&!current.ended&&!current.failed)return;
  const fallback=[...dialogueSchedule.values()].find(state=>
   time>=state.start&&time<state.end&&!state.started&&!state.ended
  );
