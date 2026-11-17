@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { advanceSecretEntryCharge, SECRET_ENTRY, WALL_INSCRIPTION, WALL_INSCRIPTION_REVERSED } from '../src/secret-entry.js';
+import { advanceSecretEntryCharge, hasCrossedSecretWall, SECRET_ENTRY, WALL_INSCRIPTION, WALL_INSCRIPTION_REVERSED } from '../src/secret-entry.js';
 
 const sample = overrides => ({
   position: { x: -3.19, z: -2.6, height: -7.2 },
@@ -15,6 +15,15 @@ const sample = overrides => ({
 test('the stair inscription is exactly the requested sentence in reverse character order', () => {
   assert.equal([...WALL_INSCRIPTION].reverse().join(''), WALL_INSCRIPTION_REVERSED);
   assert.match(WALL_INSCRIPTION_REVERSED, /^\."ti"/);
+});
+
+test('the embedded Backrooms room is revealed only after the player crosses the wall plane', () => {
+  const threshold = SECRET_ENTRY.wallX - 0.04;
+  assert.equal(hasCrossedSecretWall(threshold + 0.001), false, 'the room remains hidden before crossing');
+  assert.equal(hasCrossedSecretWall(threshold), true, 'the room is revealed at the wall-crossing point');
+  assert.equal(hasCrossedSecretWall(threshold - 0.001), true, 'the room remains revealed after crossing');
+  assert.equal(hasCrossedSecretWall(Number.NaN), false);
+  assert.equal(hasCrossedSecretWall(Infinity), false);
 });
 
 test('the secret wall requires a deliberate forward push while facing the right-hand wall at the bottom', () => {
