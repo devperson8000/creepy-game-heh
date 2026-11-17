@@ -34,3 +34,9 @@ canvas{touch-action:none}#crosshair{position:fixed;top:50%;left:50%;width:4px;he
  .jumpscare-active #scene canvas{transform:none;}
  #jumpscare-border::after{opacity:0;}
 }
+
+#interaction[data-kind="secret-entry-contact"]{opacity:.38;min-width:0;font-size:10px;letter-spacing:.035em;transition:opacity .18s ease}
+#interaction[data-kind="secret-entry-contact"] kbd{font-size:9px;padding:1px 5px;border-color:#656b5e88;background:#0b0c0b88;color:#b1b5a8}
+#interaction[data-kind="secret-entry-contact"] .hold-track{width:54px;margin-top:7px;background:#73786d30}
+#interaction[data-kind="secret-entry-contact"] .hold-track i{background:#c9cdbf88}
+@media(prefers-reduced-motion:reduce){#interaction[data-kind="secret-entry-contact"]{transition:none}}
