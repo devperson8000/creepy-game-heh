@@ -2,8 +2,9 @@ import {canWalkLevelZero} from './backrooms-layout.js';
 /** Stable world coordinates: the camera never participates in placement or drift. */
 export function createDustField(map,count=800){
  const points=[];let seed=17091;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const bounds=map.dustBounds??map.bounds;
  for(let tries=0;points.length<count*3&&tries<count*30;tries++){
-  const x=map.bounds.minX+random()*(map.bounds.maxX-map.bounds.minX),z=map.bounds.minZ+random()*(map.bounds.maxZ-map.bounds.minZ);
+  const x=bounds.minX+random()*(bounds.maxX-bounds.minX),z=bounds.minZ+random()*(bounds.maxZ-bounds.minZ);
   if(canWalkLevelZero(map,x,z,.45))points.push(x,.3+random()*(map.height-.6),z);
  }return new Float32Array(points);
 }

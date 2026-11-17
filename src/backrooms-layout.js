@@ -1,5 +1,5 @@
 /** Authored reconstruction of visible Level 0 architectural motifs, not a canonical blueprint. */
-export function createLevelZero(){
+export function createLevelZero({cinematic=false}={}){
  const walls=[],wall=(x,z,w,d)=>walls.push({x,z,w,d});
  const bounds={minX:-30,maxX:42,minZ:-42,maxZ:30};
  wall(-30, -6,.22,72);wall(42,-29.5,.22,25);wall(42,7.5,.22,45);wall(6,-42,72,.22);wall(6,30,72,.22);
@@ -18,7 +18,29 @@ export function createLevelZero(){
  for(const x of [-10,-2,6])for(const z of [-14,-25]){wall(x,z,.72,.72);columns.push({x,z});}
  // The broad square-pillar gallery is a key landmark in the commercial Level 0 map.
  for(const x of [14,20,26,34])for(const z of [14,20,26])if(canWalkLevelZero({walls,bounds},x,z,1.4)){wall(x,z,1.7,1.7);columns.push({x,z});}
- return {walls,columns,bounds,height:2.8,spawn:{x:-7,z:13,yaw:-.45},areas:[{name:'Arrival',x:-7,z:13},{name:'Column hall',x:18,z:6},{name:'Long passage',x:37,z:-16},{name:'Dark offices',x:-23,z:-13},{name:'Far rooms',x:25,z:-37},{name:'Empty gallery',x:24,z:25}]};
+ const map={walls,columns,bounds,height:2.8,spawn:{x:-7,z:13,yaw:-.45},areas:[{name:'Arrival',x:-7,z:13},{name:'Column hall',x:18,z:6},{name:'Long passage',x:37,z:-16},{name:'Dark offices',x:-23,z:-13},{name:'Far rooms',x:25,z:-37},{name:'Empty gallery',x:24,z:25}]};
+ if(cinematic){
+  const originalBounds={...bounds},expansion=180;
+  const outer={minX:originalBounds.minX-expansion,maxX:originalBounds.maxX+expansion,minZ:originalBounds.minZ-expansion,maxZ:originalBounds.maxZ+expansion};
+  const originalWidth=originalBounds.maxX-originalBounds.minX,originalDepth=originalBounds.maxZ-originalBounds.minZ;
+  map.dustBounds=originalBounds;
+  map.walls=map.walls.filter(w=>!(
+   (Math.abs(w.x-originalBounds.minX)<.01&&w.w<.3&&w.d>originalDepth*.9)||
+   (Math.abs(w.x-originalBounds.maxX)<.01&&w.w<.3&&w.d>originalDepth*.3)||
+   (Math.abs(w.z-originalBounds.minZ)<.01&&w.d<.3&&w.w>originalWidth*.9)||
+   (Math.abs(w.z-originalBounds.maxZ)<.01&&w.d<.3&&w.w>originalWidth*.9)
+  ));
+  const width=outer.maxX-outer.minX,depth=outer.maxZ-outer.minZ;
+  const centerX=(outer.minX+outer.maxX)/2,centerZ=(outer.minZ+outer.maxZ)/2;
+  map.walls.push(
+   {x:centerX,z:outer.minZ,w:width,d:.22},
+   {x:centerX,z:outer.maxZ,w:width,d:.22},
+   {x:outer.minX,z:centerZ,w:.22,d:depth},
+   {x:outer.maxX,z:centerZ,w:.22,d:depth}
+  );
+  map.bounds=outer;
+ }
+ return map;
 }
 export function canWalkLevelZero(map,x,z,radius=.22){
  if(!Number.isFinite(x)||!Number.isFinite(z))return false;

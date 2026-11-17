@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
  MONOCHROME2_DURATION,MONOCHROME2_DIALOGUE,sampleMonochrome2,sampleMonochrome2Actors,
- monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING
+ monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2DialogueDuration,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING
 } from '../src/monochrome2-intro-timeline.js';
 import {MONOCHROME2_SHELVES,monochrome2CollisionViolations} from '../src/monochrome2-collision.js';
 
@@ -20,17 +20,12 @@ test('the intro moves from the street to the two-line title in the intended orde
  assert.equal(MONOCHROME2_DURATION,78);
 });
 
-test('the real Backrooms map flashes as a 0.15-second opening background cut, then only occasionally',()=>{
- assert.equal(monochrome2BackroomsBackgroundFlash(0),true,'the map flash starts on the first playback frame');
- assert.equal(monochrome2BackroomsBackgroundFlash(.079),true);
- assert.equal(monochrome2BackroomsBackgroundFlash(.149),true,'the opening flash remains visible for about 0.15 seconds');
- assert.equal(monochrome2BackroomsBackgroundFlash(.151),false,'the original Monochrome background returns');
- assert.equal(monochrome2BackroomsBackgroundFlash(2),false,'there is a clear gap after the opening flash');
- for(const time of [4.8,13.6,26.2,43.4]){
-  assert.equal(monochrome2BackroomsBackgroundFlash(time),true,'a later sparse map flash is scheduled');
-  assert.equal(monochrome2BackroomsBackgroundFlash(time+.16),false,'each later flash also returns to Monochrome');
+test('Backrooms imagery stays hidden until the survivor has entered the wall',()=>{
+ for(const time of [0,.079,.149,2,4.8,13.6,26.2,34,43.4,45,49.04]){
+  assert.equal(monochrome2BackroomsBackgroundFlash(time),false,'no Backrooms flash before noclip entry at '+time);
  }
- assert.equal(monochrome2BackroomsBackgroundFlash(50),false,'the sparse map flashes stop before the full Backrooms reveal');
+ assert.equal(sampleMonochrome2(49.2).backrooms,0,'the real map remains hidden during wall approach');
+ assert.ok(sampleMonochrome2(49.6).backrooms>0,'the real map reveals after wall crossing');
 });
 
 test('all survivors move at a steady pace and both friends reach for store supplies',()=>{
@@ -195,15 +190,20 @@ test('Monochrome makes a brief silent-silhouette run before the fade and title',
  assert.equal(sampleMonochrome2(71).shot,'title-subtitle');
 });
 
-test('dialogue retains three character voice profiles and ordered caption cue windows',()=>{
+test('dialogue retains three voices and queued caption estimates cover complete sentences',()=>{
  assert.ok(MONOCHROME2_DIALOGUE.some(cue=>/nightmare/i.test(cue.text)));
  assert.ok(MONOCHROME2_DIALOGUE.some(cue=>/door/i.test(cue.text)));
  assert.deepEqual(new Set(MONOCHROME2_DIALOGUE.map(cue=>cue.voice)),new Set(['lead','friend1','friend2']));
+ let queueEnd=0;
  for(let i=0;i<MONOCHROME2_DIALOGUE.length;i++){
   const cue=MONOCHROME2_DIALOGUE[i];
   assert.ok(cue.end>cue.at);
   if(i)assert.ok(cue.at>=MONOCHROME2_DIALOGUE[i-1].at);
+  const duration=monochrome2DialogueDuration(cue);
+  assert.ok(duration>cue.end-cue.at,'caption fallback must cover '+cue.id);
+  queueEnd=Math.max(cue.at,queueEnd)+duration;
  }
+ assert.ok(queueEnd<34,'estimated queue completes before stair descent');
 });
 
 test('all timeline values are clamped to the complete cinematic duration',()=>{
