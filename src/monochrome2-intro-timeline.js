@@ -22,8 +22,12 @@ const STAIR_RISE=2.62/STAIR_COUNT;
 // The feet stay on each tread, with a small, eased drop at the front edge.
 export function monochrome2RampY(z){
  const progress=clamp((STAIR_START_Z-z)/STAIR_RUN,0,STAIR_COUNT);
- const index=Math.min(STAIR_COUNT,Math.floor(progress));
- return -STAIR_RISE*index;
+ const step=Math.min(STAIR_COUNT-1,Math.floor(progress));
+ const withinStep=clamp(progress-step,0,1);
+ // Blend between tread heights instead of snapping the whole actor down at
+ // each riser. The foot correction uses this same continuous stair profile.
+ const eased=withinStep*withinStep*(3-2*withinStep);
+ return -STAIR_RISE*(step+eased);
 }
 
 export function monochrome2FootPlantOffset(footPositions,targetClearance=.105){
