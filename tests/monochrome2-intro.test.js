@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {
  MONOCHROME2_DURATION,MONOCHROME2_DIALOGUE,sampleMonochrome2,sampleMonochrome2Actors,
  monochrome2RampY,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING
@@ -209,4 +210,21 @@ test('dialogue retains three character voice profiles and ordered caption cue wi
 test('all timeline values are clamped to the complete cinematic duration',()=>{
  assert.equal(sampleMonochrome2(-4).time,0);
  assert.equal(sampleMonochrome2(MONOCHROME2_DURATION+20).time,MONOCHROME2_DURATION);
+});
+
+
+test('dialogue playback queues every line and lets each utterance finish naturally',()=>{
+ const source=readFileSync(new URL('../src/monochrome2-intro.js',import.meta.url),'utf8');
+ const sayStart=source.indexOf('function say(cue,windowState){');
+ const updateStart=source.indexOf('function updateNarration(time){',sayStart);
+ const titleStart=source.indexOf('function showTitle()',updateStart);
+ assert.ok(sayStart>=0&&updateStart>sayStart&&titleStart>updateStart,'dialogue functions are present');
+ const saySource=source.slice(sayStart,updateStart);
+ const updateSource=source.slice(updateStart,titleStart);
+ assert.ok(saySource.includes('synth.speak(utterance)'),'each line is sent to SpeechSynthesis');
+ assert.ok(saySource.includes('utterance.onend'),'the spoken line clears its caption on natural end');
+ assert.equal(saySource.includes('synth.cancel()'),false,'queueing a later line must not cancel current speech');
+ assert.equal(updateSource.includes('speechSynthesis?.cancel()'),false,'cue end must not cancel an in-progress sentence');
+ assert.equal(updateSource.includes('narrationEpoch++'),false,'a later cue must not invalidate earlier speech events');
+ assert.equal(source.includes('subtitleTimers'),false,'the fixed early caption timer has been removed');
 });
