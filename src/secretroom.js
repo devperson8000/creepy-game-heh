@@ -633,8 +633,14 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
     camera.updateMatrixWorld(true);
     hazmatViewmodel.update({
       x:hazmatViewmodelBase.x,height:hazmatViewmodelBase.y,z:hazmatViewmodelBase.z,
-      yaw:0,pitch:clamp(pitch,-1.1,1.1),torch:false,moving:false
+      yaw:0,pitch:clamp(pitch,-1.1,1.1),torch:false,moving:false,
+      // createPlayerAvatar.update() writes root.visible from pose.hidden, so the
+      // hidden state must be passed into that update instead of set beforehand.
+      hidden:!Boolean(plugAnimation)
     },delta);
+    // Enforce visibility after the avatar update; pickup and carry never show
+    // any part of the rigged arm, even if another pose update changes it.
+    hazmatViewmodel.root.visible=Boolean(plugAnimation);
     if(plugAnimation){
       hazmatViewmodel.setGripWorldTransform(roomPointToWorld(world.power.plug.position),roomQuaternionToWorld(world.power.plug.quaternion));
       return;
