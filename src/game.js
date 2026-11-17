@@ -212,7 +212,7 @@ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repea
    if(!target&&entryCharge.aligned){
     target={
      id:'secret-entry-contact',type:'secret-entry-contact',
-     label:entryCharge.aligned?'Hold W to push through the wall':'Turn right toward the wall, then hold W',
+     label:'Keep moving',
      hotkey:'W'
     };
    }
