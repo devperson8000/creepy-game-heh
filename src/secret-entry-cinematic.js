@@ -9,6 +9,11 @@ const ease = value => {
 };
 const mix = (a, b, t) => a + (b - a) * t;
 
+// Keep the walk cycle on the same interval as the survivor's ground travel.
+const WALK_START = 2.02;
+const WALK_DURATION = 2.3;
+const WALK_ANIMATION_RATE = 0.72;
+
 function createFallbackSurvivor(scene, position, yaw) {
   const root = new THREE.Group();
   root.name = 'cutscene-hazmat-survivor-fallback';
@@ -87,7 +92,11 @@ export function createSecretEntryCinematic({ scene, camera, position, yaw, roomR
   const sideQuaternion = new THREE.Quaternion();
 
   function sampleAvatar(t) {
-    const walk = ease((t - 2.02) / 2.3);
+    const walkProgress = clamp((t - WALK_START) / WALK_DURATION);
+    // The same eased progress drives both root movement and gait phase, so
+    // the feet slow into and out of the walk instead of sliding past the floor.
+    const walk = ease(walkProgress);
+    const walking = t >= WALK_START && t < WALK_START + WALK_DURATION;
     const actor = {
       x: mix(start.x, finish.x, walk),
       z: mix(start.z, finish.z, walk),
@@ -101,8 +110,10 @@ export function createSecretEntryCinematic({ scene, camera, position, yaw, roomR
       : null;
     if (avatar) {
       avatar.sampleCinematic({
-        clip: t > 1.98 ? 'Walk' : 'Idle',
-        time: Math.max(0, t - 2.0),
+        clip: walking ? 'Walk' : 'Idle',
+        // Slow the gait to 72% and tie its phase to actual ground progress.
+        // Switch to a stationary idle pose on the exact frame the actor stops.
+        time: walking ? walk * WALK_DURATION * WALK_ANIMATION_RATE : 0,
         position: [actor.x, actor.height, actor.z],
         yaw,
         handTarget,
