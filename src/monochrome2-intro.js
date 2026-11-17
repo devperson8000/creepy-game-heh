@@ -493,32 +493,60 @@ function refreshVoices(){
 }
 window.speechSynthesis?.getVoices?.();
 if('speechSynthesis'in window){window.speechSynthesis.addEventListener?.('voiceschanged',refreshVoices);refreshVoices();}
+let speechPrimed=false;
+function unlockSpeech(){
+ const synth=window.speechSynthesis;
+ if(!synth||!('SpeechSynthesisUtterance'in window))return false;
+ try{
+  synth.resume?.();
+  if(!speechPrimed){
+   // Prime speech from an actual key/pointer gesture in the TV room. Zero
+   // volume keeps the unlock utterance silent while enabling later dialogue.
+   const primer=new SpeechSynthesisUtterance(' ');
+   primer.lang='en-AU';primer.volume=0;primer.rate=10;
+   synth.speak(primer);
+   speechPrimed=true;
+  }
+  return true;
+ }catch(error){
+  console.warn('MONOCHROME 2 voice playback could not be unlocked:',error);
+  return false;
+ }
+}
 function say(cue){
  const synth=window.speechSynthesis;
- if(muted||!synth||!('SpeechSynthesisUtterance'in window)){fallbackSubtitle(cue);return;}
- if(activeSpeechCue)clearSubtitle(activeSpeechCue);
+ if(activeSpeechCue&&activeSpeechCue.id!==cue.id)clearSubtitle(activeSpeechCue);
+ // Draw captions on the cue's exact timeline, not in SpeechSynthesis onstart.
+ // Chrome may delay or suppress that event in an embedded TV playback.
+ showSubtitle(cue);
+ if(muted||!synth||!('SpeechSynthesisUtterance'in window))return;
  const epoch=++narrationEpoch;
- synth.cancel();
  const utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
  if(voice)utterance.voice=voice;
  utterance.lang=voice?.lang??'en-AU';
  utterance.rate=THREE.MathUtils.clamp(cue.rate??.97,.92,1.06);
  utterance.pitch=THREE.MathUtils.clamp(cue.pitch??1,.96,1.04);
  utterance.volume=1;
- let began=false;
  utterance.onstart=()=>{
   if(epoch!==narrationEpoch)return;
   if(narrationTime>=(cue.end??cue.at+5)){synth.cancel();return;}
-  began=true;
-  const timer=subtitleTimers.get(cue.id);if(timer)window.clearTimeout(timer);
-  subtitleTimers.delete(cue.id);showSubtitle(cue);
+  showSubtitle(cue);
  };
- utterance.onend=()=>{if(epoch===narrationEpoch)clearSubtitle(cue);};
- utterance.onerror=()=>{
+ // Keep the caption visible for the authored cue window even if TTS ends early.
+ utterance.onend=()=>{};
+ utterance.onerror=event=>{
   if(epoch!==narrationEpoch)return;
-  if(!began&&!muted&&narrationTime<(cue.end??cue.at+5))fallbackSubtitle(cue);else clearSubtitle(cue);
+  console.warn('MONOCHROME 2 dialogue speech failed; retaining timed caption:',event?.error??'speech error');
+  showSubtitle(cue);
  };
- synth.speak(utterance);
+ try{
+  synth.cancel();
+  synth.resume?.();
+  synth.speak(utterance);
+ }catch(error){
+  console.warn('MONOCHROME 2 dialogue could not be queued:',error);
+  showSubtitle(cue);
+ }
 }
 function updateNarration(time){
  narrationTime=time;
@@ -534,7 +562,7 @@ function showTitle(){titlePanel.classList.remove('hidden');titlePanel.classList.
 function reset(){
  narrationEpoch++;if(window.speechSynthesis)window.speechSynthesis.cancel();
  subtitleTimers.forEach(timer=>window.clearTimeout(timer));subtitleTimers.clear();activeSpeechCue=null;
- shotSounds.clear();lastCaption='';subtitle.classList.remove('visible');
+ shotSounds.clear();lastCaption='';subtitle.classList.remove('visible');if(embedded&&subtitlePlane)subtitlePlane.visible=false;
  titlePanel.classList.remove('visible');titlePanel.classList.add('hidden');startPanel.classList.add('hidden');
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
  backroomsGroup.visible=false;monochrome.root.visible=false;backroomsFlashPlane.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
@@ -705,7 +733,7 @@ function setFilmMuted(value){
  muted=!!value;audio?.setMuted(muted);
  if(muted&&window.speechSynthesis){narrationEpoch++;window.speechSynthesis.cancel();activeSpeechCue=null;subtitle.classList.remove('visible');if(subtitlePlane)subtitlePlane.visible=false;}
 }
-return {ready,dispose:cleanup,render:renderEmbedded,play,pause,resume,setMuted:setFilmMuted,texture:embeddedTarget?.texture??null,duration:MONOCHROME2_DURATION};
+return {ready,dispose:cleanup,render:renderEmbedded,play,pause,resume,unlockVoice:unlockSpeech,setMuted:setFilmMuted,texture:embeddedTarget?.texture??null,duration:MONOCHROME2_DURATION};
 }
 
 export function startMonochrome2Intro(){return createMonochrome2Runtime();}
