@@ -36,6 +36,9 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
   } : {});
   const renderScene = embedded?.scene ?? world.scene;
   const roomRoot = world.root ?? world.scene;
+  // This complete room is embedded in the main Monochrome scene. Keep every
+  // wall, floor, ceiling, light and prop out of view until the wall is crossed.
+  if (embedded) roomRoot.visible = false;
   const post = createBackroomsPost(renderer);
   const camera = embedded?.camera ?? new T.PerspectiveCamera(68, 1, 0.06, 60);
   camera.rotation.order = 'YXZ';
@@ -787,6 +790,7 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
 
   function activate() {
     if(!embedded||disposed)return false;
+    roomRoot.visible = true;
     if(camera.parent!==roomRoot)roomRoot.add(camera);
     camera.position.set(player.x,1.68,player.z);
     camera.rotation.set(pitch,yaw,0,'YXZ');
