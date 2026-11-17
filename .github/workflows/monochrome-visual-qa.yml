@@ -1,0 +1,89 @@
+name: Visual QA — Monochrome rollback and dialogue
+on:
+  push:
+    branches:
+      - qa/dialogue-visual-check
+permissions:
+  contents: read
+  actions: read
+jobs:
+  browser-visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Unit and regression tests
+        run: npm test
+      - name: Build production bundle
+        run: npm run build
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 0.0.0.0 > /tmp/vite-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/monochrome2 > /dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/vite-preview.log
+          exit 1
+      - name: Inspect animation and VHS room in Chromium
+        run: |
+          mkdir -p artifacts
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs/promises';
+          const browser = await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
+          const report = { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [], frames: [], voices: [] };
+          const page = await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+          page.on('console', msg => { if(msg.type()==='error') report.consoleErrors.push(msg.text()); });
+          page.on('pageerror', err => report.pageErrors.push(String(err)));
+          page.on('requestfailed', req => report.failedRequests.push({url:req.url(),error:req.failure()?.errorText}));
+          page.on('response', res => { if(res.status()>=400) report.badResponses.push({status:res.status(),url:res.url()}); });
+          await page.goto('http://127.0.0.1:4173/monochrome2',{waitUntil:'networkidle',timeout:90000});
+          await page.waitForFunction(()=>{const b=document.querySelector('.m2-play');return b&&!b.disabled;},{timeout:90000});
+          await page.screenshot({path:'artifacts/01-intro-ready.png',fullPage:false});
+          const initial=await page.evaluate(()=>({canvas:!!document.querySelector('#scene canvas'),canvasSize:document.querySelector('#scene canvas')?{w:document.querySelector('#scene canvas').width,h:document.querySelector('#scene canvas').height}:null,voices:window.speechSynthesis?.getVoices?.().map(v=>({name:v.name,lang:v.lang}))??[]}));
+          report.voices=initial.voices;
+          if(!initial.canvas||initial.canvasSize.w<100||initial.canvasSize.h<100)throw new Error('MONOCHROME 2 did not create a renderable canvas');
+          await page.locator('.m2-play').click();
+          const checkpoints=[3,8,16,24,32,36,41,43.8,45,47,48.6,49.5,51,55,63.8,69.5];
+          let elapsed=0;
+          for(const second of checkpoints){
+            await page.waitForTimeout((second-elapsed)*1000);
+            elapsed=second;
+            const state=await page.evaluate(()=>({
+              progress:parseFloat(document.querySelector('.m2-progress i')?.style.width??'0'),
+              subtitle:document.querySelector('.m2-subtitle')?.innerText??'',
+              subtitleVisible:!!document.querySelector('.m2-subtitle.visible'),
+              canvas:!!document.querySelector('#scene canvas'),
+              speech:{speaking:window.speechSynthesis?.speaking??false,pending:window.speechSynthesis?.pending??false,paused:window.speechSynthesis?.paused??false}
+            }));
+            report.frames.push({second,...state});
+            await page.screenshot({path:'artifacts/monochrome2-'+String(second).replace('.','-')+'s.png',fullPage:false});
+          }
+          await page.goto('http://127.0.0.1:4173/secretroom?entry=1',{waitUntil:'networkidle',timeout:90000});
+          await page.waitForSelector('#scene canvas',{timeout:90000});
+          await page.waitForTimeout(4000);
+          await page.screenshot({path:'artifacts/20-secretroom-vhs-room.png',fullPage:false});
+          report.secretroom=await page.evaluate(()=>({
+            canvas:!!document.querySelector('#scene canvas'),
+            tapeState:document.querySelector('[data-tape-state]')?.textContent??null,
+            tvState:document.querySelector('[data-tv-state]')?.textContent??null,
+            title:document.title
+          }));
+          await fs.writeFile('artifacts/browser-report.json',JSON.stringify(report,null,2));
+          await browser.close();
+          if(report.pageErrors.length||report.badResponses.length)throw new Error('Browser page errors or HTTP failures were recorded; inspect browser-report.json');
+          if(!report.frames.some(f=>f.progress>0))throw new Error('Animation progress did not advance');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: monochrome-visual-qa
+          path: artifacts/
+          retention-days: 3
