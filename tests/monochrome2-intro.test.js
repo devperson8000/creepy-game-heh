@@ -110,7 +110,7 @@ test('dialogue stops before the stair descent begins',()=>{
  assert.ok(MONOCHROME2_DIALOGUE.every(cue=>cue.end<=32.8),'no dialogue or subtitles continue into the stair sequence');
 });
 
-test('the stair path steps down and stays aligned with the visible treads',()=>{
+test('the stair path descends continuously without a vertical snap at each riser',()=>{
  const start=sampleMonochrome2Actors(34)[0];
  const middle=sampleMonochrome2Actors(39)[0];
  const lower=sampleMonochrome2Actors(43)[0];
@@ -118,10 +118,19 @@ test('the stair path steps down and stays aligned with the visible treads',()=>{
  assert.ok(Math.abs(start.y)<.001);
  assert.ok(start.y>middle.y&&middle.y>lower.y&&lower.y>=bottom.y);
  assert.ok(distance(start,bottom)>10);
- for(let z=-29;z>=-39.92;z-=.11){
+ let previous=monochrome2RampY(-29),largestFrameStep=0;
+ for(let z=-29.001;z>=-39.92;z-=.005){
   const y=monochrome2RampY(z);
   assert.ok(y<=0&&y>=-2.62,'stair height '+y);
-  assert.ok(Math.abs(y/2.62*12-Math.round(y/2.62*12))<.8,'height follows a stair level');
+  largestFrameStep=Math.max(largestFrameStep,Math.abs(y-previous));
+  previous=y;
+ }
+ assert.ok(largestFrameStep<.004,'per-frame stair height change remains smooth');
+ for(let step=1;step<12;step++){
+  const edge=-29-step*((-29-(-39.92))/12);
+  const before=monochrome2RampY(edge+.001),at=monochrome2RampY(edge),after=monochrome2RampY(edge-.001);
+  assert.ok(Math.abs(before-at)<.002,'height is continuous before tread '+step);
+  assert.ok(Math.abs(after-at)<.002,'height is continuous after tread '+step);
  }
 });
 
