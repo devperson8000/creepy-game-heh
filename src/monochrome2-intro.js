@@ -4,7 +4,7 @@ import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
 import {MONOCHROME2_SHELVES} from './monochrome2-collision.js';
-import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
+import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2DialogueDuration,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 function createMonochrome2Runtime({embedded=false,renderer:providedRenderer=null}={}){
@@ -74,8 +74,8 @@ const geometries=new Set(),materials=new Set(),textures=new Set(),actors=[];
 let disposed=false,started=false,startAt=0,lastFrame=0,lastCaption='',muted=false,audio=null;
 let previousPoseTime=null,previousActorPositions=[null,null,null],walkAnimationTimes=[0,0,0],leadTravelDistance=0,nextFootstepDistance=.72;
 const leadHeadPoint=new THREE.Vector3();
-let voiceChoices=new Map(),activeSpeechCue=null,narrationEpoch=0,narrationTime=0;
-const subtitleTimers=new Map();
+let voiceChoices=new Map(),activeSpeechCue=null,narrationEpoch=0;
+const dialogueSchedule=new Map();let dialogueScheduleCursor=0;
 const shotSounds=new Set();
 
 function mat(options){const value=new THREE.MeshStandardMaterial({roughness:.88,...options});materials.add(value);return value;}
@@ -435,6 +435,7 @@ function cameraFor(time,lead,headPoint){
  camera.position.copy(position);camera.lookAt(look);
 }
 function showSubtitle(cue){
+ if(activeSpeechCue?.id===cue.id&&subtitle.classList.contains('visible'))return;
  activeSpeechCue=cue;subtitleSpeaker.textContent=cue.speaker;subtitleText.textContent=cue.text;subtitle.classList.add('visible');
  if(embedded&&subtitleContext&&subtitlePlane){
   const c=subtitleContext,w=subtitleCanvas.width,h=subtitleCanvas.height;c.clearRect(0,0,w,h);
@@ -457,13 +458,6 @@ function clearSubtitle(cue){
  if(activeSpeechCue?.id!==cue.id)return;
  activeSpeechCue=null;subtitle.classList.remove('visible');
  if(embedded&&subtitlePlane)subtitlePlane.visible=false;
-}
-function fallbackSubtitle(cue){
- const old=subtitleTimers.get(cue.id);if(old)window.clearTimeout(old);
- showSubtitle(cue);
- const duration=Math.max(1.35,Math.min(7,(cue.end??cue.at+3.5)-cue.at));
- const timer=window.setTimeout(()=>{subtitleTimers.delete(cue.id);clearSubtitle(cue);},duration*1000);
- subtitleTimers.set(cue.id,timer);
 }
 function refreshVoices(){
  const all=window.speechSynthesis?.getVoices?.()??[];
@@ -513,14 +507,15 @@ function unlockSpeech(){
   return false;
  }
 }
-function say(cue){
+function say(cue,windowState){
  const synth=window.speechSynthesis;
- if(activeSpeechCue&&activeSpeechCue.id!==cue.id)clearSubtitle(activeSpeechCue);
- // Draw captions on the cue's exact timeline, not in SpeechSynthesis onstart.
- // Chrome may delay or suppress that event in an embedded TV playback.
- showSubtitle(cue);
- if(muted||!synth||!('SpeechSynthesisUtterance'in window))return;
- const epoch=++narrationEpoch;
+ if(muted||!synth||!('SpeechSynthesisUtterance'in window)){
+  windowState.failed=true;
+  return;
+ }
+ // Epoch changes only when the whole film is reset or muted. It must not
+ // invalidate or cancel an earlier line when the next character is queued.
+ const epoch=narrationEpoch;
  const utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
  if(voice)utterance.voice=voice;
  utterance.lang=voice?.lang??'en-AU';
@@ -529,44 +524,64 @@ function say(cue){
  utterance.volume=1;
  utterance.onstart=()=>{
   if(epoch!==narrationEpoch)return;
-  if(narrationTime>=(cue.end??cue.at+5)){synth.cancel();return;}
-  showSubtitle(cue);
+  windowState.started=true;
+  if(activeSpeechCue?.id===cue.id)showSubtitle(cue);
  };
- // Keep the caption visible for the authored cue window even if TTS ends early.
- utterance.onend=()=>{};
+ utterance.onend=()=>{
+  if(epoch!==narrationEpoch)return;
+  windowState.ended=true;
+  clearSubtitle(cue);
+ };
  utterance.onerror=event=>{
   if(epoch!==narrationEpoch)return;
-  console.warn('MONOCHROME 2 dialogue speech failed; retaining timed caption:',event?.error??'speech error');
-  showSubtitle(cue);
+  windowState.failed=true;
+  windowState.started=false;
+  console.warn('MONOCHROME 2 dialogue speech failed; retaining its full caption:',event?.error??'speech error');
  };
  try{
-  synth.cancel();
+  // Queue the next sentence; do not cancel the sentence already being spoken.
   synth.resume?.();
   synth.speak(utterance);
  }catch(error){
+  windowState.failed=true;
   console.warn('MONOCHROME 2 dialogue could not be queued:',error);
-  showSubtitle(cue);
  }
 }
 function updateNarration(time){
- narrationTime=time;
- if(activeSpeechCue&&time>=activeSpeechCue.end){
-  const expired=activeSpeechCue;narrationEpoch++;window.speechSynthesis?.cancel();clearSubtitle(expired);
- }
  for(const cue of MONOCHROME2_DIALOGUE){
   const key='voice:'+cue.id;
-  if(time>=cue.at&&time<cue.end&&!shotSounds.has(key)){shotSounds.add(key);say(cue);}
+  if(time>=cue.at&&!shotSounds.has(key)){
+   shotSounds.add(key);
+   const start=Math.max(cue.at,dialogueScheduleCursor);
+   const end=start+monochrome2DialogueDuration(cue);
+   const windowState={cue,start,end,started:false,ended:false,failed:false};
+   dialogueSchedule.set(cue.id,windowState);
+   dialogueScheduleCursor=end;
+   say(cue,windowState);
+  }
+ }
+ // Speech events take priority; this time-based fallback supports embedded
+ // browsers that suppress SpeechSynthesis start/end notifications.
+ const current=activeSpeechCue?dialogueSchedule.get(activeSpeechCue.id):null;
+ if(current?.started&&!current.ended&&!current.failed&&time<current.end)return;
+ const fallback=[...dialogueSchedule.values()].find(state=>
+  time>=state.start&&time<state.end&&!state.started&&!state.ended
+ );
+ if(fallback){
+  showSubtitle(fallback.cue);
+ }else if(activeSpeechCue&&current&&!current.ended&&time>=current.end){
+  clearSubtitle(activeSpeechCue);
  }
 }
 function showTitle(){titlePanel.classList.remove('hidden');titlePanel.classList.add('visible');}
 function reset(){
  narrationEpoch++;if(window.speechSynthesis)window.speechSynthesis.cancel();
- subtitleTimers.forEach(timer=>window.clearTimeout(timer));subtitleTimers.clear();activeSpeechCue=null;
+ dialogueSchedule.clear();dialogueScheduleCursor=0;activeSpeechCue=null;
  shotSounds.clear();lastCaption='';subtitle.classList.remove('visible');if(embedded&&subtitlePlane)subtitlePlane.visible=false;
  titlePanel.classList.remove('visible');titlePanel.classList.add('hidden');startPanel.classList.add('hidden');
  previousPoseTime=null;previousActorPositions=[null,null,null];walkAnimationTimes=[0,0,0];leadTravelDistance=0;nextFootstepDistance=.72;
  backroomsGroup.visible=false;monochrome.root.visible=false;backroomsFlashPlane.visible=false;rampEndWall.visible=true;rampEnd.opacity=1;fadeLayer.style.opacity='0';
- narrationTime=0;audio?.stopLoop();noclipCueStarted=false;noclipCueStopped=false;
+ audio?.stopLoop();noclipCueStarted=false;noclipCueStopped=false;
  scene.background.copy(introBackground);scene.fog.color.copy(introFogColor);scene.fog.density=.0125;
  started=true;startAt=performance.now();audio?.start();audio?.setMuted(muted);
 }

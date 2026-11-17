@@ -13,6 +13,13 @@ export const MONOCHROME2_DIALOGUE=[
 ];
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+
+// A fallback display duration for browsers that suppress embedded speech events.
+export function monochrome2DialogueDuration(cue){
+ const words=String(cue?.text??'').trim().split(/\s+/).filter(Boolean).length;
+ const rate=clamp(Number.isFinite(cue?.rate)?cue.rate:1,.92,1.06);
+ return words*60/(175*rate)+.12;
+}
 const lerp=(a,b,t)=>a+(b-a)*clamp(t,0,1);
 const smooth=v=>{const t=clamp(v,0,1);return t*t*(3-2*t);};
 const STAIR_COUNT=12,STAIR_START_Z=-29,STAIR_END_Z=-39.92;

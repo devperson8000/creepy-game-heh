@@ -57,6 +57,28 @@ jobs:
           const initial=await page.evaluate(()=>({canvas:!!document.querySelector('#scene canvas'),canvasSize:document.querySelector('#scene canvas')?{w:document.querySelector('#scene canvas').width,h:document.querySelector('#scene canvas').height}:null,voices:window.speechSynthesis?.getVoices?.().map(v=>({name:v.name,lang:v.lang}))??[]}));
           report.voices=initial.voices;
           if(!initial.canvas||initial.canvasSize.w<100||initial.canvasSize.h<100)throw new Error('MONOCHROME 2 did not create a renderable canvas');
+          await page.evaluate(()=>{
+            const synth=window.speechSynthesis;
+            window.__dialogueQa={cancelCalls:0,speakCalls:[],events:[],instrumented:false};
+            if(!synth)return;
+            try{
+              const nativeSpeak=synth.speak.bind(synth);
+              const nativeCancel=synth.cancel.bind(synth);
+              synth.speak=function(utterance){
+                const text=String(utterance?.text??'').trim();
+                if(text){
+                  window.__dialogueQa.speakCalls.push({text,at:performance.now()});
+                  for(const type of ['start','end','error'])utterance.addEventListener(type,()=>window.__dialogueQa.events.push({type,text,at:performance.now()}));
+                }
+                return nativeSpeak(utterance);
+              };
+              synth.cancel=function(){
+                window.__dialogueQa.cancelCalls++;
+                return nativeCancel();
+              };
+              window.__dialogueQa.instrumented=true;
+            }catch(error){window.__dialogueQa.instrumentationError=String(error);}
+          });
           await page.locator('.m2-play').click();
           const checkpoints=[3,8,16,24,32,36,41,43.8,45,47,48.6,49.5,51,55,63.8,69.5];
           let elapsed=0;
@@ -73,6 +95,7 @@ jobs:
             report.frames.push({second,...state});
             if([3,8,16,24,36,43.8,49.5,51,63.8,69.5].includes(second))await page.screenshot({path:'artifacts/monochrome2-'+String(second).replace('.','-')+'s.png',fullPage:false,timeout:120000});
           }
+          report.dialogueAudio=await page.evaluate(()=>window.__dialogueQa??null);
           await page.goto('http://127.0.0.1:4173/secretroom?entry=1',{waitUntil:'networkidle',timeout:90000});
           await page.waitForSelector('#scene canvas',{timeout:90000});
           await page.waitForTimeout(4000);
@@ -87,6 +110,10 @@ jobs:
           await browser.close();
           if(report.pageErrors.length||report.badResponses.length)throw new Error('Browser page errors or HTTP failures were recorded; inspect browser-report.json');
           if(!report.frames.some(f=>f.progress>0))throw new Error('Animation progress did not advance');
+          if(report.dialogueAudio?.instrumented){
+            if(report.dialogueAudio.speakCalls.length!==8)throw new Error('Expected eight dialogue utterances; got '+report.dialogueAudio.speakCalls.length);
+            if(report.dialogueAudio.cancelCalls>1)throw new Error('Speech was cancelled after initial reset; '+report.dialogueAudio.cancelCalls+' cancellations observed');
+          }
           NODE
       - uses: actions/upload-artifact@v4
         if: always()
