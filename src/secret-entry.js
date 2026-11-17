@@ -53,6 +53,12 @@ export const SECRET_ENTRY = Object.freeze({
   holdSeconds: 0.82
 });
 
+// The secret Backrooms room must stay hidden until the player has crossed
+// the wall plane during the deliberate entry cinematic.
+export function hasCrossedSecretWall(x) {
+  return Number.isFinite(x) && x <= SECRET_ENTRY.wallX - 0.04;
+}
+
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const angleDistance = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 
