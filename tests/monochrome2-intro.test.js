@@ -196,7 +196,7 @@ test('Monochrome makes a brief silent-silhouette run before the fade and title',
 });
 
 test('dialogue retains three character voice profiles and ordered caption cue windows',()=>{
- assert.ok(MONOCHROME2_DIALOGUE.some(cue=>/monochrome/i.test(cue.text)));
+ assert.ok(MONOCHROME2_DIALOGUE.some(cue=>/nightmare/i.test(cue.text)));
  assert.ok(MONOCHROME2_DIALOGUE.some(cue=>/door/i.test(cue.text)));
  assert.deepEqual(new Set(MONOCHROME2_DIALOGUE.map(cue=>cue.voice)),new Set(['lead','friend1','friend2']));
  for(let i=0;i<MONOCHROME2_DIALOGUE.length;i++){
