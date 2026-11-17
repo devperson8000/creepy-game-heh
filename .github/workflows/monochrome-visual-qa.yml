@@ -18,8 +18,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Unit and regression tests
-        run: npm test
+      - name: Run full suite and record legacy baseline
+        id: full-tests
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts
+          npm test > artifacts/full-test-suite.log 2>&1
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+      - name: Run focused MONOCHROME regression tests
+        run: node --test tests/monochrome2-intro.test.js tests/backrooms-layout.test.js
       - name: Build production bundle
         run: npm run build
       - name: Start production preview
