@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { loadPlayerAvatarAsset, createPlayerAvatar } from './player-avatar.js';
-import { SECRET_ENTRY } from './secret-entry.js';
+import { SECRET_ENTRY, hasCrossedSecretWall } from './secret-entry.js';
 
 const clamp = value => Math.max(0, Math.min(1, value));
 const ease = value => {
@@ -142,9 +142,11 @@ export function createSecretEntryCinematic({ scene, camera, position, yaw, roomR
     elapsed += Math.max(0, Math.min(0.1, delta));
     const t = elapsed;
     const actor = sampleAvatar(t);
-    // Keep the maze wall opaque until the survivor's body has crossed it.
-    // The camera then follows through the same opening into the hidden room.
-    if (seal) seal.visible = actor.x > SECRET_ENTRY.wallX - 0.04;
+    // Keep the entire Backrooms room hidden until the survivor has crossed
+    // the wall plane. Reveal it on that same frame the entry seal disappears.
+    const crossedSecretWall = hasCrossedSecretWall(actor.x);
+    if (crossedSecretWall) roomRoot.visible = true;
+    if (seal) seal.visible = !crossedSecretWall;
     sampleSideCamera(actor);
 
     const sideBlend = ease(t / 0.72);
