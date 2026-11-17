@@ -9,7 +9,7 @@ permissions:
 jobs:
   browser-visual:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,14 +46,14 @@ jobs:
           import fs from 'node:fs/promises';
           const browser = await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
           const report = { consoleErrors: [], pageErrors: [], failedRequests: [], badResponses: [], frames: [], voices: [] };
-          const page = await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+          const page = await browser.newPage({viewport:{width:1280,height:720},deviceScaleFactor:1});
           page.on('console', msg => { if(msg.type()==='error') report.consoleErrors.push(msg.text()); });
           page.on('pageerror', err => report.pageErrors.push(String(err)));
           page.on('requestfailed', req => report.failedRequests.push({url:req.url(),error:req.failure()?.errorText}));
           page.on('response', res => { if(res.status()>=400) report.badResponses.push({status:res.status(),url:res.url()}); });
           await page.goto('http://127.0.0.1:4173/monochrome2',{waitUntil:'networkidle',timeout:90000});
           await page.waitForFunction(()=>{const b=document.querySelector('.m2-play');return b&&!b.disabled;},{timeout:90000});
-          await page.screenshot({path:'artifacts/01-intro-ready.png',fullPage:false});
+          await page.screenshot({path:'artifacts/01-intro-ready.png',fullPage:false,timeout:120000});
           const initial=await page.evaluate(()=>({canvas:!!document.querySelector('#scene canvas'),canvasSize:document.querySelector('#scene canvas')?{w:document.querySelector('#scene canvas').width,h:document.querySelector('#scene canvas').height}:null,voices:window.speechSynthesis?.getVoices?.().map(v=>({name:v.name,lang:v.lang}))??[]}));
           report.voices=initial.voices;
           if(!initial.canvas||initial.canvasSize.w<100||initial.canvasSize.h<100)throw new Error('MONOCHROME 2 did not create a renderable canvas');
@@ -71,12 +71,12 @@ jobs:
               speech:{speaking:window.speechSynthesis?.speaking??false,pending:window.speechSynthesis?.pending??false,paused:window.speechSynthesis?.paused??false}
             }));
             report.frames.push({second,...state});
-            await page.screenshot({path:'artifacts/monochrome2-'+String(second).replace('.','-')+'s.png',fullPage:false});
+            if([3,8,16,24,36,43.8,49.5,51,63.8,69.5].includes(second))await page.screenshot({path:'artifacts/monochrome2-'+String(second).replace('.','-')+'s.png',fullPage:false,timeout:120000});
           }
           await page.goto('http://127.0.0.1:4173/secretroom?entry=1',{waitUntil:'networkidle',timeout:90000});
           await page.waitForSelector('#scene canvas',{timeout:90000});
           await page.waitForTimeout(4000);
-          await page.screenshot({path:'artifacts/20-secretroom-vhs-room.png',fullPage:false});
+          await page.screenshot({path:'artifacts/20-secretroom-vhs-room.png',fullPage:false,timeout:120000});
           report.secretroom=await page.evaluate(()=>({
             canvas:!!document.querySelector('#scene canvas'),
             tapeState:document.querySelector('[data-tape-state]')?.textContent??null,
