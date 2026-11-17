@@ -87,7 +87,7 @@ jobs:
                 const utterance=this._queue.shift();
                 this._active=utterance;this.speaking=true;this.pending=this._queue.length>0;
                 utterance.fire('start');
-                const words=String(utterance.text??'').trim().split(/\\s+/).filter(Boolean).length;
+                const words=String(utterance.text??'').trim().split(/\s+/).filter(Boolean).length;
                 const duration=Math.max(180,words*60000/(175*Math.max(.8,utterance.rate||1)));
                 this._timer=setTimeout(()=>{
                   this._timer=null;
