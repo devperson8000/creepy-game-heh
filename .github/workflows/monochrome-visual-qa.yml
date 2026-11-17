@@ -51,6 +51,55 @@ jobs:
           page.on('pageerror', err => report.pageErrors.push(String(err)));
           page.on('requestfailed', req => report.failedRequests.push({url:req.url(),error:req.failure()?.errorText}));
           page.on('response', res => { if(res.status()>=400) report.badResponses.push({status:res.status(),url:res.url()}); });
+          await page.addInitScript(()=>{
+            class QaUtterance {
+              constructor(text){
+                this.text=String(text??'');this.lang='en-AU';this.rate=1;this.pitch=1;this.volume=1;this.voice=null;this.listeners={};
+                this.onstart=null;this.onend=null;this.onerror=null;
+              }
+              addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}
+              fire(type){
+                const event={type,target:this,error:null};
+                this['on'+type]?.(event);
+                for(const fn of this.listeners[type]??[])fn(event);
+              }
+            }
+            const voices=[
+              {name:'Google Australian Male',lang:'en-AU',voiceURI:'qa-lead',default:true,localService:true},
+              {name:'Google Australian Female',lang:'en-AU',voiceURI:'qa-friend-one',default:false,localService:true},
+              {name:'Microsoft Guy Australian',lang:'en-AU',voiceURI:'qa-friend-two',default:false,localService:true}
+            ];
+            const synth={
+              speaking:false,pending:false,paused:false,_queue:[],_active:null,_timer:null,_cancelCount:0,
+              getVoices(){return voices;},
+              addEventListener(){},
+              removeEventListener(){},
+              resume(){this.paused=false;this._pump();},
+              pause(){this.paused=true;},
+              cancel(){
+                this._cancelCount++;
+                if(this._timer!==null)clearTimeout(this._timer);
+                this._timer=null;this._queue=[];this._active=null;this.speaking=false;this.pending=false;
+              },
+              speak(utterance){this._queue.push(utterance);this.pending=true;this._pump();},
+              _pump(){
+                if(this.paused||this._active||!this._queue.length)return;
+                const utterance=this._queue.shift();
+                this._active=utterance;this.speaking=true;this.pending=this._queue.length>0;
+                utterance.fire('start');
+                const words=String(utterance.text??'').trim().split(/\\s+/).filter(Boolean).length;
+                const duration=Math.max(180,words*60000/(175*Math.max(.8,utterance.rate||1)));
+                this._timer=setTimeout(()=>{
+                  this._timer=null;
+                  utterance.fire('end');
+                  this._active=null;this.speaking=false;this.pending=this._queue.length>0;
+                  this._pump();
+                },duration);
+              }
+            };
+            Object.defineProperty(window,'SpeechSynthesisUtterance',{configurable:true,value:QaUtterance});
+            Object.defineProperty(window,'speechSynthesis',{configurable:true,value:synth});
+          });
           await page.goto('http://127.0.0.1:4173/monochrome2',{waitUntil:'networkidle',timeout:90000});
           await page.waitForFunction(()=>{const b=document.querySelector('.m2-play');return b&&!b.disabled;},{timeout:90000});
           await page.screenshot({path:'artifacts/01-intro-ready.png',fullPage:false,timeout:120000});
@@ -80,11 +129,21 @@ jobs:
             }catch(error){window.__dialogueQa.instrumentationError=String(error);}
           });
           await page.locator('.m2-play').click();
-          const checkpoints=[3,8,16,24,32,36,41,43.8,45,47,48.6,49.5,51,55,63.8,69.5];
-          let elapsed=0;
-          for(const second of checkpoints){
-            await page.waitForTimeout((second-elapsed)*1000);
-            elapsed=second;
+          const checkpoints=[
+            {label:'dialogue-opening',progress:4},
+            {label:'dialogue-store',progress:25},
+            {label:'stairs-descent',progress:47},
+            {label:'stair-bottom',progress:56},
+            {label:'wall-approach',progress:60.5},
+            {label:'wall-crossing',progress:64.5},
+            {label:'backrooms-recovery',progress:75},
+            {label:'title',progress:89}
+          ];
+          for(const checkpoint of checkpoints){
+            await page.waitForFunction(target=>{
+              const value=parseFloat(document.querySelector('.m2-progress i')?.style.width??'0');
+              return value>=target;
+            },checkpoint.progress,{timeout:180000});
             const state=await page.evaluate(()=>({
               progress:parseFloat(document.querySelector('.m2-progress i')?.style.width??'0'),
               subtitle:document.querySelector('.m2-subtitle')?.innerText??'',
@@ -92,8 +151,8 @@ jobs:
               canvas:!!document.querySelector('#scene canvas'),
               speech:{speaking:window.speechSynthesis?.speaking??false,pending:window.speechSynthesis?.pending??false,paused:window.speechSynthesis?.paused??false}
             }));
-            report.frames.push({second,...state});
-            if([3,8,16,24,36,43.8,49.5,51,63.8,69.5].includes(second))await page.screenshot({path:'artifacts/monochrome2-'+String(second).replace('.','-')+'s.png',fullPage:false,timeout:120000});
+            report.frames.push({checkpoint:checkpoint.label,targetProgress:checkpoint.progress,...state});
+            await page.screenshot({path:'artifacts/monochrome2-'+checkpoint.label+'.png',fullPage:false,timeout:120000});
           }
           report.dialogueAudio=await page.evaluate(()=>window.__dialogueQa??null);
           await page.goto('http://127.0.0.1:4173/secretroom?entry=1',{waitUntil:'networkidle',timeout:90000});
@@ -112,7 +171,10 @@ jobs:
           if(!report.frames.some(f=>f.progress>0))throw new Error('Animation progress did not advance');
           if(report.dialogueAudio?.instrumented){
             if(report.dialogueAudio.speakCalls.length!==8)throw new Error('Expected eight dialogue utterances; got '+report.dialogueAudio.speakCalls.length);
-            if(report.dialogueAudio.cancelCalls>1)throw new Error('Speech was cancelled after initial reset; '+report.dialogueAudio.cancelCalls+' cancellations observed');
+            if(report.dialogueAudio.cancelCalls!==1)throw new Error('Expected only the initial speech reset cancellation; got '+report.dialogueAudio.cancelCalls);
+            if(report.dialogueAudio.events.filter(event=>event.type==='start').length!==8)throw new Error('Not all eight dialogue lines started');
+            if(report.dialogueAudio.events.filter(event=>event.type==='end').length!==8)throw new Error('Not all eight dialogue lines ended naturally');
+            if(report.dialogueAudio.events.some(event=>event.type==='error'))throw new Error('Synthetic speech simulation emitted an error');
           }
           NODE
       - uses: actions/upload-artifact@v4
