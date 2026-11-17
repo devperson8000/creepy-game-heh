@@ -525,7 +525,9 @@ function say(cue,windowState){
  utterance.onstart=()=>{
   if(epoch!==narrationEpoch)return;
   windowState.started=true;
-  if(activeSpeechCue?.id===cue.id)showSubtitle(cue);
+  // The browser starts queued utterances in order. Show each caption on the
+  // real utterance start, even when a delayed queue outlives its estimate.
+  showSubtitle(cue);
  };
  utterance.onend=()=>{
   if(epoch!==narrationEpoch)return;
