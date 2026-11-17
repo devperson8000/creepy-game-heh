@@ -685,7 +685,7 @@ audio=createSoundscape();
 /* The 12-second cue is decoded and crossfaded inside createSoundscape. */
 // Seamless loop playback is managed by the shared Web Audio soundscape.
 let noclipCueStarted=false,noclipCueStopped=false;
-startButton.addEventListener('click',()=>{if(!started){reset();startButton.blur();}});
+startButton.addEventListener('click',()=>{if(!started){unlockSpeech();reset();startButton.blur();}});
 replayButton.addEventListener('click',()=>reset());
 soundButton.addEventListener('click',()=>{
  muted=!muted;soundButton.textContent=muted?'SOUND OFF':'SOUND ON';soundButton.setAttribute('aria-pressed',String(muted));
