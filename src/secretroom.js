@@ -510,6 +510,8 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
     if (target.id === 'pickup') beginPickup();
     else if (target.id === 'cable-pickup') {
       powerCableHeld=true;
+      // Hide synchronously on the interaction frame so no hand can flash on screen.
+      if(hazmatViewmodel)hazmatViewmodel.root.visible=false;
       cablePickupAnimation={elapsed:0,duration:.52,from:world.power.plug.position.clone(),fromQuaternion:world.power.plug.quaternion.clone()};
       world.power.beginCableHold();
       announce('Gathering the TV power lead. Carry the plug to the wall outlet on the right.');
@@ -624,7 +626,9 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
   function updateCarriedPowerCable(delta=0){
     if(!hazmatViewmodel||disposed)return;
     const active=powerCableHeld||Boolean(cablePickupAnimation)||Boolean(plugAnimation);
-    hazmatViewmodel.root.visible=active;
+    // Suppress the entire first-person arm for the complete pickup/carry phase.
+    // Only reveal it again when the plug-in animation explicitly begins.
+    hazmatViewmodel.root.visible=active&&(!powerCableHeld||Boolean(plugAnimation));
     if(!active)return;
     camera.updateMatrixWorld(true);
     hazmatViewmodel.update({
@@ -647,9 +651,6 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
     }
     world.power.setHeldPose(position,quaternion);
     hazmatViewmodel.setGripWorldTransform(roomPointToWorld(position),roomQuaternionToWorld(quaternion));
-    // Keep the actual hazmat arm hidden while the cable lifts from the floor.
-    // The arm can reappear once the pickup has settled into its carry pose.
-    hazmatViewmodel.root.visible=!cablePickupAnimation;
   }
 
   function updateCameraAndPower(delta){
