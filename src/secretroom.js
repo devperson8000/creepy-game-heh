@@ -556,6 +556,9 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
   on(el('[data-action="throw"]'), 'click', () => dropTape(true));
 
   on(document, 'keydown', event => {
+    // Keyboard input is a direct user gesture; use it to unlock embedded TTS
+    // before the VHS reaches its first dialogue cue.
+    teaserPlayback?.unlockVoice?.();
     if (!paused && tvMode === 'minigame' && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(event.code)) {
       event.preventDefault(); if (!event.repeat) handleTvArrow(event.code); return;
     }
@@ -571,6 +574,7 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
     }
     if (event.code === 'KeyG' && !event.repeat && !paused) dropTape(false);
   });
+  on(document, 'pointerdown', () => teaserPlayback?.unlockVoice?.());
   on(document, 'keyup', event => keys.delete(event.code));
   on(window, 'blur', () => {
     keys.clear();
