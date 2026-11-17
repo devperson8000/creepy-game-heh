@@ -605,7 +605,7 @@ function update(t){
  });
  previousPoseTime=t;
  actors[0].getHeadWorldPosition(leadHeadPoint);
- cameraFor(t,poses[0],leadHeadPoint);
+ cameraFor(t,{...poses[0],y:actors[0].root.position.y},leadHeadPoint);
  backroomsFlashPlane.visible=!prefersReducedMotion&&monochrome2BackroomsBackgroundFlash(t);
  if(backroomsFlashPlane.visible){
   const flashDistance=5.02;
