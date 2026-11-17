@@ -76,7 +76,7 @@ export function createGameUI(){
   el('player-noise').textContent=`Noise: ${player.noise||'Quiet'}`;
   el('player-noise').classList.toggle('noisy',player.noise==='Loud');
   el('clue-note').textContent=run.clueRead?`Clue: ${run.code}${run.codeAccepted?' · accepted':''}`:'Four-digit clue not yet found';
-  crosshair?.classList.toggle('has-target',!!target&&!overlay);const interactionState=target&&!overlay?(hold>0?'holding':'ready'):'none';if(root.dataset.interacting!==interactionState)root.dataset.interacting=interactionState;
+  el('interaction').dataset.kind=target?.type??'';crosshair?.classList.toggle('has-target',!!target&&!overlay);const interactionState=target&&!overlay?(hold>0?'holding':'ready'):'none';if(root.dataset.interacting!==interactionState)root.dataset.interacting=interactionState;
   el('interaction').hidden=!target||!!overlay;el('interaction').querySelector('kbd').textContent=target?.hotkey??'E';el('interaction-label').textContent=target?.label||'';el('hold-fill').style.width=`${Math.max(0,Math.min(1,hold))*100}%`;
   el('hold-fill').parentElement.setAttribute('aria-valuenow',String(Math.round(Math.max(0,Math.min(1,hold))*100)));
   el('hide-mask').hidden=!run.hidden||!!run.layout?.narrowMaze;
