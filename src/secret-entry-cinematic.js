@@ -11,8 +11,8 @@ const mix = (a, b, t) => a + (b - a) * t;
 
 // Keep the walk cycle on the same interval as the survivor's ground travel.
 const WALK_START = 2.02;
-const WALK_DURATION = 2.3;
-const WALK_ANIMATION_RATE = 0.72;
+const WALK_DURATION = 2.55;
+const WALK_ANIMATION_RATE = 0.64;
 
 function createFallbackSurvivor(scene, position, yaw) {
   const root = new THREE.Group();
