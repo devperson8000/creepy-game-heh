@@ -93,13 +93,7 @@ jobs:
           await page.screenshot({path:'artifacts/03-monochrome-menu-after-exit.png',timeout:60000});
           if(!report.returnedToMainMenu)throw new Error('Backrooms exit did not return to Monochrome menu');
 
-          // Use a controlled monotonic clock for exact cinematic frame captures.
-          await page.addInitScript(()=>{
-            let controlledNow=1000;
-            Object.defineProperty(performance,'now',{configurable:true,value:()=>controlledNow});
-            window.__qaShiftNow=delta=>{controlledNow+=delta;};
-          });
-          await page.goto('http://127.0.0.1:4173/monochrome2',{waitUntil:'networkidle',timeout:90000});
+          await page.goto('http://127.0.0.1:4173/monochrome2?qa=1',{waitUntil:'networkidle',timeout:90000});
           await page.waitForFunction(()=>{const button=document.querySelector('.m2-play');return button&&!button.disabled;},{timeout:90000});
           await page.screenshot({path:'artifacts/04-monochrome2-ready.png',timeout:60000});
           await page.locator('.m2-play').click();
@@ -110,10 +104,7 @@ jobs:
             {label:'backrooms-recovery',time:59}
           ];
           for(const point of checkpoints){
-            const before=await page.locator('.m2-progress i').evaluate(el=>parseFloat(el.style.width)||0);
-            const currentTime=before/100*78;
-            await page.evaluate(delta=>window.__qaShiftNow(delta),(point.time-currentTime)*1000);
-            await page.evaluate(()=>new Promise(requestAnimationFrame));
+            await page.evaluate(time=>window.__MONOCHROME2_QA_SEEK(time),point.time);
             const progress=await page.locator('.m2-progress i').evaluate(el=>el.style.width);
             const expected=point.time/78*100;
             const actual=parseFloat(progress);
