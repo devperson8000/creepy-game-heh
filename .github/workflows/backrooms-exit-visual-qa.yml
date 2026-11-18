@@ -1,0 +1,116 @@
+name: Backrooms exit, Riley voice and relaxed-hand visual QA
+on:
+  push:
+    branches:
+      - qa/backrooms-exit-riley-hand
+permissions:
+  contents: read
+jobs:
+  browser-visual:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Focused regression tests
+        run: node --test tests/backrooms-exit.test.js tests/player-avatar.test.js tests/monochrome2-intro.test.js tests/monochrome2-voices.test.js tests/backrooms-layout.test.js
+      - name: Build production bundle
+        run: npm run build
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 0.0.0.0 > /tmp/vite-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4173/ > /dev/null && exit 0
+            sleep 1
+          done
+          cat /tmp/vite-preview.log
+          exit 1
+      - name: Test Backrooms exit and inspect wall-crossing hand in Chromium
+        run: |
+          mkdir -p artifacts
+          node --input-type=module <<'NODE'
+          import { chromium } from 'playwright';
+          import fs from 'node:fs/promises';
+          const browser=await chromium.launch({headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-webgl','--ignore-gpu-blocklist']});
+          const report={consoleErrors:[],pageErrors:[],failedRequests:[],badResponses:[],dialogue:[],frames:[]};
+          const page=await browser.newPage({viewport:{width:1440,height:900},deviceScaleFactor:1});
+          page.on('console',msg=>{if(msg.type()==='error')report.consoleErrors.push(msg.text());});
+          page.on('pageerror',err=>report.pageErrors.push(String(err)));
+          page.on('requestfailed',req=>report.failedRequests.push({url:req.url(),error:req.failure()?.errorText}));
+          page.on('response',res=>{if(res.status()>=400)report.badResponses.push({status:res.status(),url:res.url()});});
+          // Provide repeatable English AU voice profiles even on CI machines without OS voices.
+          await page.addInitScript(()=>{
+            class TestUtterance{
+              constructor(text){this.text=String(text??'');this.voice=null;this.rate=1;this.pitch=1;this.volume=1;this.listeners={};this.onstart=null;this.onend=null;this.onerror=null;}
+              addEventListener(type,fn){(this.listeners[type]??=[]).push(fn);}
+              fire(type){const event={type,target:this,error:null};this['on'+type]?.(event);for(const fn of this.listeners[type]??[])fn(event);}
+            }
+            const voices=[
+              {name:'Microsoft David Online (Natural) - English (Australia)',lang:'en-AU',localService:false},
+              {name:'Microsoft Sonia Online (Natural) - English (Australia)',lang:'en-AU',localService:false},
+              {name:'Microsoft Ryan Online (Natural) - English (Australia)',lang:'en-AU',localService:false},
+              {name:'Google UK English Female',lang:'en-GB',localService:true}
+            ];
+            const synth={
+              _queue:[],_active:null,_timer:null,_cancelCount:0,speaking:false,pending:false,paused:false,
+              getVoices(){return voices;},addEventListener(){},removeEventListener(){},
+              resume(){this.paused=false;this._pump();},pause(){this.paused=true;},
+              cancel(){this._cancelCount++;if(this._timer!==null)clearTimeout(this._timer);this._timer=null;this._queue=[];this._active=null;this.speaking=false;this.pending=false;},
+              speak(utterance){if(String(utterance.text??'').trim())window.__qaUtterances.push({text:utterance.text,voice:utterance.voice?.name??null,rate:utterance.rate,pitch:utterance.pitch});this._queue.push(utterance);this.pending=true;this._pump();},
+              _pump(){if(this.paused||this._active||!this._queue.length)return;const utterance=this._queue.shift();this._active=utterance;this.speaking=true;this.pending=this._queue.length>0;utterance.fire('start');const words=String(utterance.text??'').trim().split(/\s+/).filter(Boolean).length;const duration=Math.max(180,words*60000/(175*Math.max(.8,utterance.rate||1)));this._timer=setTimeout(()=>{this._timer=null;utterance.fire('end');this._active=null;this.speaking=false;this.pending=this._queue.length>0;this._pump();},duration);}
+            };
+            window.__qaUtterances=[];
+            Object.defineProperty(window,'SpeechSynthesisUtterance',{configurable:true,value:TestUtterance});
+            Object.defineProperty(window,'speechSynthesis',{configurable:true,value:synth});
+          });
+
+          await page.goto('http://127.0.0.1:4173/backrooms',{waitUntil:'networkidle',timeout:90000});
+          await page.waitForSelector('#scene canvas',{timeout:90000});
+          await page.waitForSelector('.br-start',{timeout:90000});
+          await page.screenshot({path:'artifacts/01-backrooms-ready.png',timeout:60000});
+          await page.locator('.br-start').click();
+          await page.waitForTimeout(1600);
+          if(!await page.locator('[data-action="exit"]').isVisible())throw new Error('Return-to-Monochrome control is not visible during gameplay');
+          await page.screenshot({path:'artifacts/02-backrooms-playing-with-exit.png',timeout:60000});
+          await page.locator('[data-action="exit"]').click();
+          await page.waitForURL(url=>url.pathname==='/',{timeout:30000});
+          await page.waitForSelector('#lobby-menu',{timeout:60000});
+          report.returnedToMainMenu=await page.locator('#lobby-menu').isVisible();
+          await page.screenshot({path:'artifacts/03-monochrome-menu-after-exit.png',timeout:60000});
+          if(!report.returnedToMainMenu)throw new Error('Backrooms exit did not return to Monochrome menu');
+
+          await page.goto('http://127.0.0.1:4173/monochrome2',{waitUntil:'networkidle',timeout:90000});
+          await page.waitForFunction(()=>{const button=document.querySelector('.m2-play');return button&&!button.disabled;},{timeout:90000});
+          await page.screenshot({path:'artifacts/04-monochrome2-ready.png',timeout:60000});
+          await page.locator('.m2-play').click();
+          const checkpoints=[
+            {label:'riley-dialogue',progress:7.2},
+            {label:'wall-hand-reach',progress:60.0},
+            {label:'wall-crossing',progress:63.5},
+            {label:'backrooms-recovery',progress:76}
+          ];
+          for(const point of checkpoints){
+            await page.waitForFunction(target=>parseFloat(document.querySelector('.m2-progress i')?.style.width??'0')>=target,point.progress,{timeout:180000});
+            report.frames.push({label:point.label,progress:await page.locator('.m2-progress i').evaluate(el=>el.style.width)});
+            await page.screenshot({path:'artifacts/monochrome2-'+point.label+'.png',timeout:120000});
+          }
+          report.dialogue=await page.evaluate(()=>({utterances:window.__qaUtterances,cancelCalls:window.speechSynthesis?._cancelCount??null}));
+          const rileyLines=report.dialogue.utterances.filter(item=>/right behind us|real food|i have snacks/i.test(item.text));
+          if(rileyLines.length!==3)throw new Error('Expected all three Riley lines; received '+rileyLines.length);
+          if(!rileyLines.every(item=>/Sonia/i.test(item.voice??'')))throw new Error('Riley did not get the natural Australian female voice: '+JSON.stringify(rileyLines));
+          if(!rileyLines.every(item=>item.rate>1&&item.pitch>1.04))throw new Error('Riley delivery profile was not applied: '+JSON.stringify(rileyLines));
+          if(report.pageErrors.length||report.badResponses.length||report.failedRequests.length)throw new Error('Chromium recorded page, HTTP or request errors');
+          await fs.writeFile('artifacts/browser-report.json',JSON.stringify(report,null,2));
+          await browser.close();
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backrooms-exit-riley-hand-visual-qa
+          path: artifacts/
+          retention-days: 3
