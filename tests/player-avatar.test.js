@@ -254,3 +254,20 @@ test('the real survivor get-up remains above the floor and completes with the to
  const heights=[];for(let i=0;i<25;i++){avatar.update({status:'alive',torch:true},.04);heights.push(head.getWorldPosition(new THREE.Vector3()).y);}
  assert.ok(heights[0]<.4);assert.ok(heights.some(y=>y>.6&&y<1.3));assert.ok(heights.every(y=>Number.isFinite(y)&&y>0));assert.ok(heights.at(-1)>1.5);assert.ok(beam.intensity>0);avatar.dispose();
 });
+
+
+test('cinematic relaxed hands keep the source glove geometry while normal avatars retain the torch grip',()=>{
+ const asset=fixture(),sourceMesh=asset.scene.children.find(object=>object.isSkinnedMesh);
+ const torchGrip=createPlayerAvatar(asset,{id:'torch-grip'});
+ const relaxed=createPlayerAvatar(asset,{id:'cinema-relaxed',handPose:'relaxed'});
+ const gripMesh=torchGrip.root.getObjectByProperty('isSkinnedMesh',true);
+ const relaxedMesh=relaxed.root.getObjectByProperty('isSkinnedMesh',true);
+ assert.equal(torchGrip.root.userData.handPose,'torch-grip');
+ assert.equal(relaxed.root.userData.handPose,'relaxed');
+ assert.notEqual(gripMesh.geometry,sourceMesh.geometry,'normal torch grip keeps its private curled geometry');
+ assert.equal(relaxedMesh.geometry,sourceMesh.geometry,'cinematic uses the original uncurled glove geometry');
+ relaxed.sampleCinematic({clip:'Walk',time:.4,position:[0,0,0],action:'dive',progress:.35});
+ assert.equal(relaxed.root.getObjectByName('player-torch').visible,false,'hidden torch cannot curl the visible hand');
+ assert.equal(relaxedMesh.geometry,sourceMesh.geometry,'wall-crossing sample leaves source glove geometry unchanged');
+ torchGrip.dispose();relaxed.dispose();
+});
