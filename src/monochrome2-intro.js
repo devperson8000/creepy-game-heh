@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createSeamlessLoopBuffer } from './seamless-audio-loop.js';
+import {selectMonochrome2Voices,monochrome2SpeechSettings} from './monochrome2-voices.js';
 import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
@@ -460,30 +461,8 @@ function clearSubtitle(cue){
  if(embedded&&subtitlePlane)subtitlePlane.visible=false;
 }
 function refreshVoices(){
- const all=window.speechSynthesis?.getVoices?.()??[];
- const english=all.filter(voice=>/^en[-_]/i.test(voice.lang));
- if(!english.length)return;
- const profiles=[
-  ['lead',[/daniel|oliver|arthur|fred|aaron|tom|george|david|james|google.*male|microsoft.*mark/i]],
-  ['friend1',[/karen|moira|samantha|tessa|fiona|victoria|serena|ava|zoe|susan|google.*female|microsoft.*zira/i]],
-  ['friend2',[/eddy|lee|rishi|matthew|liam|ryan|google.*male|microsoft.*guy/i]]
- ];
- const used=new Set(),next=new Map();
- const score=(voice,patterns)=>{
-  const name=voice.name.toLowerCase(),lang=voice.lang.toLowerCase();
-  let value=/en[-_]au/.test(lang)?34:/en[-_]gb/.test(lang)?27:/en[-_]us/.test(lang)?22:10;
-  if(/natural|neural|premium|enhanced|studio|online/i.test(name))value+=42;
-  if(!voice.localService)value+=5;
-  if(/compact|robot|novelty|whisper/i.test(name))value-=24;
-  if(patterns.some(pattern=>pattern.test(name)))value+=31;
-  if(used.has(voice.name))value-=50;
-  return value;
- };
- for(const [speaker,patterns] of profiles){
-  const voice=english.slice().sort((a,b)=>score(b,patterns)-score(a,patterns))[0];
-  if(voice){used.add(voice.name);next.set(speaker,voice);}
- }
- voiceChoices=next;
+ const next=selectMonochrome2Voices(window.speechSynthesis?.getVoices?.()??[]);
+ if(next.size)voiceChoices=next;
 }
 window.speechSynthesis?.getVoices?.();
 if('speechSynthesis'in window){window.speechSynthesis.addEventListener?.('voiceschanged',refreshVoices);refreshVoices();}
@@ -519,8 +498,9 @@ function say(cue,windowState){
  const utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
  if(voice)utterance.voice=voice;
  utterance.lang=voice?.lang??'en-AU';
- utterance.rate=THREE.MathUtils.clamp(cue.rate??.97,.92,1.06);
- utterance.pitch=THREE.MathUtils.clamp(cue.pitch??1,.96,1.04);
+ const speechStyle=monochrome2SpeechSettings(cue);
+ utterance.rate=THREE.MathUtils.clamp(speechStyle.rate,.92,1.08);
+ utterance.pitch=THREE.MathUtils.clamp(speechStyle.pitch,.96,1.12);
  utterance.volume=1;
  utterance.onstart=()=>{
   if(epoch!==narrationEpoch)return;
@@ -711,9 +691,9 @@ soundButton.addEventListener('click',()=>{
 const ready=loadPlayerAvatarAsset().then(asset=>{
  if(disposed)return;
  actors.push(
-  createPlayerAvatar(asset,{id:'monochrome2-lead',name:'LEAD',slot:0}),
-  createPlayerAvatar(asset,{id:'monochrome2-riley',name:'RILEY',slot:1}),
-  createPlayerAvatar(asset,{id:'monochrome2-jamie',name:'JAMIE',slot:2})
+  createPlayerAvatar(asset,{id:'monochrome2-lead',name:'LEAD',slot:0,handPose:'relaxed'}),
+  createPlayerAvatar(asset,{id:'monochrome2-riley',name:'RILEY',slot:1,handPose:'relaxed'}),
+  createPlayerAvatar(asset,{id:'monochrome2-jamie',name:'JAMIE',slot:2,handPose:'relaxed'})
  );
  actors.forEach(actor=>scene.add(actor.root));
  startButton.disabled=false;startButton.textContent='PLAY CINEMATIC';
