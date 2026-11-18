@@ -93,19 +93,30 @@ jobs:
           await page.screenshot({path:'artifacts/03-monochrome-menu-after-exit.png',timeout:60000});
           if(!report.returnedToMainMenu)throw new Error('Backrooms exit did not return to Monochrome menu');
 
+          // Use a controlled monotonic clock for exact cinematic frame captures.
+          await page.addInitScript(()=>{
+            let controlledNow=1000;
+            Object.defineProperty(performance,'now',{configurable:true,value:()=>controlledNow});
+            window.__qaSetNow=value=>{controlledNow=1000+value*1000;};
+          });
           await page.goto('http://127.0.0.1:4173/monochrome2',{waitUntil:'networkidle',timeout:90000});
           await page.waitForFunction(()=>{const button=document.querySelector('.m2-play');return button&&!button.disabled;},{timeout:90000});
           await page.screenshot({path:'artifacts/04-monochrome2-ready.png',timeout:60000});
           await page.locator('.m2-play').click();
           const checkpoints=[
-            {label:'riley-dialogue',progress:7.2},
-            {label:'wall-hand-reach',progress:60.0},
-            {label:'wall-crossing',progress:63.5},
-            {label:'backrooms-recovery',progress:76}
+            {label:'riley-dialogue',time:7.2},
+            {label:'wall-hand-reach',time:46.6},
+            {label:'wall-crossing',time:49.5},
+            {label:'backrooms-recovery',time:59}
           ];
           for(const point of checkpoints){
-            await page.waitForFunction(target=>parseFloat(document.querySelector('.m2-progress i')?.style.width??'0')>=target,point.progress,{timeout:180000});
-            report.frames.push({label:point.label,progress:await page.locator('.m2-progress i').evaluate(el=>el.style.width)});
+            await page.evaluate(time=>window.__qaSetNow(time),point.time);
+            await page.evaluate(()=>new Promise(requestAnimationFrame));
+            const progress=await page.locator('.m2-progress i').evaluate(el=>el.style.width);
+            const expected=point.time/78*100;
+            const actual=parseFloat(progress);
+            if(!Number.isFinite(actual)||Math.abs(actual-expected)>.35)throw new Error(point.label+' captured at '+progress+' instead of '+expected.toFixed(2)+'%');
+            report.frames.push({label:point.label,time:point.time,progress});
             await page.screenshot({path:'artifacts/monochrome2-'+point.label+'.png',timeout:120000});
           }
           report.dialogue=await page.evaluate(()=>({utterances:window.__qaUtterances,cancelCalls:window.speechSynthesis?._cancelCount??null}));
