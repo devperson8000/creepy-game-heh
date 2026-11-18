@@ -14,3 +14,8 @@
 @media(pointer:coarse){.br-touch{max-width:100%;flex-wrap:wrap}.br-touch button{padding:9px 11px;font-size:10px}.br-balance{bottom:220px}.br-help{display:none}}
 @media(pointer:coarse){.br-touch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"left forward back right" "run run crouch crouch" "leanleft leanleft leanright leanright" "interact interact interact interact";width:min(360px,calc(100vw - 32px));left:16px;bottom:58px;gap:6px}.br-touch button{width:auto;height:38px;padding:7px;font-size:10px}.br-touch [data-key="KeyW"]{grid-area:forward}.br-touch [data-key="KeyA"]{grid-area:left}.br-touch [data-key="KeyS"]{grid-area:back}.br-touch [data-key="KeyD"]{grid-area:right}.br-touch [data-key="ShiftLeft"]{grid-area:run}.br-touch [data-key="ControlLeft"]{grid-area:crouch}.br-touch [data-key="KeyQ"]{grid-area:leanleft}.br-touch [data-key="KeyE"]{grid-area:leanright}.br-touch [data-key="KeyF"]{grid-area:interact}.br-balance{bottom:255px}}
 @media(pointer:coarse) and (max-height:500px){.br-touch{width:280px;bottom:12px;gap:4px}.br-touch button{height:29px}.br-balance{bottom:155px;width:280px;left:auto;right:16px;transform:none}.br-objective{max-width:35vw}.br-timestamp{display:none}}
+
+
+/* Keep the return path visible without changing the pause/menu flow. */
+.br-tools [data-action="exit"]{border-color:#c8b77b72;background:#4a452a66;color:#f0e8c8}
+.br-tools [data-action="exit"]:hover{background:#81764b55;border-color:#e2d39a}
