@@ -61,6 +61,8 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0,handPose='to
  };
  const chest=findBone('spine003'),headBone=findBone('spine006'),hand=findBone('handr'),forearm=findBone('forearmr'),upperArm=findBone('upperarmr');
  const thighL=findBone('thighl'),thighR=findBone('thighr'),shinL=findBone('shinl'),shinR=findBone('shinr'),footL=findBone('footl'),footR=findBone('footr'),toeL=findBone('toel'),toeR=findBone('toer'),heelL=findBone('heel02l'),heelR=findBone('heel02r');
+ // Store the source wrist orientation before any animation clip is sampled.
+ const relaxedHandRest=hand?.quaternion.clone()??new THREE.Quaternion();
  root.updateMatrixWorld(true);
  // Cache every boot vertex influenced by the foot, toe and heel joints.
  // The ankle pivot alone can look clear while the boot sole still clips.
@@ -267,6 +269,10 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0,handPose='to
    const sampleTime=action==='snared'?end*.28:action==='free-leg'?end*.28*(1-p):action==='prone'?end:action==='get-up'?(1-p)*end:action==='dive'&&clip.toLowerCase()==='death'?Math.pow(p,.4)*end:Math.max(0,finite(time))%duration;
    mixer.setTime(sampleTime);
   }
+  // The Death/dive clip rotates the single-bone mitten into a fist-like pose.
+  // Keep the rest wrist orientation for cinematic actors so the hand stays
+  // neutral while the arm and body continue to use the authored animation.
+  if(root.userData.handPose==='relaxed'&&hand)hand.quaternion.copy(relaxedHandRest);
   root.visible=true;root.position.fromArray(position);root.rotation.set(0,yaw+Math.PI,0);model.rotation.set(0,0,0);
   speakingIcon.visible=false;torch.visible=false;beam.intensity=0;glow.intensity=0;
   const label=root.getObjectByName('player-name');if(label)label.visible=false;
