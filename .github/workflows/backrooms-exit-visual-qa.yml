@@ -18,7 +18,9 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Focused regression tests
-        run: node --test tests/backrooms-exit.test.js tests/player-avatar.test.js tests/monochrome2-intro.test.js tests/monochrome2-voices.test.js tests/backrooms-layout.test.js
+        run: |
+          node --test tests/backrooms-exit.test.js tests/monochrome2-intro.test.js tests/monochrome2-voices.test.js tests/backrooms-layout.test.js
+          node --test --test-name-pattern="cinematic relaxed hands|selected curved GLB|real hazmat grasp stays closed" tests/player-avatar.test.js
       - name: Build production bundle
         run: npm run build
       - name: Start production preview
