@@ -256,6 +256,21 @@ test('the real survivor get-up remains above the floor and completes with the to
 });
 
 
+test('cinematic relaxed wrist ignores the animated fist rotation during the wall dive',()=>{
+ const asset=fixture(),death=asset.animations.find(clip=>clip.name==='Death');
+ death.tracks.push(new THREE.QuaternionKeyframeTrack('handR.quaternion',[0,1],[0,0,0,1,0,0,Math.SQRT1_2,Math.SQRT1_2]));
+ const relaxed=createPlayerAvatar(asset,{handPose:'relaxed'});
+ const normal=createPlayerAvatar(asset,{handPose:'torch-grip'});
+ const rest=relaxed.root.getObjectByName('handR').quaternion.clone();
+ relaxed.sampleCinematic({clip:'Death',time:.8,action:'dive',progress:.9});
+ normal.sampleCinematic({clip:'Death',time:.8,action:'dive',progress:.9});
+ const relaxedHand=relaxed.root.getObjectByName('handR').quaternion;
+ const normalHand=normal.root.getObjectByName('handR').quaternion;
+ assert.ok(relaxedHand.angleTo(rest)<1e-8,'relaxed hand must stay in its source wrist orientation');
+ assert.ok(normalHand.angleTo(rest)>.2,'default/torch actors continue to receive authored wrist animation');
+ relaxed.dispose();normal.dispose();
+});
+
 test('cinematic relaxed hands keep the source glove geometry while normal avatars retain the torch grip',async()=>{
  const bytes=await readFile(new URL('../public/models/hazmat-survivor.glb',import.meta.url));
  const loader=new GLTFLoader();loader.register(()=>({name:'CPUTextureDecoder',loadTexture:async()=>new THREE.Texture()}));
