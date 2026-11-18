@@ -705,6 +705,18 @@ const ready=loadPlayerAvatarAsset().then(asset=>{
 });
 void ready;
 if(!embedded)renderer.setAnimationLoop(animate);
+// Isolated visual-test hook. It is only exposed on the explicit QA query route.
+if(!embedded&&new URLSearchParams(location.search).get('qa')==='1'){
+ Object.defineProperty(window,'__MONOCHROME2_QA_SEEK',{
+  configurable:true,
+  value(time){
+   if(disposed)return;
+   renderer.setAnimationLoop(null);
+   started=true;
+   update(Math.max(0,Math.min(MONOCHROME2_DURATION,Number(time)||0)));
+  }
+ });
+}
 function renderEmbedded(time){
  if(!embedded||disposed||!embeddedTarget||!started)return;
  const previousTarget=renderer.getRenderTarget();
