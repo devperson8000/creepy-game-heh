@@ -24,10 +24,10 @@ function canvasTexture(width,height,draw){
  return texture;
 }
 
-export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
+export function createPlayerAvatar(asset,{id,name='Survivor',slot=0,handPose='torch-grip'}={}){
  const root=new THREE.Group();root.name='player-avatar';
  const playerSlot=((Math.trunc(finite(slot))%4)+4)%4,number=playerSlot+1,color=COLORS[playerSlot];
- root.userData={playerId:id,playerName:name,slot:playerSlot};
+ root.userData={playerId:id,playerName:name,slot:playerSlot,handPose:handPose==='relaxed'?'relaxed':'torch-grip'};
  const model=cloneSkeleton(asset.scene);model.name='player-model';root.add(model);
  const ownedMaterials=new Set(),ownedGeometry=new Set(),ownedTextures=new Set(),skeletons=new Set(),materialClones=new Map();
  model.traverse(object=>{
@@ -131,7 +131,7 @@ export function createPlayerAvatar(asset,{id,name='Survivor',slot=0}={}){
  // once per actor; keep the shared cached geometry and all skin weights intact.
  const gripRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2);
  const gripPoint=new THREE.Vector3(-.043,.095,.038);
- if(hand&&forearm&&upperArm){
+ if(root.userData.handPose==='torch-grip'&&hand&&forearm&&upperArm){
   model.traverse(object=>{
    if(!object.isSkinnedMesh)return;
    const handIndex=object.skeleton.bones.indexOf(hand);if(handIndex<0)return;
