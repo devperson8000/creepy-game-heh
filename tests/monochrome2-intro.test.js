@@ -9,6 +9,11 @@ import {MONOCHROME2_SHELVES,monochrome2CollisionViolations} from '../src/monochr
 
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z);
 
+test('all three cinematic survivors use the relaxed source glove',()=>{
+ const source=readFileSync(new URL('../src/monochrome2-intro.js',import.meta.url),'utf8');
+ assert.equal((source.match(/handPose:'relaxed'/g)??[]).length,3);
+});
+
 test('the intro moves from the street to the two-line title in the intended order',()=>{
  const expected=[
   [2,'street'],[20,'storefront'],[26,'store'],[40,'rear-stairs'],
