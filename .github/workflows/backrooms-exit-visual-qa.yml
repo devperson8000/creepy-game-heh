@@ -5,6 +5,9 @@ on:
       - qa/backrooms-exit-riley-hand
 permissions:
   contents: read
+concurrency:
+  group: backrooms-exit-riley-hand-qa
+  cancel-in-progress: true
 jobs:
   browser-visual:
     runs-on: ubuntu-latest
@@ -20,7 +23,7 @@ jobs:
       - name: Focused regression tests
         run: |
           node --test tests/backrooms-exit.test.js tests/monochrome2-intro.test.js tests/monochrome2-voices.test.js tests/backrooms-layout.test.js
-          node --test --test-name-pattern="cinematic relaxed hands|selected curved GLB|real hazmat grasp stays closed" tests/player-avatar.test.js
+          node --test --test-name-pattern="cinematic relaxed hands|cinematic relaxed wrist|selected curved GLB|real hazmat grasp stays closed" tests/player-avatar.test.js
       - name: Build production bundle
         run: npm run build
       - name: Start production preview
