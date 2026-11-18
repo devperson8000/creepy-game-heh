@@ -14,7 +14,7 @@ export function selectMonochrome2Voices(availableVoices=[]){
   if(/natural|neural|premium|enhanced|studio|online/i.test(name))value+=42;
   if(voice.localService===false)value+=5;
   if(/compact|robot|novelty|whisper/i.test(name))value-=24;
-  if(patterns.some(pattern=>pattern.test(name)))value+=speaker==='friend1'?68:31;
+  if(patterns.some(pattern=>pattern.test(name)))value+=speaker==='friend1'?85:31;
   if(used.has(voice.name))value-=50;
   return value;
  };
