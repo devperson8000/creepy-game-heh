@@ -79,7 +79,11 @@ jobs:
           await page.waitForTimeout(1600);
           if(!await page.locator('[data-action="exit"]').isVisible())throw new Error('Return-to-Monochrome control is not visible during gameplay');
           await page.screenshot({path:'artifacts/02-backrooms-playing-with-exit.png',timeout:60000});
-          await page.locator('[data-action="exit"]').click();
+          // The game captures the mouse after starting. Release pointer lock so
+          // Chromium can deliver the real button click just as on a normal tab.
+          await page.evaluate(()=>document.exitPointerLock?.());
+          await page.waitForTimeout(150);
+          await page.locator('[data-action="exit"]').click({timeout:30000});
           await page.waitForURL(url=>url.pathname==='/',{timeout:30000});
           await page.waitForSelector('#lobby-menu',{timeout:60000});
           report.returnedToMainMenu=await page.locator('#lobby-menu').isVisible();
