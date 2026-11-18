@@ -256,18 +256,23 @@ test('the real survivor get-up remains above the floor and completes with the to
 });
 
 
-test('cinematic relaxed hands keep the source glove geometry while normal avatars retain the torch grip',()=>{
- const asset=fixture(),sourceMesh=asset.scene.children.find(object=>object.isSkinnedMesh);
+test('cinematic relaxed hands keep the source glove geometry while normal avatars retain the torch grip',async()=>{
+ const bytes=await readFile(new URL('../public/models/hazmat-survivor.glb',import.meta.url));
+ const loader=new GLTFLoader();loader.register(()=>({name:'CPUTextureDecoder',loadTexture:async()=>new THREE.Texture()}));
+ const asset=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
+ const sourceMesh=asset.scene.getObjectByProperty('isSkinnedMesh',true),sourceGeometry=sourceMesh.geometry;
+ const originalPositions=sourceGeometry.attributes.position.array.slice();
  const torchGrip=createPlayerAvatar(asset,{id:'torch-grip'});
  const relaxed=createPlayerAvatar(asset,{id:'cinema-relaxed',handPose:'relaxed'});
  const gripMesh=torchGrip.root.getObjectByProperty('isSkinnedMesh',true);
  const relaxedMesh=relaxed.root.getObjectByProperty('isSkinnedMesh',true);
  assert.equal(torchGrip.root.userData.handPose,'torch-grip');
  assert.equal(relaxed.root.userData.handPose,'relaxed');
- assert.notEqual(gripMesh.geometry,sourceMesh.geometry,'normal torch grip keeps its private curled geometry');
- assert.equal(relaxedMesh.geometry,sourceMesh.geometry,'cinematic uses the original uncurled glove geometry');
+ assert.notEqual(gripMesh.geometry,sourceGeometry,'normal torch grip keeps its private curled geometry');
+ assert.equal(relaxedMesh.geometry,sourceGeometry,'cinematic uses the original uncurled glove geometry');
  relaxed.sampleCinematic({clip:'Walk',time:.4,position:[0,0,0],action:'dive',progress:.35});
  assert.equal(relaxed.root.getObjectByName('player-torch').visible,false,'hidden torch cannot curl the visible hand');
- assert.equal(relaxedMesh.geometry,sourceMesh.geometry,'wall-crossing sample leaves source glove geometry unchanged');
+ assert.equal(relaxedMesh.geometry,sourceGeometry,'wall-crossing sample retains the uncurled source mesh');
+ assert.deepEqual(sourceGeometry.attributes.position.array,originalPositions,'cinematic avatar must not mutate cached glove vertices');
  torchGrip.dispose();relaxed.dispose();
 });
