@@ -1,0 +1,74 @@
+.sunnychen-page {
+  margin: 0;
+  overflow: hidden;
+  background: #050605;
+  color: #e8e9e2;
+}
+.sunnychen-page #scene,
+.sunnychen-page > .grain,
+.sunnychen-page > .vignette,
+.sunnychen-page > .hud,
+.sunnychen-page > .touch-move,
+.sunnychen-page > #crosshair,
+.sunnychen-page > #error {
+  display: none !important;
+}
+.sunnychen-message-screen {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(24px, 7vw, 90px);
+  background:
+    radial-gradient(ellipse at 50% 45%, #1b211b 0%, #0b0e0b 43%, #030403 100%);
+}
+.sunnychen-message {
+  max-width: 760px;
+  margin: 0;
+  color: #e2e6dc;
+  font: 500 clamp(18px, 2.4vw, 27px)/1.8 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: .015em;
+  text-align: center;
+  text-wrap: balance;
+}
+.sunnychen-scare-canvas {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: contrast(1.19) saturate(.82);
+  transform: translateX(var(--scare-glitch, 0px));
+}
+.sunnychen-page #jumpscare-border {
+  position: fixed;
+  z-index: 71;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(80,2,13,.36), transparent 34%, transparent 60%, rgba(100,2,15,.56)),
+    radial-gradient(ellipse at 50% 56%, transparent 23%, rgba(37,0,6,.3) 62%, rgba(90,0,14,.78) 100%);
+  box-shadow: inset 0 0 110px rgba(72,0,10,.68);
+}
+.sunnychen-page #jumpscare-border::before,
+.sunnychen-page #jumpscare-border::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.sunnychen-page #jumpscare-border::before {
+  background: repeating-linear-gradient(0deg, transparent 0px, transparent 3px, rgba(26,0,4,.19) 4px);
+  opacity: .55;
+}
+.sunnychen-page #jumpscare-border::after {
+  background: radial-gradient(ellipse at center, rgba(140,16,20,.58), rgba(75,0,13,.2) 42%, transparent 70%);
+  opacity: var(--scare-impact, 0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sunnychen-scare-canvas { transform: none; }
+  .sunnychen-page #jumpscare-border::after { opacity: 0; }
+}
