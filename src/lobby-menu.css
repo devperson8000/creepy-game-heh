@@ -70,3 +70,7 @@
  .lobby-coming-soon{animation:none;transition:none}
  .lobby-coming-soon::before,.lobby-coming-soon-signal i{animation:none}
 }
+
+
+/* Small archive-style easter egg on the mode selection screen. */
+.lobby-sunny-note{padding:2px 3px 0;color:#687465;font:7px/1.7 ui-monospace,monospace;letter-spacing:.13em;text-transform:uppercase;opacity:.78}
