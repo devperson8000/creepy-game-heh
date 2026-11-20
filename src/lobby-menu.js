@@ -103,7 +103,11 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=false,
   const multiplayer = button('', 'lobby-multiplayer', openMultiplayer);
   multiplayer.classList.add('lobby-mode-card');
   multiplayer.append(element('span', 'lobby-mode-number', '02 / SHARED DESCENT'), element('strong', '', 'Multiplayer'), element('span', 'lobby-mode-detail', '2–4 players · Private entry · Host approval'), element('span', 'lobby-mode-arrow'));
-  const sunnyNote = element('p', 'lobby-sunny-note', 'FIELD REPORT 08 // SUNNY CHEN CLAIMS THEY KNOW THE WAY OUT.');
+  const sunnyNote = element('div', 'lobby-sunny-note');
+  sunnyNote.append(element('span', 'lobby-sunny-copy', 'FIELD REPORT 08 // SUNNY CHEN CLAIMS THEY KNOW THE WAY OUT.'));
+  const sunnyOpen = element('a', 'lobby-sunny-open', 'OPEN SUNNY CHEN ↗');
+  sunnyOpen.href = '/sunnychen';
+  sunnyNote.append(sunnyOpen);
   options.append(solo, multiplayer, sunnyNote);
 
   const rightPanel = element('div', 'lobby-right-stack');
