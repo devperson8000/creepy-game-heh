@@ -1,16 +1,19 @@
 import {randomSource,shuffled,pathBetween} from './level.js';
-import {SECRET_ROOM_LAYOUT,SECRET_ROOM_BOUNDS} from './secret-entry.js';
+import {SECRET_ROOM_LAYOUT,SECRET_ROOM_BOUNDS,secretRoomProtectedCells} from './secret-entry.js';
 const directions=[[1,0],[-1,0],[0,1],[0,-1]];
+const protectedCells=new Set(secretRoomProtectedCells().map(c=>`${c.x},${c.z}`));
+// A carved passage between two maze nodes may never run through a cell that touches the hidden room.
+const crossesProtected=(a,b,steps)=>{for(let i=0;i<=steps;i++)if(protectedCells.has(`${a.x+(b.x-a.x)*i/steps},${a.z+(b.z-a.z)*i/steps}`))return true;return false;};
 export function createMazeLayout(seed,{playerCount=1}={}){
  const size=playerCount>=4?53:playerCount>=3?49:45,rng=randomSource(seed^0xA1102026),grid=Array.from({length:size},()=>Array(size).fill(0));
  const entrance={x:7,z:7},start={x:7,z:9},stack=[start];grid[start.z][start.x]=1;
  const inside=(x,z)=>x>=3&&z>=9&&x<size-3&&z<size-3;
- while(stack.length){const p=stack.at(-1),n=shuffled(directions,rng).map(([dx,dz])=>({x:p.x+dx*4,z:p.z+dz*4})).find(q=>inside(q.x,q.z)&&!grid[q.z][q.x]);
+ while(stack.length){const p=stack.at(-1),n=shuffled(directions,rng).map(([dx,dz])=>({x:p.x+dx*4,z:p.z+dz*4})).find(q=>inside(q.x,q.z)&&!grid[q.z][q.x]&&!crossesProtected(p,q,4));
   if(!n){stack.pop();continue;}for(let i=1;i<=4;i++)grid[p.z+(n.z-p.z)*i/4][p.x+(n.x-p.x)*i/4]=1;stack.push(n);
  }
  // Sparse loops provide chase escapes without turning the maze into open rooms.
  for(let z=9;z<size-3;z+=4)for(let x=3;x<size-3;x+=4)for(const [dx,dz]of [[1,0],[0,1]]){
-  if(!inside(x+dx*4,z+dz*4)||rng()>.075)continue;
+  if(!inside(x+dx*4,z+dz*4)||rng()>.075||crossesProtected({x,z},{x:x+dx*4,z:z+dz*4},4))continue;
   for(let i=1;i<4;i++)grid[z+dz*i][x+dx*i]=1;
  }
  for(let z=6;z<=9;z++)grid[z][7]=1;
@@ -18,7 +21,7 @@ export function createMazeLayout(seed,{playerCount=1}={}){
   for(let x=SECRET_ROOM_LAYOUT.interiorMinCellX;x<=SECRET_ROOM_LAYOUT.interiorMaxCellX;x++)grid[z][x]=1;
  }
  const adjacent=(x,z)=>directions.filter(([dx,dz])=>grid[z+dz]?.[x+dx]===1);
- function candidates(){const a=[];for(let z=8;z<size-2;z++)for(let x=2;x<size-2;x++)if(!grid[z][x]&&adjacent(x,z).length===1)a.push({x,z});return shuffled(a,rng);}
+ function candidates(){const a=[];for(let z=8;z<size-2;z++)for(let x=2;x<size-2;x++)if(!grid[z][x]&&adjacent(x,z).length===1&&!protectedCells.has(`${x},${z}`))a.push({x,z});return shuffled(a,rng);}
  const rooms=[],roomCount=playerCount>=4?23:playerCount>=3?20:17;
  for(const p of candidates()){
   if(rooms.length>=roomCount)break;if(adjacent(p.x,p.z).length!==1||rooms.some(r=>Math.hypot(r.x-p.x,r.z-p.z)<4))continue;

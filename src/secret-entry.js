@@ -53,6 +53,31 @@ export const SECRET_ENTRY = Object.freeze({
   holdSeconds: 0.82
 });
 
+// The concealing wall between the stair corridor and the hidden room is a solid
+// block, not a thin plane. It runs past the room on both sides so it buries
+// itself in the stair wall (north) and the maze wall block (south): there is
+// no slit to look through, from any angle.
+export const SECRET_ENTRY_SEAL = Object.freeze({
+  faceX: SECRET_ENTRY.wallX + 0.112,
+  thickness: 0.14,
+  minZ: SECRET_ROOM_BOUNDS.minZ - 0.24,
+  maxZ: SECRET_ROOM_BOUNDS.maxZ + 0.24,
+  minY: SECRET_ROOM_PLACEMENT.floorY - 0.06,
+  maxY: SECRET_ROOM_PLACEMENT.floorY + SECRET_ROOM_PLACEMENT.height + 0.06
+});
+
+// Maze cells orthogonally touching the hidden room (all but the east side,
+// which is the stair corridor and is closed by the seal above). They must
+// always be solid wall: never a corridor, closet or cabinet niche, otherwise
+// the back of the room shows through the maze.
+export function secretRoomProtectedCells() {
+  const { interiorMinCellX: x0, interiorMaxCellX: x1, minCellZ: z0, maxCellZ: z1 } = SECRET_ROOM_LAYOUT;
+  const cells = [];
+  for (let x = x0; x <= x1; x++) { cells.push({ x, z: z0 - 1 }); cells.push({ x, z: z1 + 1 }); }
+  for (let z = z0; z <= z1; z++) cells.push({ x: x0 - 1, z });
+  return cells;
+}
+
 // The secret Backrooms room must stay hidden until the player has crossed
 // the wall plane during the deliberate entry cinematic.
 export function hasCrossedSecretWall(x) {

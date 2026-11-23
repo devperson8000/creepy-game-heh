@@ -5,7 +5,7 @@ import {CELL,worldPoint,gridPoint,walkable,groundHeight as sampleGround,randomSo
 import {createMazeNavigator} from './maze-navigation.js';
 import {createProximityLighting} from './proximity-lighting.js';
 import {createWallNotes} from './wall-notes.js';
-import {WALL_INSCRIPTION_REVERSED,SECRET_ROOM_BOUNDS,SECRET_ROOM_PLACEMENT,SECRET_ROOM_LAYOUT,SECRET_ENTRY} from './secret-entry.js';
+import {WALL_INSCRIPTION_REVERSED,SECRET_ROOM_BOUNDS,SECRET_ROOM_PLACEMENT,SECRET_ROOM_LAYOUT,SECRET_ENTRY,SECRET_ENTRY_SEAL} from './secret-entry.js';
 
 export function createMazeWorld(run){
  const layout=run.layout,floor=layout.floorHeight,height=layout.ceilingHeight,size=layout.size;
@@ -43,14 +43,14 @@ export function createMazeWorld(run){
  slabWithOpening(floorMinX,floorMaxX,roofStart,roofEnd,roofHole,floor+height+.06,.12,concrete);
  // The stairwell-facing surface of the hidden room must look like the maze,
  // while the wallpaper remains visible from inside after the noclip entry.
- const sealWidth=SECRET_ROOM_PLACEMENT.half*2+.08,sealHeight=SECRET_ROOM_PLACEMENT.height+.12;
- const secretEntrySealGeometry=new THREE.PlaneGeometry(sealWidth,sealHeight);
- const sealUv=secretEntrySealGeometry.attributes.uv;
- for(let i=0;i<sealUv.count;i++)sealUv.setXY(i,sealUv.getX(i)*sealWidth/2.6,sealUv.getY(i)*sealHeight/2.6);
+ const seal=SECRET_ENTRY_SEAL,sealDepth=seal.maxZ-seal.minZ,sealHeight=seal.maxY-seal.minY;
+ const secretEntrySealGeometry=new THREE.BoxGeometry(seal.thickness,sealHeight,sealDepth);
+ // Wallpaper-free concrete tiled at the maze wall's scale on every face.
+ const sealUv=secretEntrySealGeometry.attributes.uv,faceSpans=[[sealDepth,sealHeight],[sealDepth,sealHeight],[seal.thickness,sealDepth],[seal.thickness,sealDepth],[seal.thickness,sealHeight],[seal.thickness,sealHeight]];
+ for(let i=0;i<sealUv.count;i++){const [u,v]=faceSpans[Math.floor(i/4)];sealUv.setXY(i,sealUv.getX(i)*u/2.6,sealUv.getY(i)*v/2.6);}
  sealUv.needsUpdate=true;
  const secretEntrySeal=new THREE.Mesh(secretEntrySealGeometry,concrete);
- secretEntrySeal.position.set(SECRET_ENTRY.wallX+.112,SECRET_ROOM_PLACEMENT.floorY+SECRET_ROOM_PLACEMENT.height/2,SECRET_ROOM_PLACEMENT.centerZ);
- secretEntrySeal.rotation.y=Math.PI/2;
+ secretEntrySeal.position.set(seal.faceX-seal.thickness/2,(seal.minY+seal.maxY)/2,(seal.minZ+seal.maxZ)/2);
  secretEntrySeal.name='secret-room-concealed-concrete-wall';
  secretEntrySeal.receiveShadow=true;
  scene.add(secretEntrySeal);rayMeshes.push(secretEntrySeal);
