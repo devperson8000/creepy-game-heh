@@ -7,8 +7,9 @@ on:
     paths:
       - '*.zip'
       - '**/*.zip'
-      - '*.[zZ][iI][pP]'
-      - '**/*.[zZ][iI][pP]'
+  release:
+    types:
+      - published
 
 permissions:
   contents: write
@@ -30,19 +31,46 @@ jobs:
           fetch-depth: 0
 
       - name: Check out the ZIP upload commit
+        if: github.event_name == 'push'
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.sha }}
           path: upload
           fetch-depth: 0
 
-      - name: Validate ZIP and stage full replacement
+      - name: Download the ZIP attached to the release
+        if: github.event_name == 'release'
+        working-directory: repo
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          mkdir -p ../incoming
+          gh release download "$RELEASE_TAG" --repo "$REPOSITORY" --pattern '*.zip' --dir ../incoming
+          mapfile -t release_zips < <(find ../incoming -maxdepth 1 -type f -iname '*.zip' -print)
+          if [ "${#release_zips[@]}" -ne 1 ]; then
+            echo "Attach exactly one .zip asset to each release; found ${#release_zips[@]}."
+            exit 1
+          fi
+          mv "${release_zips[0]}" ../incoming/game-upload.zip
+
+      - name: Validate ZIP and stage full replacement (branch upload)
+        if: github.event_name == 'push'
         working-directory: repo
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: >-
           python3 .github/scripts/replace_from_zip.py
           --upload-repo-root ../upload
+          --repo-root .
+
+      - name: Validate ZIP and stage full replacement (release asset)
+        if: github.event_name == 'release'
+        working-directory: repo
+        run: >-
+          python3 .github/scripts/replace_from_zip.py
+          --archive-path ../incoming/game-upload.zip
           --repo-root .
 
       - name: Commit replacement to main
