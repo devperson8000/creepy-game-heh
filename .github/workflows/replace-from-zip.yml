@@ -1,0 +1,59 @@
+name: Replace game from uploaded ZIP
+
+on:
+  push:
+    branches:
+      - zip-uploads
+    paths:
+      - '*.zip'
+      - '**/*.zip'
+      - '*.[zZ][iI][pP]'
+      - '**/*.[zZ][iI][pP]'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: creepy-game-zip-replacement
+  cancel-in-progress: false
+
+jobs:
+  replace:
+    name: Safely replace main from the ZIP
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the production branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+          path: repo
+          fetch-depth: 0
+
+      - name: Check out the ZIP upload commit
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.sha }}
+          path: upload
+          fetch-depth: 0
+
+      - name: Validate ZIP and stage full replacement
+        working-directory: repo
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: >-
+          python3 .github/scripts/replace_from_zip.py
+          --upload-repo-root ../upload
+          --repo-root .
+
+      - name: Commit replacement to main
+        working-directory: repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add --all
+          if git diff --cached --quiet; then
+            echo "The ZIP produced no repository changes; nothing to commit."
+            exit 1
+          fi
+          git commit -m "Replace game from uploaded ZIP"
+          git push origin HEAD:main
