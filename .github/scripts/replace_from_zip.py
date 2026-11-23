@@ -223,18 +223,25 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Replace a repository from one uploaded ZIP.")
     parser.add_argument("--upload-repo-root", default=".", help="Checkout containing the uploaded ZIP commit")
     parser.add_argument("--repo-root", default=".", help="Production repository checkout to replace")
+    parser.add_argument("--archive-path", help="Explicit ZIP path, used for GitHub Release assets")
     args = parser.parse_args()
 
     upload_root = Path(args.upload_repo_root).resolve()
     repo_root = Path(args.repo_root).resolve()
-    commit_sha = os.environ.get("GITHUB_SHA")
-    if not commit_sha:
-        print("GITHUB_SHA is required; run this script from the ZIP upload workflow.", file=sys.stderr)
-        return 2
     try:
-        archive_path = changed_zip_for_commit(upload_root, commit_sha)
-        relative_archive = archive_path.relative_to(upload_root)
-        print(f"Replacing the production repository from upload {relative_archive}")
+        if args.archive_path:
+            archive_path = Path(args.archive_path).resolve()
+            if not archive_path.is_file():
+                raise ValueError(f"Release ZIP not found: {archive_path}")
+            print("Replacing the production repository from a published release asset.")
+        else:
+            commit_sha = os.environ.get("GITHUB_SHA")
+            if not commit_sha:
+                raise ValueError("GITHUB_SHA is required for ZIP branch uploads.")
+            archive_path = changed_zip_for_commit(upload_root, commit_sha)
+            relative_archive = archive_path.relative_to(upload_root)
+            print(f"Replacing the production repository from upload {relative_archive}")
+
         count = replace_from_archive(archive_path, repo_root)
         print(f"Replacement staged: {count} files imported. Automation files were preserved.")
         return 0
