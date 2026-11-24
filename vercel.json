@@ -38,14 +38,6 @@
     {
       "source": "/secretroom/",
       "destination": "/index.html"
-    },
-    {
-      "source": "/sunnychen",
-      "destination": "/index.html"
-    },
-    {
-      "source": "/sunnychen/",
-      "destination": "/index.html"
     }
   ]
 }
