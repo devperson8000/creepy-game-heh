@@ -1,0 +1,10 @@
+.m2-gate{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:#050606;color:#e4e6dc;font-family:ui-monospace,Menlo,Consolas,monospace;text-align:center}
+.m2-gate>div{max-width:34rem;padding:2rem}
+.m2-gate small{letter-spacing:.24em;color:#8da995}
+.m2-gate h1{margin:.6rem 0 1rem;font-size:clamp(1.8rem,6vw,3rem);letter-spacing:.14em}
+.m2-gate p{font-size:1.1rem;letter-spacing:.12em;min-height:1.6em}
+.m2-gate button{margin:1rem .5rem 0;padding:.6rem 1.1rem;background:transparent;color:inherit;border:1px solid #8da995;letter-spacing:.14em;cursor:pointer}
+.m2-gate button:focus-visible,.m2-gate a:focus-visible{outline:2px solid #e4e6dc;outline-offset:3px}
+.m2-gate a{display:block;margin-top:1.4rem;color:#8da995;letter-spacing:.12em}
+body.m2-gated{background:#050606;overflow:hidden}
+.m2-enter[disabled]{opacity:.6;cursor:not-allowed}

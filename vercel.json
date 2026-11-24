@@ -32,11 +32,27 @@
       "destination": "/index.html"
     },
     {
+      "source": "/monochrome2/play/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/monochrome2/play",
+      "destination": "/index.html"
+    },
+    {
       "source": "/secretroom",
       "destination": "/index.html"
     },
     {
       "source": "/secretroom/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/testmonochrome2",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/testmonochrome2/",
       "destination": "/index.html"
     }
   ]

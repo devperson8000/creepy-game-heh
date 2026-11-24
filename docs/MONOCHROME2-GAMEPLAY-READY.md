@@ -42,3 +42,35 @@ The current cinematic collision audit lives in `src/monochrome2-collision.js`; g
 - The player's first objective and what the first encounter should teach.
 
 Keep these decisions open until the first playable slice is designed; do not change the current intro or the existing game modes to make the scaffold fit.
+
+---
+
+# Monochrome 2 — First build slice (Level 0)
+
+Route: `/monochrome2` (cinematic, unchanged) → **ENTER LEVEL 0** button on its title card → `/monochrome2/play` in the same page, no reload. `/monochrome2/play` can also be opened directly. It reuses the existing Level 0 game (`backrooms.js`) through a `variant:'monochrome2'` option; `/backrooms` behaves as before.
+
+## Release timer
+Gameplay is sealed until a timer opens. **The time is not decided yet**, so the gate stays sealed ("release time to be announced"). Set it without a code change via the `MONOCHROME2_RELEASE_AT` environment variable (ISO timestamp, e.g. `2026-12-05T20:00:00+11:00`) in Vercel, or edit `MONOCHROME2_RELEASE_AT` in `src/monochrome2-release-time.js`. The server clock decides (`/api/monochrome2-release`) and the client fails closed. Local `npm run dev` only: `?unlock=1` skips the timer. Like the existing map release, this gates the page, not the shipped bundle.
+
+## Entities
+`src/monochrome2-entities.js`. `monochrome` is live and wears the rebuilt metal-head body (scaled to 2.5 m to fit the 2.8 m ceiling) until a model is imported: set `MONOCHROME_SLOT.modelUrl` to a GLB path (a failed load falls back to the metal-head). `bacteria` stays reserved as Level 0 defined it (lower layer, awaiting its model): nothing is simulated or drawn for it. Player model: `BACKROOMS_PLAYER_MODEL` is still `null`.
+
+## Monochrome (all numbers in `src/monochrome2-tuning.js`)
+- Senses: footsteps (walk 12 m, sprint 30 m, crouch-walk 2.5 m), interactions, beam wobble (16 m), falls (32 m, urgent), microphone tiers in co-op. Each wall between sound and him multiplies reach by 0.62; the closed pitfall door counts as a wall. Sight: direct line only, 22 m standing, half crouched, all-round inside 3 m.
+- States: patrol → investigate the last heard point → chase → search after losing you.
+- Speed retune: Monochrome 1's 1.8 / 2.65 / 3.95 scaled by Level 0's sprint ratio: patrol 4.5, investigate 6.6, chase 9.8 vs walk 5.4 / sprint 9.2, rising to 10.6 with progress. Half speed on the beams.
+- Telegraph: positional servo whine and jaw clicks, audible to 34 m (sight is 22 m), louder/faster/higher as he nears, muffled by walls.
+- Catch: a hit downs the player (jumpscare, then floor view); a teammate revives with a 3 s hold of F; the round fails when the whole team is down (solo = team of one).
+
+## Harder ending
+Escalation tiers (ladder sections, key, door, exit door raise his speed, hearing and sight); longer objective holds; loud objectives, with the lit exit door acting as an alarm; each player can be revived only twice; a downed player bleeds out after 75 s (**my addition, not in the brief**: otherwise a downed teammate could stall the exit forever); the exit needs every player who is not lost.
+
+## Verification
+`npm test`: the 31 pre-existing Monochrome 1 / Halloween failures are unchanged; new tests in `tests/monochrome2-gameplay.test.js`. `npm run build` passes. Not yet checked in a real browser (none was available): rendering, audio, jumpscare, lobby flow and live co-op still need a playthrough.
+
+## Test route and flashlight build
+
+- Private playtesting is available at `/testmonochrome2`; it bypasses only the public release timer.
+- `/monochrome2/play` remains protected by the server-clock release gate for Wednesday 2 December 2026 at 9:00 AM AEDT.
+- The supplied flashlight GLB is shipped at `public/models/monochrome2/flashlight.glb`. Its housing is matte black and its translucent lens materials are preserved.
+- The lower-level flashlight pickup and first-person held view use this model. The spotlight originates at the lens, uses soft-edged falloff and shadow maps, and the switch uses a short mechanical click synthesized through Web Audio.

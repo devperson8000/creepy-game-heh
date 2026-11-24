@@ -1,4 +1,5 @@
 import * as T from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {createPitfallHouse} from './backrooms-house-view.js';
 import {PITFALLS as P,gridX,gridZ} from './backrooms-pitfalls.js';
 /** Top grid, shaft lining and lower route are generated from the same dimensions as collision. */
@@ -47,7 +48,8 @@ export function createPitfallView(world,round,{root,resources,mat,box,carpet,pap
  function arrow(x,z,angle){const group=new T.Group();group.position.set(x,P.floorY+.012,z);group.rotation.y=angle;root.add(group);box(.1,.012,.8,0,0,0,arrowMat,group);for(const side of [-1,1]){const arm=box(.075,.012,.4,side*.12,0,-.32,arrowMat,group);arm.rotation.y=side*.65;}}
  for(const [x,z,a]of [[62,-25,Math.PI/2],[54,-26,Math.PI/2],[46,-25,Math.PI/2],[39,-25,Math.PI/2],[34,-25,Math.PI/2],[30.5,-24.5,Math.PI/2],[26.5,-25,Math.PI/2],[34,-26.5,0],[34,-28.5,0]])arrow(x,z,a);
  label('←',.8,.55,43.5,P.floorY+1.5,-27,Math.PI);label('←',.7,.5,36.4,P.floorY+1.5,-23.12,0);
- const torch=new T.Group();torch.position.set(P.flashlight.x,P.floorY+.82,P.flashlight.z);root.add(torch);const barrel=new T.CylinderGeometry(.065,.05,.3,12);resources.add(barrel);const torchBody=new T.Mesh(barrel,steel);torchBody.rotation.x=Math.PI/2;torch.add(torchBody);box(.14,.14,.04,0,0,-.17,paper,torch);
+ const torch=new T.Group();torch.name='black-flashlight-pickup';torch.position.set(P.flashlight.x,P.floorY+.82,P.flashlight.z);torch.rotation.y=-.28;root.add(torch);const barrel=new T.CylinderGeometry(.065,.05,.3,12);resources.add(barrel);const fallback=new T.Mesh(barrel,steel);fallback.rotation.x=Math.PI/2;torch.add(fallback);const fallbackLens=box(.14,.14,.04,0,0,-.17,paper,torch);let flashlightDisposed=false;
+ new GLTFLoader().load('/models/monochrome2/flashlight.glb',gltf=>{const model=gltf.scene;if(flashlightDisposed){model.traverse(o=>{if(o.isMesh){o.geometry.dispose();for(const m of [].concat(o.material??[]))m.dispose();}});return;}model.rotation.x=Math.PI/2;model.scale.set(.075,.11,.075);model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;resources.add(o.geometry);for(const m of [].concat(o.material??[])){resources.add(m);for(const key of ['map','normalMap','roughnessMap','metalnessMap','emissiveMap'])if(m[key])resources.add(m[key]);}}});torch.add(model);fallback.visible=false;fallbackLens.visible=false;},undefined,()=>{});
  function vent(x,y,z,rotation=0){const group=new T.Group();group.name='pitfall-exit-vent';group.position.set(x,y,z);group.rotation.y=rotation;root.add(group);box(.18,1.1,1.4,0,0,0,dark,group);for(let yy=-.45;yy<.5;yy+=.12)box(.2,.035,1.3,-.06,yy,0,steel,group);}
  vent(P.altVent.x,-3.3,P.altVent.z);vent(P.upperVent.x,1.1,P.upperVent.z);
  const ropeItem=new T.Group();ropeItem.position.set(P.rope.x,.06,P.rope.z);root.add(ropeItem);const ropeMat=mat(0xb5a276),torus=new T.TorusGeometry(.18,.018,6,30);resources.add(torus);for(let i=0;i<5;i++){const ring=new T.Mesh(torus,ropeMat);ring.rotation.x=Math.PI/2;ring.position.y=i*.02;ropeItem.add(ring);}
@@ -55,7 +57,7 @@ export function createPitfallView(world,round,{root,resources,mat,box,carpet,pap
  for(let x=44.4;x<73;x+=4.8)for(let z=-27.6;z<-3;z+=4.8)world.registerLight?.({x,z,y:P.ceilingY-.25,base:1});
  for(const [x,z]of [[48,-25],[67,-6],[55,-11],[62,-23],[38,-25]])world.registerLight?.({x,z,y:P.floorY+2.5,base:.25});
  let doorAngle=0;
- return {update(dt){upperDoorAngle+=((round.upperExitOpen?-Math.PI/2:.35)-upperDoorAngle)*(1-Math.exp(-dt*5));upperDoor.rotation.y=upperDoorAngle;ropeItem.visible=!round.hasRope;torch.visible=!round.hasTorch;doorAngle+=( (round.altDoorOpen?Math.PI/2:0)-doorAngle)*(1-Math.exp(-dt*5));lowDoor.rotation.y=doorAngle;
+ return {dispose(){flashlightDisposed=true;},update(dt){upperDoorAngle+=((round.upperExitOpen?-Math.PI/2:.35)-upperDoorAngle)*(1-Math.exp(-dt*5));upperDoor.rotation.y=upperDoorAngle;ropeItem.visible=!round.hasRope;torch.visible=!round.hasTorch;doorAngle+=( (round.altDoorOpen?Math.PI/2:0)-doorAngle)*(1-Math.exp(-dt*5));lowDoor.rotation.y=doorAngle;
   const ids=new Set();for(const r of round.ropes??[]){ids.add(r.playerId);if(!ropeLines.has(r.playerId)){const geometry=new T.BufferGeometry().setFromPoints([new T.Vector3(r.anchor.x,.08,r.anchor.z),new T.Vector3(r.bottom.x,-.15,r.bottom.z),new T.Vector3(r.bottom.x,P.floorY+.15,r.bottom.z)]);resources.add(geometry);const line=new T.Line(geometry,lineMat);root.add(line);ropeLines.set(r.playerId,line);}
    const line=ropeLines.get(r.playerId),a=line.geometry.attributes.position;a.setXYZ(0,r.anchor.x,.08,r.anchor.z);a.setXYZ(1,r.bottom.x,-.15,r.bottom.z);a.setXYZ(2,r.bottom.x,P.floorY+.15,r.bottom.z);a.needsUpdate=true;line.geometry.computeBoundingSphere();}
   for(const [id,line]of ropeLines)if(!ids.has(id)){line.removeFromParent();resources.delete(line.geometry);line.geometry.dispose();ropeLines.delete(id);}

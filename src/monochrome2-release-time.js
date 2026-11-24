@@ -1,6 +1,6 @@
 /**
- * Monochrome 2 Level 0 opens Wednesday 2 December 2026 at 9:00 AM
- * Sydney time (AEDT, UTC+11). The API supplies the authoritative server clock.
+ * Public Monochrome 2 gameplay opens Wednesday 2 December 2026 at 9:00 AM
+ * Sydney time (AEDT, UTC+11). The server clock is authoritative.
  */
 export const MONOCHROME2_RELEASE_AT=Date.parse('2026-12-02T09:00:00+11:00');
 export const MONOCHROME2_RELEASE_VERSION='monochrome2-level0-2026-12-02-0900';
