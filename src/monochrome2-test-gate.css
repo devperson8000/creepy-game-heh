@@ -1,0 +1,25 @@
+body.m2-test-gate-open{overflow:hidden!important;background:#050706!important}
+body.m2-test-gate-open #scene,
+body.m2-test-gate-open>.grain,
+body.m2-test-gate-open>.vignette,
+body.m2-test-gate-open>#crosshair,
+body.m2-test-gate-open>.hud,
+body.m2-test-gate-open>.touch-move,
+body.m2-test-gate-open>#error{visibility:hidden!important}
+.m2-test-gate{position:fixed;z-index:100000;inset:0;display:grid;place-items:center;overflow:auto;padding:28px;background:radial-gradient(ellipse at 50% 43%,#192019 0%,#090d0a 48%,#030504 100%);color:#e8ece3;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.m2-test-gate::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.28;background:repeating-linear-gradient(0deg,transparent 0 3px,#fff0 3px 4px),radial-gradient(ellipse at center,transparent 25%,#000 100%)}
+.m2-test-gate-panel{position:relative;width:min(100%,430px);padding:38px 36px 30px;border:1px solid #9daa8738;background:linear-gradient(145deg,#121a14ed,#090e0bed);box-shadow:0 28px 100px #0009,inset 0 1px #ffffff0a}
+.m2-test-kicker{margin:0 0 32px;color:#a9b69b;font-size:9px;letter-spacing:.18em}
+.m2-test-gate-panel h1{margin:0;color:#edf0e8;font:500 clamp(30px,7vw,42px)/1 Georgia,serif;letter-spacing:.04em}
+.m2-test-description{margin:16px 0 28px;color:#9aa494;font:12px/1.8 system-ui,sans-serif}
+.m2-test-form{display:grid;gap:10px}
+.m2-test-form label{color:#9ca990;font-size:9px;letter-spacing:.16em}
+.m2-test-form input{width:100%;box-sizing:border-box;padding:14px 13px;border:1px solid #8b987252;border-radius:2px;outline:none;background:#050906;color:#edf1e8;font:15px/1.4 ui-monospace,monospace;letter-spacing:.12em}
+.m2-test-form input:focus{border-color:#b8c7a7a0;box-shadow:0 0 0 2px #b8c7a71a}
+.m2-test-form button{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-top:7px;padding:14px 15px;border:1px solid #d7ddc8;background:#cbd3bf;color:#10160f;font:700 9px/1.4 ui-monospace,monospace;letter-spacing:.12em;cursor:pointer}
+.m2-test-form button:hover:enabled{background:#e1e7d7}
+.m2-test-form button:disabled{opacity:.55;cursor:wait}
+.m2-test-status{min-height:18px;margin:16px 0 0;color:#9ba993;font:10px/1.7 ui-monospace,monospace}
+.m2-test-status.is-error{color:#d6a18e}
+.m2-test-foot{margin:30px 0 0;padding-top:14px;border-top:1px solid #ffffff12;color:#687466;font-size:8px;letter-spacing:.14em}
+@media(max-width:480px){.m2-test-gate-panel{padding:30px 23px 24px}.m2-test-kicker{font-size:8px}}
