@@ -14,17 +14,6 @@ export const MONOCHROME2_DIALOGUE=[
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 
-/**
- * Speech is fitted to each cue's window. A typical voice speaks about 158 words a minute at rate 1, and the
- * lines are longer than their windows at that pace, so they used to pile up in the browser's queue and arrive
- * later and later. Faster delivery (never past maxRate), asked for slightly early (lead), keeps them on cue.
- */
-export const MONOCHROME2_SPEECH=Object.freeze({wpm:158,minRate:.95,maxRate:1.3,lead:.3});
-export function monochrome2SpeechRate(cue){
- const words=String(cue?.text??'').trim().split(/\s+/).filter(Boolean).length,span=Math.max(1.4,(Number.isFinite(cue?.end)?cue.end:cue.at+3)-cue.at-.1);
- const needed=(words*60/MONOCHROME2_SPEECH.wpm+.25)/span;
- return clamp(Math.max(Number.isFinite(cue?.rate)?cue.rate:.97,needed),MONOCHROME2_SPEECH.minRate,MONOCHROME2_SPEECH.maxRate);
-}
 // A fallback display duration for browsers that suppress embedded speech events.
 export function monochrome2DialogueDuration(cue){
  const words=String(cue?.text??'').trim().split(/\s+/).filter(Boolean).length;

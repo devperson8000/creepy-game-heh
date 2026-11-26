@@ -228,33 +228,3 @@ test('dialogue playback queues every line and lets each utterance finish natural
  assert.equal(updateSource.includes('narrationEpoch++'),false,'a later cue must not invalidate earlier speech events');
  assert.equal(source.includes('subtitleTimers'),false,'the fixed early caption timer has been removed');
 });
-
-import {MONOCHROME2_SPEECH,monochrome2SpeechRate} from '../src/monochrome2-intro-timeline.js';
-
-/** A voice speaking queued lines one after another: how far behind its cue does each line start? */
-function lagBehindCues(rateFor){
- let free=0,worst=0;
- for(const cue of MONOCHROME2_DIALOGUE){
-  const words=cue.text.trim().split(/\s+/).length,spoken=words*60/MONOCHROME2_SPEECH.wpm/rateFor(cue)+.25;
-  const asked=cue.at-MONOCHROME2_SPEECH.lead,start=Math.max(asked,free);worst=Math.max(worst,start-asked);free=start+spoken;
- }
- return worst;
-}
-
-test('dialogue is spoken at a rate that fits each cue window and stays within what a voice can do',()=>{
- for(const cue of MONOCHROME2_DIALOGUE){
-  const rate=monochrome2SpeechRate(cue);
-  assert.ok(rate>=MONOCHROME2_SPEECH.minRate&&rate<=MONOCHROME2_SPEECH.maxRate,`${cue.id}: rate ${rate.toFixed(2)}`);
- }
-});
-
-test('queued dialogue no longer drifts behind the picture (it used to fall seconds behind with ordinary voices)',()=>{
- const before=lagBehindCues(cue=>cue.rate??.97),after=lagBehindCues(monochrome2SpeechRate);
- assert.ok(before>1.2,'the old pace really did pile lines up, even for a fast voice: '+before.toFixed(1)+' s');
- assert.ok(after<.8,'lines now start within a beat of their cue: '+after.toFixed(2)+' s');
-});
-
-test('the lines can be asked for slightly early so the first word lands on the cue',()=>{
- assert.ok(MONOCHROME2_SPEECH.lead>0&&MONOCHROME2_SPEECH.lead<=.5);
- for(const cue of MONOCHROME2_DIALOGUE)assert.ok(cue.at-MONOCHROME2_SPEECH.lead>=0,cue.id+' cannot be asked for before the film starts');
-});

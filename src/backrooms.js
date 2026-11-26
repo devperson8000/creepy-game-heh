@@ -37,6 +37,7 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
  const el=s=>root.querySelector(s),on=(target,event,fn,options)=>{target.addEventListener(event,fn,options);listeners.push(()=>target.removeEventListener(event,fn,options));};
  const m2layer=m2?createMonochrome2Layer({root,reduced:()=>reduced.matches}):null;m2layer?.copy();
  const survivor=createBackroomsPlayer(world.scene,{url:BACKROOMS_PLAYER_MODEL,onError:()=>{el('.br-toast').textContent='The hazmat suit could not load. Reload to try again.';}});
+ const beam=new T.SpotLight(0xffedbd,28,24,.42,.65,1.5),beamTarget=new T.Object3D();world.scene.add(beam,beamTarget);
  function spawnRigTestPlayer(){
   if(!rigTestEnabled||testPlayer)return;
   const sideX=Math.cos(mainYaw),sideZ=-Math.sin(mainYaw);
@@ -70,7 +71,7 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
   on(el('[data-action="spawn-rig-player"]'),'click',spawnRigTestPlayer);
   on(el('[data-action="switch-rig-control"]'),'click',switchRigControl);
  }
- const beam=new T.SpotLight(0xffedbd,28,24,.42,.65,1.5),beamTarget=new T.Object3D();world.scene.add(beam,beamTarget);beam.target=beamTarget;
+  beam.target=beamTarget;
  el('[data-action="view"]').hidden=survivor.pending;el('[data-action="torch"]').setAttribute('aria-pressed',String(torchOn));
  if(classic){el('[data-action="distract"]').hidden=true;el('.br-help').innerHTML='WASD MOVE · SHIFT RUN · F INTERACT<br>Q / E BALANCE · CTRL CROUCH · LMB TORCH';}
  const encounter=m2?createMonochrome2Encounter(world,{round:()=>round,actorFactory:createMonochrome2Actor,bacteriaActorFactory:createBacteriaActor,audioFactory:()=>createMonochrome2Audio({onError:error=>console.warn('Monochrome 2 audio',error)}),onNotice:text=>{el('.br-toast').textContent=text;}}):createBackroomsEncounter(world);
@@ -113,7 +114,7 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
  function resize(){const w=container.clientWidth,h=container.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();post.resize(w,h);}on(window,'resize',resize);resize();
  camera.rotation.order='YXZ';let previous=performance.now();
  renderer.setAnimationLoop(()=>{const now=performance.now(),dt=Math.min(.1,(now-previous)/1000);previous=now;if(lobby)return;let focusTarget=null;
-  if(rigTestEnabled){if(rigTestActive){testYaw=yaw;testPitch=pitch;}else{mainYaw=yaw;mainPitch=pitch;mainThirdPerson=thirdPerson;}}
+  if(rigTestEnabled){if(rigTestActive){testYaw=yaw;testPitch=pitch;}else{mainYaw=yaw;mainPitch=pitch;}}
   player.speed=0;player.sprint=false;
   if(net){const previousTorch=round.hasTorch,prevX=player.x,prevZ=player.z,typing=!!document.activeElement?.closest('.br-team-chat');
    net.step(dt,{forward:Number(keys.has('KeyW')||keys.has('ArrowUp'))-Number(keys.has('KeyS')||keys.has('ArrowDown')),right:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),yaw,pitch,lean:Number(keys.has('KeyE'))-Number(keys.has('KeyQ')),crouch:keys.has('ControlLeft')||keys.has('ControlRight'),sprint:keys.has('ShiftLeft')||keys.has('ShiftRight'),torch:torchOn,paused:paused||typing||!net.connected,...(m2?{voiceLevel:client.voice?.noiseLevel??0,voiceSequence:++voiceSeq}:{})});

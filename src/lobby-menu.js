@@ -110,7 +110,7 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=false,
   comingSoon.setAttribute('aria-label', 'Upcoming Monochrome update');
   const signalMeta = element('div', 'lobby-coming-soon-meta');
   signalMeta.append(
-   element('span', 'lobby-coming-soon-kicker', 'MONOCHROME II / INCOMING SIGNAL')
+   element('span', 'lobby-coming-soon-kicker', 'MONOCHROME 2 / RELEASE SCHEDULE')
   );
   const signalBars = element('span', 'lobby-coming-soon-signal');
   signalBars.setAttribute('aria-hidden', 'true');
@@ -123,8 +123,8 @@ export function createLobbyMenu({onHalloweenTest=()=>{},showHalloweenTest=false,
   );
   comingSoon.append(
    signalMeta,
-   element('h2', '', 'The signal is changing.'),
-   element('p', 'lobby-coming-soon-copy', 'Something is coming soon.'),
+   element('h2', '', 'Monochrome 2 is coming.'),
+   element('p', 'lobby-coming-soon-copy', 'WEDNESDAY 02 DECEMBER 2026 · 9:00 AM SYDNEY (AEDT)'),
    signalFooter
   );
   rightPanel.append(options, comingSoon);
