@@ -45,7 +45,7 @@ export const MONSTER={
  */
 export const BACTERIA={
  /** Seconds of play before it first appears (the documented three minutes). */
- spawnDelay:180,
+ spawnDelay:120,
  /** It starts this far from every player and out of their line of sight, as close as it can manage. */
  spawnMinDistance:18,relocateMinDistance:26,
  /** Knocks it makes on arrival (to lure players off route), and the gap between them. */
