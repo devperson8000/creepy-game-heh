@@ -16,6 +16,14 @@
   ],
   "rewrites": [
     {
+      "source": "/testmonochrome2",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/testmonochrome2/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/backrooms",
       "destination": "/index.html"
     },
