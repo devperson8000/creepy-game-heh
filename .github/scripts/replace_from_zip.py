@@ -74,8 +74,8 @@ def _safe_member_path(raw_name: str) -> PurePosixPath:
         raise ValueError(f"Unsafe ZIP path: {raw_name!r}")
     if ":" in parts[0]:
         raise ValueError(f"Unsafe ZIP path: {raw_name!r}")
-    if any(part in {".git", ".github"} for part in parts):
-        raise ValueError("ZIP archives cannot contain .git or .github; automation is protected.")
+    if ".git" in parts:
+        raise ValueError("ZIP archives cannot contain a .git directory.")
     return path
 
 
@@ -209,12 +209,17 @@ def replace_from_archive(archive_path: Path, repo_root: Path) -> int:
         _validate_project(extracted_root)
         _clear_repo_except_automation(repo_root)
 
-        for item in extracted_root.iterdir():
-            destination = repo_root / item.name
-            if item.is_dir():
-                shutil.copytree(item, destination)
-            else:
-                shutil.copy2(item, destination)
+        # Restore the ZIP's project files, including its own .github content, while
+        # keeping this importer and its workflow intact so future ZIPs still work.
+        for source in extracted_root.rglob("*"):
+            if not source.is_file():
+                continue
+            relative = source.relative_to(extracted_root)
+            if relative.as_posix() in PROTECTED_FILES:
+                continue
+            destination = repo_root / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, destination)
 
     return extracted_count
 
