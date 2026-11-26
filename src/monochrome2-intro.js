@@ -4,7 +4,7 @@ import {loadPlayerAvatarAsset,createPlayerAvatar} from './player-avatar.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createCreature,applyRunning} from './creature.js';
 import {MONOCHROME2_SHELVES} from './monochrome2-collision.js';
-import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2DialogueDuration,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
+import {MONOCHROME2_DIALOGUE,MONOCHROME2_DURATION,sampleMonochrome2,sampleMonochrome2Actors,monochrome2CrackVisibility,monochrome2FootPlantOffset,monochrome2DialogueDuration,MONOCHROME2_SPEECH,monochrome2SpeechRate,monochrome2NoclipCueGain,monochrome2ShopDoorOpen,monochrome2BackroomsBackgroundFlash,MONOCHROME2_STAIR_OPENING} from './monochrome2-intro-timeline.js';
 import './monochrome2-intro.css';
 
 function createMonochrome2Runtime({embedded=false,renderer:providedRenderer=null}={}){
@@ -472,8 +472,10 @@ function refreshVoices(){
  const score=(voice,patterns)=>{
   const name=voice.name.toLowerCase(),lang=voice.lang.toLowerCase();
   let value=/en[-_]au/.test(lang)?34:/en[-_]gb/.test(lang)?27:/en[-_]us/.test(lang)?22:10;
-  if(/natural|neural|premium|enhanced|studio|online/i.test(name))value+=42;
-  if(!voice.localService)value+=5;
+  // Local voices speak at once. Cloud/"online" voices wait on the network, which is what made the dialogue arrive late.
+  if(voice.localService)value+=36;else value-=30;
+  if(/natural|neural|premium|enhanced|studio/i.test(name)&&voice.localService)value+=18;
+  if(/online|cloud/i.test(name))value-=40;
   if(/compact|robot|novelty|whisper/i.test(name))value-=24;
   if(patterns.some(pattern=>pattern.test(name)))value+=31;
   if(used.has(voice.name))value-=50;
@@ -496,9 +498,13 @@ function unlockSpeech(){
   if(!speechPrimed){
    // Prime speech from an actual key/pointer gesture in the TV room. Zero
    // volume keeps the unlock utterance silent while enabling later dialogue.
-   const primer=new SpeechSynthesisUtterance(' ');
-   primer.lang='en-AU';primer.volume=0;primer.rate=10;
-   synth.speak(primer);
+   const primed=new Set();
+   for(const speaker of ['lead','friend1','friend2']){
+    const voice=voiceChoices.get(speaker);if(voice&&primed.has(voice.name))continue;if(voice)primed.add(voice.name);
+    const primer=new SpeechSynthesisUtterance(' ');
+    if(voice)primer.voice=voice;primer.lang=voice?.lang??'en-AU';primer.volume=0;primer.rate=10;
+    synth.speak(primer);
+   }
    speechPrimed=true;
   }
   return true;
@@ -507,6 +513,8 @@ function unlockSpeech(){
   return false;
  }
 }
+const SPEECH_LEAD=MONOCHROME2_SPEECH.lead;
+const fitRate=monochrome2SpeechRate;
 function say(cue,windowState){
  const synth=window.speechSynthesis;
  if(muted||!synth||!('SpeechSynthesisUtterance'in window)){
@@ -519,7 +527,7 @@ function say(cue,windowState){
  const utterance=new SpeechSynthesisUtterance(cue.text),voice=voiceChoices.get(cue.voice);
  if(voice)utterance.voice=voice;
  utterance.lang=voice?.lang??'en-AU';
- utterance.rate=THREE.MathUtils.clamp(cue.rate??.97,.92,1.06);
+ utterance.rate=fitRate(cue);
  utterance.pitch=THREE.MathUtils.clamp(cue.pitch??1,.96,1.04);
  utterance.volume=1;
  utterance.onstart=()=>{
@@ -543,7 +551,8 @@ function say(cue,windowState){
  try{
   // Queue the next sentence; do not cancel the sentence already being spoken.
   synth.resume?.();
-  synth.speak(utterance);
+  // Chrome can swallow a speak() issued in the same tick as a cancel(); one short tick avoids that.
+  if(windowState.afterCancel)window.setTimeout(()=>{if(epoch===narrationEpoch&&!muted)synth.speak(utterance);},40);else synth.speak(utterance);
  }catch(error){
   windowState.failed=true;
   console.warn('MONOCHROME 2 dialogue could not be queued:',error);
@@ -552,13 +561,19 @@ function say(cue,windowState){
 function updateNarration(time){
  for(const cue of MONOCHROME2_DIALOGUE){
   const key='voice:'+cue.id;
-  if(time>=cue.at&&!shotSounds.has(key)){
+  // Ask for the line a moment early: even a local voice needs a beat before the first word.
+  if(time>=cue.at-SPEECH_LEAD&&!shotSounds.has(key)){
    shotSounds.add(key);
    const start=Math.max(cue.at,dialogueScheduleCursor);
    const end=start+monochrome2DialogueDuration(cue);
-   const windowState={cue,start,end,started:false,ended:false,failed:false};
+   const windowState={cue,start,end,started:false,ended:false,failed:false,afterCancel:false};
    dialogueSchedule.set(cue.id,windowState);
    dialogueScheduleCursor=end;
+   // Never queue behind a line that has overrun its window: cut it, so the dialogue cannot drift further behind the picture.
+   const synth=window.speechSynthesis,previous=activeSpeechCue?dialogueSchedule.get(activeSpeechCue.id):null;
+   if(synth&&(synth.speaking||synth.pending)&&previous&&!previous.ended&&time>(previous.cue.end??previous.end)+.35){
+    synth.cancel();clearSubtitle(previous.cue);previous.ended=true;windowState.afterCancel=true;
+   }
    say(cue,windowState);
   }
  }
@@ -716,6 +731,7 @@ const ready=loadPlayerAvatarAsset().then(asset=>{
   createPlayerAvatar(asset,{id:'monochrome2-jamie',name:'JAMIE',slot:2})
  );
  actors.forEach(actor=>scene.add(actor.root));
+ warmUp();
  startButton.disabled=false;startButton.textContent='PLAY CINEMATIC';
 }).catch(error=>{
  if(embedded)throw error;
@@ -741,6 +757,26 @@ function renderEmbedded(time){
  }finally{
   renderer.setRenderTarget(previousTarget);renderer.setViewport(previousViewport);renderer.setScissor(previousScissor);
   renderer.setScissorTest(previousScissorTest);renderer.autoClear=previousAutoClear;
+ }
+}
+/**
+ * Level Zero's lights, its shadow-casting lamps and its textures first appear halfway through the film, and
+ * each one changes what every material needs, which froze the picture at the noclip. Draw everything once,
+ * into one pixel, before the film starts, so the first real frame there costs nothing extra.
+ */
+function warmUp(){
+ const visibility=[backroomsGroup.visible,monochrome.root.visible],culled=[];
+ backroomsGroup.visible=true;monochrome.root.visible=true;
+ for(const group of [backroomsGroup,monochrome.root,...actors.map(actor=>actor.root)])group.traverse(object=>{if(object.isMesh&&object.frustumCulled){object.frustumCulled=false;culled.push(object);}});
+ const previousTarget=renderer.getRenderTarget(),viewport=renderer.getViewport(new THREE.Vector4()),scissor=renderer.getScissor(new THREE.Vector4()),scissorTest=renderer.getScissorTest(),autoClear=renderer.autoClear;
+ try{
+  renderer.setRenderTarget(embedded?embeddedTarget:null);renderer.setViewport(0,0,1,1);renderer.setScissor(0,0,1,1);renderer.setScissorTest(true);renderer.autoClear=true;
+  renderer.render(scene,camera);
+ }catch(error){console.warn('MONOCHROME 2 warm-up skipped:',error);}
+ finally{
+  renderer.setRenderTarget(previousTarget);renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);renderer.autoClear=autoClear;
+  for(const object of culled)object.frustumCulled=true;
+  backroomsGroup.visible=visibility[0];monochrome.root.visible=visibility[1];
  }
 }
 function play(){if(disposed)return;reset();}

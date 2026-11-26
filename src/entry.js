@@ -3,10 +3,7 @@ import {isSecretRoomPath} from './secretroom-route.js';
 import {isSunnyChenPath} from './sunnychen-route.js';
 import {isMonochrome2PlayPath} from './monochrome2-route.js';
 const isMonochrome2Path=location.pathname==='/monochrome2'||location.pathname==='/monochrome2/';
-const isMonochrome2TestPath=location.pathname==='/testmonochrome2'||location.pathname==='/testmonochrome2/';
-if(isMonochrome2TestPath){
- void import('./monochrome2-test-gate.js').then(({startMonochrome2TestGate})=>startMonochrome2TestGate()).catch(error=>{console.error(error);const message=document.querySelector('#error');if(message){message.hidden=false;message.style.display='block';message.textContent='The Monochrome 2 test gate could not load.';}});
-}else if(isSunnyChenPath(location.pathname)){
+if(isSunnyChenPath(location.pathname)){
  void import('./sunnychen.js').then(({startSunnyChen})=>{window.sunnyChen=startSunnyChen();}).catch(error=>{console.error(error);const message=document.querySelector('#error');if(message){message.hidden=false;message.style.display='block';message.textContent='The Sunny Chen page could not load.';}});
 }else if(isSecretRoomPath(location.pathname)){
  void import('./secretroom.js').then(({startSecretRoom})=>{const autoEnter=new URLSearchParams(location.search).get('entry')==='1';window.secretroom=startSecretRoom(document.querySelector('#scene'),{autostart:autoEnter});}).catch(error=>{console.error(error);const message=document.querySelector('#error');if(message){message.hidden=false;message.style.display='block';message.textContent='The secret room could not start. Please enable WebGL and reload.';}});

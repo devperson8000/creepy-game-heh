@@ -21,57 +21,21 @@ import {createMonochrome2Layer,MONOCHROME2_COPY} from './monochrome2-layer.js';
 import {MONOCHROME2_VARIANT} from './monochrome2-team.js';
 import './backrooms.css';
 
-export function startBackrooms(container,{client=null,session=null,variant=null,rigTest=false}={}){
- const m2=variant===MONOCHROME2_VARIANT,rigTestEnabled=m2&&rigTest&&!client&&!session;let voiceSeq=0;
+export function startBackrooms(container,{client=null,session=null,variant=null}={}){
+ const m2=variant===MONOCHROME2_VARIANT;let voiceSeq=0;
  document.title=m2?'MONOCHROME 2 — Level 0':'The Backrooms — Level 0';container.setAttribute('aria-label',m2?'Monochrome 2: hunted in Level 0':'Explore Backrooms Level 0');
  const renderer=new T.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.outputColorSpace=T.SRGBColorSpace;
  renderer.domElement.tabIndex=0;container.append(renderer.domElement);
  const classic=true;
- const world=createBackroomsWorld(),round=createBackroomsRound(),objectives=createBackroomsObjectives(world,round),camera=new T.PerspectiveCamera(68,1,.06,120),post=createBackroomsPost(renderer),primaryPlayer={...world.map.spawn,y:0};
- let player=primaryPlayer;
+ const world=createBackroomsWorld(),round=createBackroomsRound(),objectives=createBackroomsObjectives(world,round),camera=new T.PerspectiveCamera(68,1,.06,120),post=createBackroomsPost(renderer),player={...world.map.spawn,y:0};
  round.hasTorch=!classic;
  let yaw=player.yaw,pitch=0,paused=true,started=false,vhs=true,muted=false,disposed=false,drag=null,time=0,distance=0,context=null,master=null,captured=false,captureElapsed=0,thirdPerson=false,torchOn=!classic,hold=0,holdId=null,latched=false,caughtBy=m2?'Monochrome':'Bacteria',scareLeft=0,lobby=null,wonShown=false,interactionAudio=null,lastInstalled=0;const heardPickups=new Set();
- let mainYaw=yaw,mainPitch=pitch,mainThirdPerson=thirdPerson,testYaw=yaw,testPitch=pitch,rigTestActive=false,testPlayer=null,testSurvivor=null;
  const reduced=matchMedia('(prefers-reduced-motion: reduce)'),keys=new Set(),listeners=[],audioNodes=[];
- const root=document.createElement('div');root.className='br-ui';root.innerHTML=`<div class="br-top"><div><div class="br-rec"><i class="br-dot"></i>REC <span>●</span> TAPE 001</div><small>UNIDENTIFIED LOCATION / LEVEL 0</small></div><div class="br-tools"><button data-action="view">View · V</button><button data-action="torch" aria-pressed="true">Torch · LMB</button><button data-action="vhs" aria-pressed="true">VHS on</button><button data-action="sound" aria-pressed="true">Sound on</button><button data-action="pause">Pause</button></div></div>${rigTestEnabled?'<div class="br-rig-test-controls"><button type="button" data-action="spawn-rig-player">Spawn second player</button><button type="button" data-action="switch-rig-control" hidden>Control Player 2</button><small>WASD · MOUSE LOOK · SHIFT RUN · CTRL CROUCH</small></div>':''}<div class="br-aim"></div><div class="br-bottom"><div class="br-timestamp">JUL. 04 1991<br><span data-clock>00:00:00</span> <span style="opacity:.5">SP</span></div><div class="br-help">WASD MOVE · SHIFT RUN · F INTERACT<br>Q / E BALANCE · CTRL CROUCH · LMB TORCH</div></div><div class="br-center"><section class="br-panel" role="dialog" aria-modal="false" aria-labelledby="br-title"><div class="br-eyebrow">FOUND FOOTAGE / 001</div><h1 id="br-title">The Backrooms<span>LEVEL 0 — EXPLORATION BUILD</span></h1><p>The lights are still on.<br>Find four wooden ladder sections across the rooms.<br>Fit them, climb to the key, and cross the pitfalls.<br>Follow the recovery arrows if you fall.</p><button class="br-start" data-action="start">Enter the Backrooms <span>↗</span></button><button data-action="multiplayer">Multiplayer</button><button data-action="leave-game" hidden>Leave game</button><footer><span>HEADPHONES RECOMMENDED</span><a href="/">Original game</a></footer></section></div><div class="br-touch" aria-label="Movement"><button data-key="KeyW" aria-label="Forward">↑</button><button data-key="KeyA" aria-label="Left">←</button><button data-key="KeyS" aria-label="Backward">↓</button><button data-key="KeyD" aria-label="Right">→</button><button data-key="ShiftLeft">Hold to run</button><button data-action="distract">Throw scrap · Q</button><button data-key="KeyQ">Lean left · Q</button><button data-key="KeyE">Lean right · E</button><button data-key="ControlLeft">Crouch · Ctrl</button><button data-key="KeyF">Hold to interact · F</button></div><div class="br-objective"><span>LEVEL 0 / ESCAPE ROUTE</span><strong data-objective>0 / 4 LADDER PARTS</strong><small>Search the rooms for four wooden ladder sections.</small></div><div class="br-interaction" hidden><span data-target></span><div><i></i></div></div><div class="br-balance" hidden role="meter" aria-label="Walkway balance" aria-valuemin="-100" aria-valuemax="100"><span>Q · LEAN LEFT</span><div><i></i><b></b></div><span>LEAN RIGHT · E</span><small>Counter the tilt to keep your footing</small></div><div class="br-toast" role="status"></div>`;document.body.append(root);
+ const root=document.createElement('div');root.className='br-ui';root.innerHTML=`<div class="br-top"><div><div class="br-rec"><i class="br-dot"></i>REC <span>●</span> TAPE 001</div><small>UNIDENTIFIED LOCATION / LEVEL 0</small></div><div class="br-tools"><button data-action="view">View · V</button><button data-action="torch" aria-pressed="true">Torch · LMB</button><button data-action="vhs" aria-pressed="true">VHS on</button><button data-action="sound" aria-pressed="true">Sound on</button><button data-action="pause">Pause</button></div></div><div class="br-aim"></div><div class="br-bottom"><div class="br-timestamp">JUL. 04 1991<br><span data-clock>00:00:00</span> <span style="opacity:.5">SP</span></div><div class="br-help">WASD MOVE · SHIFT RUN · F INTERACT<br>Q / E BALANCE · CTRL CROUCH · LMB TORCH</div></div><div class="br-center"><section class="br-panel" role="dialog" aria-modal="false" aria-labelledby="br-title"><div class="br-eyebrow">FOUND FOOTAGE / 001</div><h1 id="br-title">The Backrooms<span>LEVEL 0 — EXPLORATION BUILD</span></h1><p>The lights are still on.<br>Find four wooden ladder sections across the rooms.<br>Fit them, climb to the key, and cross the pitfalls.<br>Follow the recovery arrows if you fall.</p><button class="br-start" data-action="start">Enter the Backrooms <span>↗</span></button><button data-action="multiplayer">Multiplayer</button><button data-action="leave-game" hidden>Leave game</button><footer><span>HEADPHONES RECOMMENDED</span><a href="/">Original game</a></footer></section></div><div class="br-touch" aria-label="Movement"><button data-key="KeyW" aria-label="Forward">↑</button><button data-key="KeyA" aria-label="Left">←</button><button data-key="KeyS" aria-label="Backward">↓</button><button data-key="KeyD" aria-label="Right">→</button><button data-key="ShiftLeft">Hold to run</button><button data-action="distract">Throw scrap · Q</button><button data-key="KeyQ">Lean left · Q</button><button data-key="KeyE">Lean right · E</button><button data-key="ControlLeft">Crouch · Ctrl</button><button data-key="KeyF">Hold to interact · F</button></div><div class="br-objective"><span>LEVEL 0 / ESCAPE ROUTE</span><strong data-objective>0 / 4 LADDER PARTS</strong><small>Search the rooms for four wooden ladder sections.</small></div><div class="br-interaction" hidden><span data-target></span><div><i></i></div></div><div class="br-balance" hidden role="meter" aria-label="Walkway balance" aria-valuemin="-100" aria-valuemax="100"><span>Q · LEAN LEFT</span><div><i></i><b></b></div><span>LEAN RIGHT · E</span><small>Counter the tilt to keep your footing</small></div><div class="br-toast" role="status"></div>`;document.body.append(root);
  const el=s=>root.querySelector(s),on=(target,event,fn,options)=>{target.addEventListener(event,fn,options);listeners.push(()=>target.removeEventListener(event,fn,options));};
  const m2layer=m2?createMonochrome2Layer({root,reduced:()=>reduced.matches}):null;m2layer?.copy();
  const survivor=createBackroomsPlayer(world.scene,{url:BACKROOMS_PLAYER_MODEL,onError:()=>{el('.br-toast').textContent='The hazmat suit could not load. Reload to try again.';}});
- const beam=new T.SpotLight(0xffedbd,28,24,.42,.65,1.5),beamTarget=new T.Object3D();world.scene.add(beam,beamTarget);
- function spawnRigTestPlayer(){
-  if(!rigTestEnabled||testPlayer)return;
-  const sideX=Math.cos(mainYaw),sideZ=-Math.sin(mainYaw);
-  testPlayer={...primaryPlayer,x:primaryPlayer.x+sideX*1.45,z:primaryPlayer.z+sideZ*1.45,y:primaryPlayer.y??0,speed:0,sprint:false,crouch:false,downed:false,downedBy:null,balance:null};
-  testYaw=mainYaw;testPitch=mainPitch;
-  testSurvivor=createBackroomsPlayer(world.scene,{url:BACKROOMS_PLAYER_MODEL,onError:()=>{el('.br-toast').textContent='The second hazmat rig could not load.';}});
-  const spawnButton=el('[data-action="spawn-rig-player"]'),switchButton=el('[data-action="switch-rig-control"]');
-  spawnButton.disabled=true;spawnButton.textContent='Player 2 spawned';switchButton.hidden=false;
-  el('.br-toast').textContent='Player 2 spawned. Switch control to test its movement and rig.';
-  void testSurvivor.ready.then(()=>{if(!disposed&&testSurvivor?.model)el('.br-toast').textContent='Player 2 ready. Click Control Player 2 to test its rig.';});
- }
- function switchRigControl(){
-  if(!rigTestEnabled||!testPlayer)return;
-  keys.clear();drag=null;document.exitPointerLock?.();
-  if(!rigTestActive){
-   mainYaw=yaw;mainPitch=pitch;mainThirdPerson=thirdPerson;
-   player=testPlayer;yaw=testYaw;pitch=testPitch;thirdPerson=true;rigTestActive=true;
-   el('[data-action="view"]').disabled=true;
-   el('[data-action="switch-rig-control"]').textContent='Control Player 1';
-   el('.br-toast').textContent='Controlling Player 2. WASD to move, mouse to look, Shift to run, Ctrl to crouch.';
-  }else{
-   testYaw=yaw;testPitch=pitch;
-   player=primaryPlayer;yaw=mainYaw;pitch=mainPitch;thirdPerson=mainThirdPerson;rigTestActive=false;
-   el('[data-action="view"]').disabled=false;
-   el('[data-action="switch-rig-control"]').textContent='Control Player 2';
-   el('.br-toast').textContent='Controlling Player 1.';
-  }
-  renderer.domElement.focus();
- }
- if(rigTestEnabled){
-  on(el('[data-action="spawn-rig-player"]'),'click',spawnRigTestPlayer);
-  on(el('[data-action="switch-rig-control"]'),'click',switchRigControl);
- }
-  beam.target=beamTarget;
+ const beam=new T.SpotLight(0xffedbd,28,24,.42,.65,1.5),beamTarget=new T.Object3D();world.scene.add(beam,beamTarget);beam.target=beamTarget;
  el('[data-action="view"]').hidden=survivor.pending;el('[data-action="torch"]').setAttribute('aria-pressed',String(torchOn));
  if(classic){el('[data-action="distract"]').hidden=true;el('.br-help').innerHTML='WASD MOVE · SHIFT RUN · F INTERACT<br>Q / E BALANCE · CTRL CROUCH · LMB TORCH';}
  const encounter=m2?createMonochrome2Encounter(world,{round:()=>round,actorFactory:createMonochrome2Actor,bacteriaActorFactory:createBacteriaActor,audioFactory:()=>createMonochrome2Audio({onError:error=>console.warn('Monochrome 2 audio',error)}),onNotice:text=>{el('.br-toast').textContent=text;}}):createBackroomsEncounter(world);
@@ -114,7 +78,6 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
  function resize(){const w=container.clientWidth,h=container.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();post.resize(w,h);}on(window,'resize',resize);resize();
  camera.rotation.order='YXZ';let previous=performance.now();
  renderer.setAnimationLoop(()=>{const now=performance.now(),dt=Math.min(.1,(now-previous)/1000);previous=now;if(lobby)return;let focusTarget=null;
-  if(rigTestEnabled){if(rigTestActive){testYaw=yaw;testPitch=pitch;}else{mainYaw=yaw;mainPitch=pitch;}}
   player.speed=0;player.sprint=false;
   if(net){const previousTorch=round.hasTorch,prevX=player.x,prevZ=player.z,typing=!!document.activeElement?.closest('.br-team-chat');
    net.step(dt,{forward:Number(keys.has('KeyW')||keys.has('ArrowUp'))-Number(keys.has('KeyS')||keys.has('ArrowDown')),right:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),yaw,pitch,lean:Number(keys.has('KeyE'))-Number(keys.has('KeyQ')),crouch:keys.has('ControlLeft')||keys.has('ControlRight'),sprint:keys.has('ShiftLeft')||keys.has('ShiftRight'),torch:torchOn,paused:paused||typing||!net.connected,...(m2?{voiceLevel:client.voice?.noiseLevel??0,voiceSequence:++voiceSeq}:{})});
@@ -137,12 +100,8 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
   camera.rotation.set(pitch,yaw,reduced.matches?0:-(balance?.angle??0)*.3-lean*.035+Math.sin(distance*3.5)*.0018);
   if(m2)m2layer.adjustCamera(camera,player,net?Object.values(net.state.players):[player]);
   const meter=el('.br-balance');meter.hidden=paused||!balance?.active;meter.setAttribute('aria-valuenow',String(Math.round((balance?.angle??0)*100)));meter.classList.toggle('br-balance-danger',Math.abs(balance?.angle??0)>.6);meter.style.setProperty('--balance',String(Math.max(-1,Math.min(1,balance?.angle??0))));
-  if(rigTestEnabled&&testPlayer){
-   survivor.update(primaryPlayer,paused?0:dt,{yaw:mainYaw,pitch:mainPitch,thirdPerson:rigTestActive||thirdPerson});
-   testSurvivor?.update(testPlayer,paused?0:dt,{yaw:testYaw,pitch:testPitch,thirdPerson:true});
-  }else survivor.update(player,paused?0:dt,{yaw,pitch,thirdPerson});
-  const cameraThirdPerson=(rigTestEnabled&&rigTestActive)||thirdPerson,cameraActor=(rigTestEnabled&&rigTestActive)?testSurvivor:survivor;
-  if(cameraThirdPerson&&cameraActor?.model){let d=.3;for(let k=.3;k<=3;k+=.1){if(!canMoveRound(round,player.x+Math.sin(yaw)*k,player.z+Math.cos(yaw)*k,world.canMove,player))break;d=k;}camera.position.set(player.x+Math.sin(yaw)*d,player.y+1.95-pitch*.6,player.z+Math.cos(yaw)*d);camera.lookAt(player.x,player.y+1.4,player.z);}
+  survivor.update(player,paused?0:dt,{yaw,pitch,thirdPerson});
+  if(thirdPerson&&survivor.model){let d=.3;for(let k=.3;k<=3;k+=.1){if(!canMoveRound(round,player.x+Math.sin(yaw)*k,player.z+Math.cos(yaw)*k,world.canMove,player))break;d=k;}camera.position.set(player.x+Math.sin(yaw)*d,player.y+1.95-pitch*.6,player.z+Math.cos(yaw)*d);camera.lookAt(player.x,player.y+1.4,player.z);}
   beam.visible=torchOn&&!captured;beam.position.copy(camera.position);const aim=camera.getWorldDirection(new T.Vector3());beamTarget.position.copy(camera.position).addScaledVector(aim,8);
   if(!captured&&round.phase==='playing'){const result=net&&!net.host?encounter.replicate(net.monsters,time,player,yaw,paused,dt):encounter.update(dt,time,player,yaw,{paused:net?!net.connected:paused,targets:net?Object.values(net.state.players):null,voices:m2&&net?net.voiceLevels():null,pitch});if(m2&&result.downedIds?.length&&(!net||net.host)){if(net)net.hit(result.downedIds,result.downs);else{player.downed=true;player.downedBy=result.downs?.[0]?.by??null;}}if(result.scare){scareLeft=.65;root.classList.add('br-ambush');}if(result.caught&&(!net||net.host)){if(net)net.finish(result.caughtBy);caughtBy=result.caughtBy;captured=true;round.phase='dead';keys.clear();document.exitPointerLock?.();}}
   if(!paused&&scareLeft>0){scareLeft=Math.max(0,scareLeft-dt);if(!scareLeft)root.classList.remove('br-ambush');}
@@ -154,8 +113,8 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
   objectives.update(time,dt,{targetId:focusTarget,progress:hold});const [title,hint]=roundObjective(round,player);el('[data-objective]').textContent=title;el('.br-objective small').textContent=net?.player.ropeClimb?'Climbing rescue rope…':net?.player.exitReady?'Waiting for the rest of the team at the exit…':hint;
   world.update(time,player,reduced.matches);const scareShown=m2&&m2layer.frame({dt,player,voice:net?.voiceLevels?.()[client.id]??0,distance:encounter.telegraphDistance,mode:encounter.mode,paused});if(scareShown)m2layer.renderScare(renderer);else post.render(world.scene,camera,time,{vhs,reduced:reduced.matches});const seconds=Math.floor(time);el('[data-clock]').textContent=`${String(Math.floor(seconds/3600)).padStart(2,'0')}:${String(Math.floor(seconds/60)%60).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
  });
- function dispose(){if(disposed)return;disposed=true;lobby?.dispose();net?.dispose();team?.dispose();chat?.dispose();if(net){client.voice?.dispose();void client.close();document.body.classList.remove('br-network','br-coop-game');}renderer.setAnimationLoop(null);for(const remove of listeners)remove();for(const n of audioNodes){n.stop?.();n.disconnect();}encounter.dispose();m2layer?.dispose();interactionAudio?.dispose();objectives.dispose();survivor.dispose();testSurvivor?.dispose();beam.removeFromParent();beamTarget.removeFromParent();void context?.close();post.dispose();world.dispose();renderer.dispose();renderer.domElement.remove();root.remove();}
+ function dispose(){if(disposed)return;disposed=true;lobby?.dispose();net?.dispose();team?.dispose();chat?.dispose();if(net){client.voice?.dispose();void client.close();document.body.classList.remove('br-network','br-coop-game');}renderer.setAnimationLoop(null);for(const remove of listeners)remove();for(const n of audioNodes){n.stop?.();n.disconnect();}encounter.dispose();m2layer?.dispose();interactionAudio?.dispose();objectives.dispose();survivor.dispose();beam.removeFromParent();beamTarget.removeFromParent();void context?.close();post.dispose();world.dispose();renderer.dispose();renderer.domElement.remove();root.remove();}
  on(window,'pagehide',dispose,{once:true});el('[data-action="start"]').focus();
  if(net)setPause(false);else if(new URLSearchParams(location.search).has('join'))setTimeout(()=>{if(!disposed)multiplayer();},0);
- return {net,team,m2layer,variant,get lobby(){return lobby;},world,camera,renderer,get player(){return player;},primaryPlayer,get testPlayer(){return testPlayer;},round,objectives,survivor,get testSurvivor(){return testSurvivor;},encounter,get rigTestActive(){return rigTestActive;},spawnRigTestPlayer,switchRigControl,get paused(){return paused;},get vhs(){return vhs;},dispose};
+ return {net,team,m2layer,variant,get lobby(){return lobby;},world,camera,renderer,player,round,objectives,survivor,encounter,get paused(){return paused;},get vhs(){return vhs;},dispose};
 }

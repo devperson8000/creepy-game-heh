@@ -44,7 +44,7 @@ export function startGame(container,{seed,autostart=false,halloween=false,mapUpd
  const raycaster=new THREE.Raycaster(),center=new THREE.Vector2(0,0);let surfaceDistance=Infinity;
  let enemy=createEnemy(run.layout),player={id:'solo',name:'You',slot:0,status:'alive',x:-2.6,z:-30.8,height:3.6},hiddenCloset=null,hideWitnessed=false,hold=0,holdId=null,latched=false,threat=0,lastResult={distance:Infinity,visible:false},buffer='';
  const ambush=createAmbush(seed);let ambushResult={silent:false,triggered:false};
- let secretCharge=0,entryCinematic=null,secretRoomActive=false,secretRoomExperience=null;
+ let secretCharge=0,entryCinematic=null,secretRoomActive=false,secretRoomExperience=null,secretRoomWarmed=false;
  const soloState={seed,run,players:new Map([['solo',player]]),closets:new Map()};let ending=null,endingAsset=null,endingFailed=false,endingFinished=false;
  function beginHouseEscape(){
   if(!beginFinale(soloState,Date.now()/1000,{requested:true}))return false;
@@ -186,6 +186,8 @@ document.addEventListener('keydown',event=>{if(event.code==='KeyM'&&!event.repea
    }
    input.updateView();camera.position.set(player.x,player.height+1.65,player.z);
    threat=THREE.MathUtils.lerp(threat,player.height<1.5?Math.max(0,1-lastResult.distance/12):0,frameDelta*3);
+   // Partway down the stairs, get the hidden room and its TV recording ready in small steps (see prewarm()).
+   if(!secretRoomWarmed&&secretRoomExperience&&player.z>-23){secretRoomWarmed=true;secretRoomExperience.prewarm();}
    const entryCharge=advanceSecretEntryCharge(secretCharge,{
     position:{x:player.x,z:player.z,height:player.height},
     yaw:input.yaw,forward:input.movement.forward,right:input.movement.right,

@@ -71,7 +71,7 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
   let cablePickupAnimation=null;
   let plugAnimation=null,switchAnimation=null,tvCameraLocked=false,cameraTween=null,tvReturnPose=null;
   let tvMode='off',tvElapsed=0,tvGame=null,tvErrorTime=0,tvCanvas=null,tvTexture=null;
-  let teaserPlayback=null,teaserReadyPromise=null,teaserLoadError=null,playbackElapsed=0;
+  let teaserPlayback=null,teaserReadyPromise=null,teaserLoadError=null,playbackElapsed=0,lastFilmFrame=-1;
   const tvStaticAudio=new Audio('/audio/halloween/sfx/monitor-static.mp3');
   tvStaticAudio.preload='auto';tvStaticAudio.loop=true;tvStaticAudio.volume=.16;
   const keys = new Set();
@@ -281,7 +281,7 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
       tvElapsed=0;tvMode='returning';returnCameraFromTv(()=>{tvMode='ready';drawTvScreen();announce('TV setup complete. The black screen and green pilot light mean it is ready for the VHS cassette.');setTvLabel('TV: READY FOR VHS');});return;
     }
     if(tvMode==='static'&&tvElapsed>=1.5&&teaserPlayback){
-      tvStaticAudio.pause();tvStaticAudio.currentTime=0;tvMode='teaser';playbackElapsed=0;
+      tvStaticAudio.pause();tvStaticAudio.currentTime=0;tvMode='teaser';playbackElapsed=0;lastFilmFrame=-1;
       world.setTvTexture(teaserPlayback.texture);
       teaserPlayback.setMuted(muted);teaserPlayback.play();
       world.power.setTvPowerState('playing');return;
@@ -762,8 +762,10 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
       updateInsertion(step);
       updateTvSequence(step);
       if (tvMode === 'teaser' && teaserPlayback) {
-        playbackElapsed += step;
-        teaserPlayback.render(playbackElapsed);
+        // The recording keeps real time (a slow frame no longer stretches it against its voices and sound),
+        // and the TV only needs its picture redrawn thirty times a second, which halves the cost of the room.
+        playbackElapsed += Math.min(Math.max(0, delta), 0.25);
+        if (playbackElapsed - lastFilmFrame >= 1 / 30 || playbackElapsed < lastFilmFrame) { lastFilmFrame = playbackElapsed; teaserPlayback.render(playbackElapsed); }
         if (playbackElapsed >= teaserPlayback.duration) {
           teaserPlayback.pause(); tvMode = 'finished'; world.setTvTexture(tvTexture); drawTvScreen();
           world.power.setTvPowerState('ready');
@@ -788,6 +790,49 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
   }
   if(!embedded)renderer.setAnimationLoop(frame);
 
+  /**
+   * The room is hidden inside the maze scene until the player crosses the wall. Showing it for the first time
+   * used to stall the game for a moment: its lights change what every material needs, its fog changes the
+   * shader variants, its ceiling light builds a shadow map and its textures upload on the first frame.
+   * prewarm() does that work earlier, in small steps while the player is still on the stairs, so the crossing
+   * and the TV are smooth. Safe to call more than once.
+   */
+  const warmTimers=[];let prewarmed=false,warmAsset=null;
+  function prewarm(){
+    if(!embedded||prewarmed||disposed)return;prewarmed=true;
+    const step=(ms,fn)=>warmTimers.push(window.setTimeout(()=>{if(disposed)return;try{fn();}catch(error){console.warn('Secret room warm-up step skipped:',error);}},ms));
+    // 1. Shader programs for the scene as it will look with the room lit and its fog in place (non-blocking where the GPU allows).
+    step(0,()=>{
+      loadPlayerAvatarAsset().then(asset=>{warmAsset=asset;}).catch(()=>{});
+      const fog=renderScene.fog,background=renderScene.background,wasVisible=roomRoot.visible;
+      roomRoot.visible=true;renderScene.fog=world.scene.fog;renderScene.background=world.scene.background;roomRoot.updateMatrixWorld(true);
+      try{const pending=renderer.compileAsync?renderer.compileAsync(renderScene,camera):Promise.resolve(renderer.compile(renderScene,camera));pending?.catch?.(()=>{});}
+      finally{roomRoot.visible=wasVisible;renderScene.fog=fog;renderScene.background=background;}
+    });
+    // 2. Textures, a couple per tick, so no single frame carries the whole upload.
+    step(350,()=>{
+      const textures=new Set();
+      roomRoot.traverse(object=>{if(!object.isMesh)return;for(const material of Array.isArray(object.material)?object.material:[object.material])for(const key of ['map','normalMap','roughnessMap','metalnessMap','emissiveMap','aoMap','bumpMap','alphaMap'])if(material?.[key])textures.add(material[key]);});
+      const queue=[...textures];
+      const pump=()=>{if(disposed)return;for(let i=0;i<2&&queue.length;i++)renderer.initTexture(queue.shift());if(queue.length)warmTimers.push(window.setTimeout(pump,24));};pump();
+    });
+    // 3. One real, one-pixel render with the room lit: geometry buffers and the shadow map are created now, not at the crossing.
+    step(1100,()=>{
+      const fog=renderScene.fog,background=renderScene.background,wasVisible=roomRoot.visible,culled=[];
+      roomRoot.visible=true;renderScene.fog=world.scene.fog;renderScene.background=world.scene.background;
+      // The survivor you see walk through the wall is built when the cutscene starts; draw one now so its skinned
+      // materials are already compiled and the fallback figure does not hitch when it swaps for the real model.
+      let warmAvatar=null;
+      if(warmAsset){try{warmAvatar=createPlayerAvatar(warmAsset,{id:'secret-entry-warm',name:'',slot:0});warmAvatar.root.position.copy(roomRoot.localToWorld(new T.Vector3(0,0,0)));renderScene.add(warmAvatar.root);warmAvatar.root.traverse(object=>{if(object.isMesh&&object.frustumCulled){object.frustumCulled=false;}});}catch(error){warmAvatar?.root.removeFromParent();warmAvatar?.dispose();warmAvatar=null;}}
+      roomRoot.traverse(object=>{if(object.isMesh&&object.frustumCulled){object.frustumCulled=false;culled.push(object);}});
+      const viewport=renderer.getViewport(new T.Vector4()),scissor=renderer.getScissor(new T.Vector4()),scissorTest=renderer.getScissorTest();
+      try{renderer.setViewport(0,0,1,1);renderer.setScissor(0,0,1,1);renderer.setScissorTest(true);renderer.render(renderScene,camera);}
+      finally{renderer.setViewport(viewport);renderer.setScissor(scissor);renderer.setScissorTest(scissorTest);for(const object of culled)object.frustumCulled=true;if(warmAvatar){warmAvatar.root.removeFromParent();warmAvatar.dispose();}roomRoot.visible=wasVisible;renderScene.fog=fog;renderScene.background=background;}
+    });
+    // 4. The Monochrome 2 recording builds a whole Level Zero map: do it now, not when the TV switches on.
+    step(2600,()=>{void prepareTeaserFilm();});
+  }
+
   function activate() {
     if(!embedded||disposed)return false;
     roomRoot.visible = true;
@@ -811,6 +856,7 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
     disposed = true;
     if(!embedded)renderer.setAnimationLoop(null);
     document.exitPointerLock?.();
+    for(const id of warmTimers)window.clearTimeout(id);
     for (const remove of listeners) remove();
     ambience.dispose();
     hazmatViewmodel?.dispose();
@@ -850,6 +896,7 @@ export function startSecretRoom(container,{autostart=false,embedded=null}={}) {
     get held() { return held; },
     get inserted() { return inserted; },
     activate,
+    prewarm,
     update,
     render,
     setTvTexture: texture => world.setTvTexture(texture),
