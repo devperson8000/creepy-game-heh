@@ -38,7 +38,7 @@ export function startMonochrome2TestGate(){
   root.remove();
   body.classList.remove('m2-test-gate-open');
   const {startMonochrome2Play}=await import('./monochrome2-play.js');
-  window.monochrome2=await startMonochrome2Play({alreadyReleased:true});
+  window.monochrome2=await startMonochrome2Play({alreadyReleased:true,rigTest:true});
  }
  async function request(path,options){
   const response=await fetch(path,{credentials:'same-origin',cache:'no-store',...options});

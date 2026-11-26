@@ -14,3 +14,11 @@
 @media(pointer:coarse){.br-touch{max-width:100%;flex-wrap:wrap}.br-touch button{padding:9px 11px;font-size:10px}.br-balance{bottom:220px}.br-help{display:none}}
 @media(pointer:coarse){.br-touch{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-areas:"left forward back right" "run run crouch crouch" "leanleft leanleft leanright leanright" "interact interact interact interact";width:min(360px,calc(100vw - 32px));left:16px;bottom:58px;gap:6px}.br-touch button{width:auto;height:38px;padding:7px;font-size:10px}.br-touch [data-key="KeyW"]{grid-area:forward}.br-touch [data-key="KeyA"]{grid-area:left}.br-touch [data-key="KeyS"]{grid-area:back}.br-touch [data-key="KeyD"]{grid-area:right}.br-touch [data-key="ShiftLeft"]{grid-area:run}.br-touch [data-key="ControlLeft"]{grid-area:crouch}.br-touch [data-key="KeyQ"]{grid-area:leanleft}.br-touch [data-key="KeyE"]{grid-area:leanright}.br-touch [data-key="KeyF"]{grid-area:interact}.br-balance{bottom:255px}}
 @media(pointer:coarse) and (max-height:500px){.br-touch{width:280px;bottom:12px;gap:4px}.br-touch button{height:29px}.br-balance{bottom:155px;width:280px;left:auto;right:16px;transform:none}.br-objective{max-width:35vw}.br-timestamp{display:none}}
+
+/* Monochrome 2 only: temporary local rig-testing controls, enabled only by the passworded test route. */
+.br-rig-test-controls{position:absolute;top:78px;right:34px;z-index:4;display:grid;gap:7px;width:min(220px,calc(100vw - 68px));padding:10px;border:1px solid #d8ddc12b;background:#10150fc9;backdrop-filter:blur(12px);pointer-events:auto;text-shadow:none}
+.br-rig-test-controls button{width:100%;text-align:left}
+.br-rig-test-controls small{color:#c2c9b18f;font:8px/1.6 'Courier New',monospace;letter-spacing:.1em}
+.br-rig-test-controls [hidden]{display:none}
+@media(pointer:coarse){.br-rig-test-controls{top:74px;right:20px;width:190px}}
+@media(max-width:480px){.br-rig-test-controls{top:90px;right:16px;width:170px;padding:7px}.br-rig-test-controls button{font-size:8px;padding:8px}}
