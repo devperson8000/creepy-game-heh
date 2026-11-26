@@ -64,7 +64,7 @@ export function createBackroomsWorld(){
  // Merge static meshes by material: long ceiling grids should not cost hundreds of draw calls.
  const batches=new Map();
  for(const mesh of [...scene.children])if(mesh.isMesh){mesh.updateMatrix();const g=mesh.geometry.clone().applyMatrix4(mesh.matrix);if(!batches.has(mesh.material))batches.set(mesh.material,[]);batches.get(mesh.material).push(g);scene.remove(mesh);}
- for(const [m,parts]of batches){const g=mergeGeometries(parts);resources.add(g);const mesh=new T.Mesh(g,m);mesh.castShadow=true;mesh.receiveShadow=true;scene.add(mesh);for(const part of parts)part.dispose();}
+ for(const [m,parts]of batches){const g=mergeGeometries(parts);resources.add(g);const mesh=new T.Mesh(g,m);mesh.receiveShadow=true;scene.add(mesh);for(const part of parts)part.dispose();}
  const dustBase=createDustField(map),dustPositions=new Float32Array(dustBase);
  const dustGeometry=new T.BufferGeometry();dustGeometry.setAttribute('position',new T.BufferAttribute(dustPositions,3).setUsage(T.DynamicDrawUsage));resources.add(dustGeometry);
  const dustMap=texture((c,s)=>{c.clearRect(0,0,s,s);const g=c.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);g.addColorStop(0,'rgba(255,248,216,.7)');g.addColorStop(.25,'rgba(255,248,216,.25)');g.addColorStop(1,'rgba(255,248,216,0)');c.fillStyle=g;c.fillRect(0,0,s,s);},64);

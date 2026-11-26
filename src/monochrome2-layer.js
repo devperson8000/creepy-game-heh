@@ -24,7 +24,7 @@ export function createMonochrome2Layer({root,reduced=()=>false}){
  hud.innerHTML='<div class="m2-sound" role="meter" aria-label="Noise you are making" aria-valuemin="0" aria-valuemax="4"><span>NOISE</span><i></i><b data-level>QUIET</b></div><div class="m2-downed" hidden><strong></strong><small></small></div><div class="m2-scare-border" hidden></div>';
  root.append(hud);
  const q=s=>hud.querySelector(s),meter=q('.m2-sound'),levelText=q('[data-level]'),downedBox=q('.m2-downed'),border=q('.m2-scare-border');
- let jumpscare=null,wasDown=false,spectate=0,tab=false,disposed=false,mouth=null;
+ let jumpscare=null,hurtLeft=0,wasDown=false,spectate=0,tab=false,disposed=false,mouth=null;
  function ensureScare(){
   if(jumpscare)return jumpscare;
   mouth=new T.TextureLoader().load(JUMPSCARE_MOUTH_URL,undefined,undefined,()=>{});
@@ -50,12 +50,14 @@ export function createMonochrome2Layer({root,reduced=()=>false}){
   get scareActive(){return !!jumpscare?.active;},
   get scareSeconds(){return JUMPSCARE_DURATION;},
   rosterLabel(p){return TEAM_LABEL(p,p.downedFor??0);},
+  /** A Bacteria hit: a red flash, not Monochrome's metal jumpscare (the Bacteria's own is designed separately). */
+  hurt(){hurtLeft=.8;border.hidden=false;document.exitPointerLock?.();},
   scare(){const j=ensureScare();if(j.active)return;j.resize(innerWidth/Math.max(1,innerHeight));j.start();border.hidden=false;document.body.classList.add('m2-scaring');document.exitPointerLock?.();},
   /** Call each frame. Returns true when the jumpscare owns the screen. */
   frame({dt,player,voice=0,distance=Infinity,mode='dormant',paused=false}){
    if(disposed)return false;
    // Edge-triggered: your own hit, wherever it was simulated, plays the scare once.
-   if(player.downed&&!wasDown)this.scare();wasDown=!!player.downed;
+   if(player.downed&&!wasDown){if(player.downedBy==='Bacteria')this.hurt();else this.scare();}wasDown=!!player.downed;
    const level=noiseLevel(player,voice);meter.setAttribute('aria-valuenow',String(level));meter.dataset.level=String(level);levelText.textContent=['QUIET','SNEAKING','WALKING','RUNNING','LOUD'][level];
    const danger=paused||!Number.isFinite(distance)?0:Math.max(0,Math.min(1,(TELEGRAPH.range*.55-distance)/(TELEGRAPH.range*.55)))*(mode==='chase'||mode==='attack'?1:.55);
    root.style.setProperty('--m2-danger',danger.toFixed(3));
@@ -64,6 +66,7 @@ export function createMonochrome2Layer({root,reduced=()=>false}){
     border.style.opacity=String(jumpscare.borderOpacity);border.style.setProperty('--scare-impact',String(jumpscare.impactOpacity));
     if(!jumpscare.active){border.hidden=true;document.body.classList.remove('m2-scaring');}
    }
+   if(!jumpscare?.active&&hurtLeft>0){hurtLeft=Math.max(0,hurtLeft-(paused?0:dt));border.style.opacity=String(Math.min(1,hurtLeft/.8)*.9);border.style.setProperty('--scare-impact','0');if(!hurtLeft)border.hidden=true;}
    return !!jumpscare?.active;
   },
   renderScare(renderer){jumpscare?.render(renderer);},

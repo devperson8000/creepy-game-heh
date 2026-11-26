@@ -48,11 +48,11 @@
       "destination": "/index.html"
     },
     {
-      "source": "/testmonochrome2",
+      "source": "/sunnychen",
       "destination": "/index.html"
     },
     {
-      "source": "/testmonochrome2/",
+      "source": "/sunnychen/",
       "destination": "/index.html"
     }
   ]

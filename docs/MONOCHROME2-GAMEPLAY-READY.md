@@ -67,10 +67,3 @@ Escalation tiers (ladder sections, key, door, exit door raise his speed, hearing
 
 ## Verification
 `npm test`: the 31 pre-existing Monochrome 1 / Halloween failures are unchanged; new tests in `tests/monochrome2-gameplay.test.js`. `npm run build` passes. Not yet checked in a real browser (none was available): rendering, audio, jumpscare, lobby flow and live co-op still need a playthrough.
-
-## Test route and flashlight build
-
-- Private playtesting is available at `/testmonochrome2`; it bypasses only the public release timer.
-- `/monochrome2/play` remains protected by the server-clock release gate for Wednesday 2 December 2026 at 9:00 AM AEDT.
-- The supplied flashlight GLB is shipped at `public/models/monochrome2/flashlight.glb`. Its housing is matte black and its translucent lens materials are preserved.
-- The lower-level flashlight pickup and first-person held view use this model. The spotlight originates at the lens, uses soft-edged falloff and shadow maps, and the switch uses a short mechanical click synthesized through Web Audio.

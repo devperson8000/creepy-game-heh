@@ -1,9 +1,11 @@
 /**
- * Public Monochrome 2 gameplay opens Wednesday 2 December 2026 at 9:00 AM
- * Sydney time (AEDT, UTC+11). The server clock is authoritative.
+ * Monochrome 2 gameplay opens on a timer. The time is not decided yet, so by default the gate stays
+ * sealed. Set it without a code change: put an ISO timestamp in the MONOCHROME2_RELEASE_AT
+ * environment variable (Vercel project settings, or the shell for `npm run dev`), e.g.
+ * `2026-12-05T20:00:00+11:00`. Or set the constant below. The server clock is authoritative.
  */
-export const MONOCHROME2_RELEASE_AT=Date.parse('2026-12-02T09:00:00+11:00');
-export const MONOCHROME2_RELEASE_VERSION='monochrome2-level0-2026-12-02-0900';
+export const MONOCHROME2_RELEASE_AT=null;
+export const MONOCHROME2_RELEASE_VERSION='monochrome2-level0-1';
 /** Parse a configured release time; anything that is not a real date means "not scheduled". */
 export function parseReleaseAt(value){
  if(value===null||value===undefined||value==='')return null;

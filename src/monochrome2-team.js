@@ -15,9 +15,9 @@ export function initTeamPlayer(p){
 const finite=v=>Number.isFinite(v);
 
 /** Monochrome's hit. A player already down cannot be downed again. Returns false if ignored. */
-export function downPlayer(s,p,elapsed=s.elapsed){
+export function downPlayer(s,p,elapsed=s.elapsed,by=null){
  if(!p||p.downed||p.lost||p.exitReady)return false;
- p.downed=true;p.downedFor=0;
+ p.downed=true;p.downedFor=0;p.downedBy=by;
  // Out of revives: this one is final.
  if(p.revives>=TEAM.maxRevives)p.lost=true;
  Object.assign(p,{speed:0,sprint:false,climbing:false,crouch:false,torch:false,downedAt:elapsed});

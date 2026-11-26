@@ -13,7 +13,7 @@ export function waitForMonochrome2Release(release){
  return new Promise(resolve=>{
   if(release.sample().released){resolve();return;}
   const root=document.createElement('section');root.className='m2-gate';root.setAttribute('role','status');
-  root.innerHTML='<div><small>MONOCHROME 2 · FIELD RECORDING / 002</small><h1>LEVEL 0 IS SEALED</h1><p data-clock></p><button type="button" data-retry>Check again</button><a href="/">Back to Monochrome</a></div>';
+  root.innerHTML='<div><small>MONOCHROME 2 · FIELD RECORDING / 002</small><h1>LEVEL 0 IS SEALED</h1><p data-clock></p><button type="button" data-retry>Check again</button><a href="/monochrome2">Watch the introduction</a></div>';
   document.body.append(root);document.body.classList.add('m2-gated');
   const clock=root.querySelector('[data-clock]');
   const draw=s=>{clock.textContent=gateLabel(s);if(s.released){off();root.remove();document.body.classList.remove('m2-gated');resolve();}};

@@ -35,6 +35,43 @@ export const MONSTER={
  /** Walls soften sound: every wall the sound crosses multiplies its reach. */
  hearing:{base:.92,wallFactor:.62,maxWalls:4,closedDoorFactor:.5,ttl:.4}
 };
+/**
+ * The Bacteria, Level 0's main monster, tuned to what Escape the Backrooms documents about it:
+ * it appears about three minutes in, near the players, mimicking knocking to lure them off route;
+ * it wanders aimlessly, notices you by sight or by sound (screeching as it does), then chases until
+ * it has lost sight of you for a while; ducking round corners or into a dead end makes it give up
+ * and reappear somewhere else. Only the three-minute timer and the behaviours are documented:
+ * the numbers below are Monochrome 2 tuning, not wiki facts.
+ */
+export const BACTERIA={
+ /** Seconds of play before it first appears (the documented three minutes). */
+ spawnDelay:180,
+ /** It starts this far from every player and out of their line of sight, as close as it can manage. */
+ spawnMinDistance:18,relocateMinDistance:26,
+ /** Knocks it makes on arrival (to lure players off route), and the gap between them. */
+ arrivalKnocks:3,knockGap:1.1,knockLinger:2.2,
+ /** While roaming it stops now and then to knock again. */
+ roamKnockEvery:Object.freeze([14,24]),roamKnockSeconds:3.2,
+ speed:Object.freeze({roam:{base:2.0,max:2.6},investigate:{base:3.4,max:4.4},chase:{base:7.6,max:8.7}}),
+ beamSpeedFactor:.5,radius:.4,catchRadius:1.5,
+ /** Shorter sight than Monochrome, keener ears: it is the sound that gives you away. */
+ sight:{range:16,crouchFactor:.5,closeAllRound:3,facingCos:.05},hearingScale:1.2,
+ /** The screech as it notices you: a head start for anyone who reacts at once. */
+ noticeSeconds:1.15,
+ /** During a chase only a nearby or urgent noise keeps it on you; distance and corners shake it. */
+ trackRadius:14,chaseMemory:5.5,
+ /** Reaching your last known position with nobody there makes it give up this many times faster. */
+ deadEndGiveUp:3,
+ search:{seconds:5,probes:2,probeRadius:5},
+ /** After giving up it vanishes and returns somewhere else. */
+ relocateDelay:Object.freeze([4,8]),
+ catchStagger:1.6,postCatchSearch:5
+};
+/**
+ * Monochrome is rare in Monochrome 2: he visits twice at most, for under a minute, with long
+ * quiet gaps, and withdraws to his room afterwards. The Bacteria is the monster of the level.
+ */
+export const MONOCHROME_VISITS={first:Object.freeze([300,390]),length:Object.freeze([45,60]),gap:Object.freeze([240,330]),max:2};
 /** How many progress steps raise his stats: 4 ladder sections, key, door, exit door. */
 export const tierCount=7;
 

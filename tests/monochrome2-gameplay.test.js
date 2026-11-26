@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isMonochrome2PlayPath,isMonochrome2TestPath,isMonochrome2IntroPath} from '../src/monochrome2-route.js';
-import {monochrome2ReleaseStatus,parseReleaseAt,MONOCHROME2_RELEASE_VERSION} from '../src/monochrome2-release-time.js';
+import {isMonochrome2PlayPath,isMonochrome2IntroPath} from '../src/monochrome2-route.js';
+import {monochrome2ReleaseStatus,parseReleaseAt} from '../src/monochrome2-release-time.js';
 import {createMonochrome2Release,countdownParts} from '../src/monochrome2-release.js';
 import {gateLabel} from '../src/monochrome2-gate.js';
 import {MONSTER,NOISE,TELEGRAPH,TEAM,HOLD,tierSpeed,tierFromRound,holdSeconds} from '../src/monochrome2-tuning.js';
@@ -23,8 +23,6 @@ const run=(m,seconds,ctx,dt=1/30)=>{let t=ctx.time??0,out=[];for(let i=0;i<secon
 
 test('routes: play is separate from the cinematic',()=>{
  assert.ok(isMonochrome2PlayPath('/monochrome2/play')&&isMonochrome2PlayPath('/monochrome2/play/'));
- assert.ok(isMonochrome2TestPath('/testmonochrome2')&&isMonochrome2TestPath('/testmonochrome2/'));
- assert.ok(!isMonochrome2TestPath('/monochrome2/play')&&!isMonochrome2PlayPath('/testmonochrome2'));
  assert.ok(!isMonochrome2PlayPath('/monochrome2')&&!isMonochrome2PlayPath('/backrooms'));
  assert.ok(isMonochrome2IntroPath('/monochrome2')&&!isMonochrome2IntroPath('/monochrome2/play'));
 });
@@ -33,7 +31,7 @@ test('release timer: sealed until scheduled, opens by server clock, fails closed
  assert.equal(monochrome2ReleaseStatus(1e12,'junk').scheduled,false);
  assert.equal(parseReleaseAt('2026-12-05T20:00:00+11:00'),Date.parse('2026-12-05T20:00:00+11:00'));
  let clock=0;const at=5000;
- const rel=createMonochrome2Release({now:()=>clock,fetchStatus:async()=>({version:MONOCHROME2_RELEASE_VERSION,releaseAt:at,serverNow:1000})});
+ const rel=createMonochrome2Release({now:()=>clock,fetchStatus:async()=>({version:'monochrome2-level0-1',releaseAt:at,serverNow:1000})});
  assert.equal(rel.sample().released,false);assert.equal(rel.sample().confirmed,false);
  await rel.refresh();assert.equal(rel.sample().scheduled,true);assert.equal(rel.sample().released,false);
  clock=3999;assert.equal(rel.sample().released,false);clock=4000;assert.equal(rel.sample().released,true);
@@ -56,11 +54,11 @@ test('he is audible before he is visible',()=>{
  assert.ok(telegraphMix({distance:10,occluded:true}).whineGain<telegraphMix({distance:10}).whineGain);
  assert.ok(telegraphMix({distance:10,mode:'chase'}).whineHz>telegraphMix({distance:10,mode:'patrol'}).whineHz);
 });
-test('slots: Monochrome fills the live slot, bacteria stays reserved without a stand-in',()=>{
- assert.deepEqual(activeEntities().map(e=>e.id),['monochrome']);
- assert.deepEqual(reservedEntities().map(e=>e.id),['bacteria']);
- assert.equal(MONOCHROME2_ENTITIES.bacteria.modelUrl,null);assert.equal(MONOCHROME_SLOT.modelUrl,null);
- assert.ok(MONOCHROME_SLOT.height<map.height);
+test('slots: the Bacteria is the live monster of the level and Monochrome keeps his own slot',()=>{
+ assert.deepEqual(activeEntities().map(e=>e.id).sort(),['bacteria','monochrome']);
+ assert.deepEqual(reservedEntities().map(e=>e.id),[]);
+ assert.ok(MONOCHROME2_ENTITIES.bacteria.modelUrl.endsWith('/bacteria.glb'));assert.equal(MONOCHROME_SLOT.modelUrl,null);
+ assert.ok(MONOCHROME_SLOT.height<map.height);assert.ok(MONOCHROME2_ENTITIES.bacteria.height<map.height);
 });
 test('patrol: he leaves a far spawn and walks every Level 0 area',()=>{
  const {m}=setup(),seen=new Set();let t=0;
@@ -247,6 +245,6 @@ test('model import spaces exist for the hazmat and the bacteria and request noth
  for(const id of ['hazmat','bacteria']){assert.ok(BACKROOMS_MODEL_SPACES[id]);assert.equal(backroomsModelUrl(id),BACKROOMS_MODEL_SPACES[id].ready?BACKROOMS_MODEL_DIR+BACKROOMS_MODEL_SPACES[id].file:null);}
  assert.ok(existsSync(new URL('../public/models/backrooms/README.md',import.meta.url)));
  assert.equal(BACKROOMS_PLAYER_MODEL,backroomsModelUrl('hazmat'));
- assert.equal(MONOCHROME2_ENTITIES.bacteria.modelUrl,backroomsModelUrl('bacteria'));
+ assert.ok(existsSync(new URL('../public'+MONOCHROME2_ENTITIES.bacteria.modelUrl,import.meta.url)),'the Bacteria slot points at a file that exists');
  for(const id of ['hazmat','bacteria'])if(BACKROOMS_MODEL_SPACES[id].ready)assert.ok(existsSync(new URL('../public'+BACKROOMS_MODEL_DIR+BACKROOMS_MODEL_SPACES[id].file,import.meta.url)),id+' is marked ready but its file is missing');
 });

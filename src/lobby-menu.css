@@ -70,3 +70,40 @@
  .lobby-coming-soon{animation:none;transition:none}
  .lobby-coming-soon::before,.lobby-coming-soon-signal i{animation:none}
 }
+
+
+/* Archive-style easter egg on the mode selection screen. */
+.lobby-sunny-note{
+ display:flex;align-items:center;gap:11px;
+ margin-top:5px;padding:11px 14px;
+ border:1px solid #9ba98a42;border-left:2px solid #b9c69d;
+ border-radius:3px;
+ background:linear-gradient(100deg,#aab99a16,#aab99a08 72%,transparent);
+ color:#b6c2a9;
+ font:10px/1.7 ui-monospace,monospace;
+ letter-spacing:.09em;
+ opacity:.96;
+ box-shadow:inset 0 1px #ffffff08,0 5px 18px #0002;
+}
+.lobby-sunny-note::before{
+ content:"";display:block;flex:0 0 7px;width:7px;height:7px;
+ border-radius:50%;background:#b9c99c;
+ box-shadow:0 0 9px #c3d8a877;
+}
+@media(max-width:700px){
+ .lobby-sunny-note{font-size:9px;padding:10px 12px;gap:9px}
+}
+
+.lobby-sunny-copy{flex:1;min-width:0}
+.lobby-sunny-open{
+ flex:0 0 auto;padding:4px 8px;border:1px solid #9ba98a55;border-radius:2px;
+ background:#151b14;color:#d4dfc8;text-decoration:none;white-space:nowrap;
+ font:8px/1.4 ui-monospace,monospace;letter-spacing:.1em;
+ transition:background .18s,border-color .18s,color .18s;
+}
+.lobby-sunny-open:hover{background:#293323;border-color:#bdcba5a0;color:#f0f2e8}
+.lobby-sunny-open:focus-visible{outline:2px solid var(--lobby-accent);outline-offset:3px}
+@media(max-width:700px){
+ .lobby-sunny-note{flex-wrap:wrap}
+ .lobby-sunny-open{margin-left:auto}
+}

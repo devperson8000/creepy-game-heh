@@ -71,9 +71,9 @@ export function createBackroomsCoop({client,session,world,onNotice=()=>{},onMove
  }
  function interact(targetId){if(host)execute(client.id,{code:'interact:'+crypto.randomUUID(),targetId});else if(!waitingAction||waitingAction.targetId!==targetId){waitingAction={code:'interact:'+crypto.randomUUID(),targetId};retryAt=0;actionUntil=now+4;}return true;}
  function restart(){if(!host)return false;resetBackroomsCoop(state);queues.clear();seen.clear();acks={};onReset();return true;}
- function hit(ids){
+ function hit(ids,downs=[]){
   if(!host||state.round.phase!=='playing'||!isMonochrome2State(state))return [];
-  const downed=[];for(const id of ids){const p=state.players[id];if(downPlayer(state,p))downed.push(id);}
+  const by=new Map(downs.map(d=>[d.id,d.by])),downed=[];for(const id of ids){const p=state.players[id];if(downPlayer(state,p,state.elapsed,by.get(id)??null))downed.push(id);}
   settleTeam(state);
   return downed;
  }

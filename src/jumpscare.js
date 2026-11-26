@@ -2,6 +2,7 @@ import {attachMechanicalHead} from './mechanical-head.js';
 import {reducedMotion} from './preferences.js';
 import * as THREE from 'three';
 import {createCreature} from './creature.js';
+import {createMetalMaw} from './metal-maw.js';
 
 // The eyes appear on the very first capture frame; the face then strikes
 // within a fraction of a second, without a delayed intro or flashing strobe.
@@ -73,12 +74,16 @@ export function createJumpscare({mouthTexture,metallic=false} = {}) {
 
  const mouth=createJumpscareMouth(mouthTexture);
  face.add(mouth);
+ // Metal Monochrome never grows a fleshy mouth: the faceplate splits and a saw-maw spins up instead.
+ const maw=metallic?createMetalMaw():null;
 
  // The first frame fits the horns even on portrait screens; the near-instant
  // subsequent push-in deliberately crops the silhouette for impact.
  const bounds = new THREE.Box3().setFromObject(face);
  const center = bounds.getCenter(new THREE.Vector3());
  const size = bounds.getSize(new THREE.Vector3());
+ // Added after the framing is measured, so the lances that punch out never push the camera back.
+ if(maw)face.add(maw.root);
  let active = false, elapsed = 0, borderOpacity = 0, impactOpacity = 0, glitch = 0;
 
  function pose(){
@@ -87,7 +92,7 @@ export function createJumpscare({mouthTexture,metallic=false} = {}) {
   const shock = motion*Math.exp(-Math.max(0, elapsed-.20)*7.5) * rush;
   const withdraw = ease(elapsed, 1.15, JUMPSCARE_DURATION);
   const darkness = 1-withdraw;
-  const open = ease(elapsed, .035, .17);machine?.sample(elapsed,{jaw:open});
+  const open = ease(elapsed, .035, .17);machine?.sample(elapsed,{jaw:open});maw?.sample(elapsed,{open:ease(elapsed,.05,.30),lunge:ease(elapsed,.12,.55),darkness});
 
   eyes.forEach(eye => eye.material.color.setScalar(darkness));
   darkSurfaces.forEach(mesh => mesh.material.color.setRGB(
@@ -99,7 +104,7 @@ export function createJumpscare({mouthTexture,metallic=false} = {}) {
   backdrop.material.uniforms.uAttack.value = rush*darkness;
 
   const textureReady = !!mouthTexture?.image?.width && !!mouthTexture?.image?.height;
-  mouth.visible = active && textureReady && elapsed >= .04 && withdraw < .98;
+  mouth.visible = !metallic && active && textureReady && elapsed >= .04 && withdraw < .98;
   mouth.scale.set(1+.25*open, .18+1.0*open, 1);
   mouth.material.opacity = clamp01(open*2) * darkness;
   mouth.material.color.setScalar(darkness);
@@ -152,7 +157,7 @@ export function createJumpscare({mouthTexture,metallic=false} = {}) {
  }
  return {
   scene,camera,face,eyes,mouth,start,update,resize,render,
-  dispose(){machine?.dispose();const geometry=new Set(),material=new Set();scene.traverse(o=>{if(o.geometry)geometry.add(o.geometry);if(o.material)material.add(o.material);});geometry.forEach(g=>g.dispose());material.forEach(m=>m.dispose());scene.clear();},
+  dispose(){maw?.dispose();machine?.dispose();const geometry=new Set(),material=new Set();scene.traverse(o=>{if(o.geometry)geometry.add(o.geometry);if(o.material)material.add(o.material);});geometry.forEach(g=>g.dispose());material.forEach(m=>m.dispose());scene.clear();},
   get active(){return active;},
   get elapsed(){return elapsed;},
   get borderOpacity(){return borderOpacity;},

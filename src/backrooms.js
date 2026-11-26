@@ -1,5 +1,4 @@
 import * as T from 'three';
-import {createHeldFlashlight,playFlashlightSwitch} from './flashlight.js';
 import {createBackroomsWorld} from './backrooms-world.js';
 import {createBackroomsPost} from './backrooms-post.js';
 import {BACKROOMS_SPEED,createBackroomsRound,roundTarget,interactRound,roundObjective,canMoveRound,advanceRoundPhysics,backroomsMoveSpeed} from './backrooms-round.js';
@@ -16,15 +15,16 @@ import {moveInWorld} from './level.js';
 import {stepPitBalance} from './backrooms-balance.js';
 import {createMonochrome2Encounter} from './monochrome2-encounter.js';
 import {createMonochrome2Actor} from './monochrome2-actor.js';
+import {createBacteriaActor} from './monochrome2-bacteria-actor.js';
 import {createMonochrome2Audio} from './monochrome2-audio.js';
 import {createMonochrome2Layer,MONOCHROME2_COPY} from './monochrome2-layer.js';
 import {MONOCHROME2_VARIANT} from './monochrome2-team.js';
 import './backrooms.css';
 
-export function startBackrooms(container,{client=null,session=null,variant=null,testMode=false}={}){
+export function startBackrooms(container,{client=null,session=null,variant=null}={}){
  const m2=variant===MONOCHROME2_VARIANT;let voiceSeq=0;
  document.title=m2?'MONOCHROME 2 — Level 0':'The Backrooms — Level 0';container.setAttribute('aria-label',m2?'Monochrome 2: hunted in Level 0':'Explore Backrooms Level 0');
- const renderer=new T.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.outputColorSpace=T.SRGBColorSpace;if(m2){renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;}
+ const renderer=new T.WebGLRenderer({antialias:false,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;renderer.outputColorSpace=T.SRGBColorSpace;
  renderer.domElement.tabIndex=0;container.append(renderer.domElement);
  const classic=true;
  const world=createBackroomsWorld(),round=createBackroomsRound(),objectives=createBackroomsObjectives(world,round),camera=new T.PerspectiveCamera(68,1,.06,120),post=createBackroomsPost(renderer),player={...world.map.spawn,y:0};
@@ -35,22 +35,18 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
  const el=s=>root.querySelector(s),on=(target,event,fn,options)=>{target.addEventListener(event,fn,options);listeners.push(()=>target.removeEventListener(event,fn,options));};
  const m2layer=m2?createMonochrome2Layer({root,reduced:()=>reduced.matches}):null;m2layer?.copy();
  const survivor=createBackroomsPlayer(world.scene,{url:BACKROOMS_PLAYER_MODEL,onError:()=>{el('.br-toast').textContent='The hazmat suit could not load. Reload to try again.';}});
- const heldFlashlight=m2?createHeldFlashlight(camera,{onError:()=>{el('.br-toast').textContent='The flashlight model could not load; the beam is still available.';}}):null;
- const beam=new T.SpotLight(0xffedbd,m2?86:28,m2?26:24,m2?.34:.42,m2?.78:.65,m2?2:1.5),beamTarget=new T.Object3D();
- world.scene.add(beam,beamTarget);beam.target=beamTarget;
- if(m2){beam.castShadow=true;beam.shadow.mapSize.set(1024,1024);beam.shadow.camera.near=.12;beam.shadow.camera.far=26;beam.shadow.bias=-.00012;beam.shadow.normalBias=.025;beam.shadow.radius=4;beam.shadow.camera.updateProjectionMatrix();}
- const beamSpill=m2?new T.PointLight(0xffe8c8,2.6,3.8,2):null;if(beamSpill)world.scene.add(beamSpill);
- el('[data-action="view"]').hidden=survivor.pending;el('[data-action="torch"]').setAttribute('aria-pressed',String(torchOn));el('[data-action="torch"]').textContent=torchOn?'Torch · ON':'Torch · OFF';
+ const beam=new T.SpotLight(0xffedbd,28,24,.42,.65,1.5),beamTarget=new T.Object3D();world.scene.add(beam,beamTarget);beam.target=beamTarget;
+ el('[data-action="view"]').hidden=survivor.pending;el('[data-action="torch"]').setAttribute('aria-pressed',String(torchOn));
  if(classic){el('[data-action="distract"]').hidden=true;el('.br-help').innerHTML='WASD MOVE · SHIFT RUN · F INTERACT<br>Q / E BALANCE · CTRL CROUCH · LMB TORCH';}
- const encounter=m2?createMonochrome2Encounter(world,{round:()=>round,actorFactory:createMonochrome2Actor,audioFactory:()=>createMonochrome2Audio({onError:error=>console.warn('Monochrome 2 audio',error)}),onNotice:text=>{el('.br-toast').textContent=text;}}):createBackroomsEncounter(world);
+ const encounter=m2?createMonochrome2Encounter(world,{round:()=>round,actorFactory:createMonochrome2Actor,bacteriaActorFactory:createBacteriaActor,audioFactory:()=>createMonochrome2Audio({onError:error=>console.warn('Monochrome 2 audio',error)}),onNotice:text=>{el('.br-toast').textContent=text;}}):createBackroomsEncounter(world);
  function resetCoopView(){encounter.reset();lastInstalled=0;heardPickups.clear();Object.assign(round,net.view());captured=false;captureElapsed=0;scareLeft=0;wonShown=false;hold=0;latched=false;root.classList.remove('br-captured','br-ambush');root.style.setProperty('--capture','0');el('[data-action="start"]').disabled=false;setPause(false);}
  const net=client&&session?createBackroomsCoop({client,session:{...session,classic:true,...(m2?{variant:MONOCHROME2_VARIANT}:{})},world,onNotice:text=>{el('.br-toast').textContent=text;},onMove:(d,s,p)=>encounter.movement(d,s,p),onReset:resetCoopView,onInteract:(p,id)=>encounter.interaction?.(p,id),onDistract:(p,t)=>encounter.distract(p,p.yaw,t)}):null;
  const team=net?createBackroomsTeam(world.scene,client.id):null;
  const chat=net?createBackroomsChat(client,()=>Object.values(net.state.players)):null;
  if(net){root.append(chat.root);document.body.classList.add('br-network','br-coop-game');el('[data-action="multiplayer"]').hidden=true;el('[data-action="leave-game"]').hidden=false;const roster=document.createElement('div');roster.className='br-team-roster';root.append(roster);}
- function multiplayer(){if(net||lobby)return;setPause(true);el('.br-center').hidden=true;document.exitPointerLock?.();renderer.render(world.scene,camera);const preview=renderer.domElement.toDataURL('image/jpeg',.6);lobby=createBackroomsLobby({preview,variant,testMode,onClose:()=>{lobby=null;el('.br-center').hidden=false;},onStart:data=>{lobby=null;dispose();window.backrooms=startBackrooms(container,{...data,variant,testMode});}});}
+ function multiplayer(){if(net||lobby)return;setPause(true);el('.br-center').hidden=true;document.exitPointerLock?.();renderer.render(world.scene,camera);const preview=renderer.domElement.toDataURL('image/jpeg',.6);lobby=createBackroomsLobby({preview,variant,onClose:()=>{lobby=null;el('.br-center').hidden=false;},onStart:data=>{lobby=null;dispose();window.backrooms=startBackrooms(container,{...data,variant});}});}
  on(el('[data-action="multiplayer"]'),'click',multiplayer);
- on(el('[data-action="leave-game"]'),'click',()=>{dispose();window.backrooms=startBackrooms(container,{variant,testMode});});
+ on(el('[data-action="leave-game"]'),'click',()=>{dispose();window.backrooms=startBackrooms(container,{variant});});
  function initAudio(){
   if(!context){try{context=new AudioContext();master=context.createGain();master.gain.value=muted?0:.23;master.connect(context.destination);
    for(const [frequency,gain]of [[60,.11],[120,.045],[180,.016]]){const osc=context.createOscillator(),volume=context.createGain();osc.type='sine';osc.frequency.value=frequency;volume.gain.value=gain;osc.connect(volume);volume.connect(master);osc.start();audioNodes.push(osc,volume);}
@@ -65,8 +61,7 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
  on(el('[data-action="start"]'),'click',()=>{setPause(false);capture();});
  on(el('[data-action="pause"]'),'click',()=>setPause(!paused));
  const toggleView=()=>{if(!survivor.model)return;thirdPerson=!thirdPerson;el('[data-action="view"]').textContent=thirdPerson?'First person · V':'Third person · V';};on(el('[data-action="view"]'),'click',toggleView);
- function setTorch(enabled,{sound=false}={}){const changed=torchOn!==!!enabled;torchOn=!!enabled;el('[data-action="torch"]').setAttribute('aria-pressed',String(torchOn));el('[data-action="torch"]').textContent=torchOn?'Torch · ON':'Torch · OFF';heldFlashlight?.setState({hasTorch:round.hasTorch,torchOn,inThirdPerson:thirdPerson});if(sound&&changed&&!muted&&context?.state==='running')playFlashlightSwitch(context,master,torchOn);}
- const toggleTorch=()=>{if(!round.hasTorch){el('.br-toast').textContent='Find the flashlight near the exit stairs.';return;}setTorch(!torchOn,{sound:true});};on(el('[data-action="torch"]'),'click',toggleTorch);
+ const toggleTorch=()=>{if(!round.hasTorch){el('.br-toast').textContent='Find the flashlight near the exit stairs.';return;}torchOn=!torchOn;el('[data-action="torch"]').setAttribute('aria-pressed',String(torchOn));};on(el('[data-action="torch"]'),'click',toggleTorch);
  const distract=()=>{if(!classic&&!paused&&!captured)(net?net.distract():encounter.distract(player,yaw,time));};on(el('[data-action="distract"]'),'click',distract);
  on(el('[data-action="vhs"]'),'click',()=>{vhs=!vhs;el('[data-action="vhs"]').textContent=vhs?'VHS on':'VHS off';el('[data-action="vhs"]').setAttribute('aria-pressed',String(vhs));});
  function toggleSound(){muted=!muted;if(master)master.gain.setTargetAtTime(muted?0:.23,context.currentTime,.08);el('[data-action="sound"]').textContent=muted?'Sound off':'Sound on';el('[data-action="sound"]').setAttribute('aria-pressed',String(!muted));if(!muted)initAudio();}
@@ -87,7 +82,7 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
   if(net){const previousTorch=round.hasTorch,prevX=player.x,prevZ=player.z,typing=!!document.activeElement?.closest('.br-team-chat');
    net.step(dt,{forward:Number(keys.has('KeyW')||keys.has('ArrowUp'))-Number(keys.has('KeyS')||keys.has('ArrowDown')),right:Number(keys.has('KeyD')||keys.has('ArrowRight'))-Number(keys.has('KeyA')||keys.has('ArrowLeft')),yaw,pitch,lean:Number(keys.has('KeyE'))-Number(keys.has('KeyQ')),crouch:keys.has('ControlLeft')||keys.has('ControlRight'),sprint:keys.has('ShiftLeft')||keys.has('ShiftRight'),torch:torchOn,paused:paused||typing||!net.connected,...(m2?{voiceLevel:client.voice?.noiseLevel??0,voiceSequence:++voiceSeq}:{})});
    Object.assign(round,net.view());Object.assign(player,net.player);time=net.state.elapsed;distance+=Math.hypot(player.x-prevX,player.z-prevZ);
-   if(!previousTorch&&round.hasTorch){setTorch(true);}
+   if(!previousTorch&&round.hasTorch){torchOn=true;el('[data-action="torch"]').setAttribute('aria-pressed','true');}
    team.update(net.state.players,dt);client.voice?.updateSpatial({listener:{...player,height:player.y,yaw,pitch},players:Object.values(net.state.players).map(p=>({...p,height:p.y,status:'alive'}))});
    el('.br-team-roster').replaceChildren(...Object.values(net.state.players).map(p=>{const row=document.createElement('span');row.textContent=p.name+(m2?m2layer.rosterLabel(p):p.exitReady?' · AT EXIT':'');return row;}));
    if(round.phase==='won'&&!wonShown){wonShown=true;setPause(true);}
@@ -98,7 +93,7 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
    player.speed=dt?frameMoved/dt:0;player.sprint=(keys.has('ShiftLeft')||keys.has('ShiftRight'))&&frameMoved>0;
    player.yaw=yaw;player.climbing=round.climbing;stepPitBalance(player,{lean:Number(keys.has('KeyE'))-Number(keys.has('KeyQ')),yaw,crouch:player.crouch},dt,{canMove:(x,z)=>canMoveRound(round,x,z,world.canMove,player),climbing:round.climbing});advanceRoundPhysics(round,player,dt);}
    const target=net?net.target():roundTarget(round,player,yaw,encounter.simulation.clear);if(m2&&target)target.duration=m2layer.holdSeconds(target);focusTarget=target?.id??null;el('.br-interaction').hidden=!target;el('[data-target]').textContent=target?(target.disabled?target.label:`Hold F · ${target.label}`):'';
-   if(!keys.has('KeyF')){hold=0;holdId=null;latched=false;}else if(target&&!target.disabled&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold+=dt/target.duration;if(hold>=1){latched=!(target.id==='ladder'&&!round.repaired&&round.installed<3);if(net?net.interact(target.id):interactRound(round,target.id)){if(!net)encounter.interaction?.(player,target.id);if(target.id==='flashlight'){setTorch(true);el('.br-toast').textContent='Flashlight recovered. Left click toggles the beam.';}if(!net&&target.id==='ladder'&&round.climbing){player.x=round.ladder.x;player.z=round.ladder.z+.45;}if(round.phase==='won'){keys.clear();setPause(true);}}hold=0;}}else if(!target){hold=0;holdId=null;}el('.br-interaction i').style.width=`${Math.min(1,hold)*100}%`;
+   if(!keys.has('KeyF')){hold=0;holdId=null;latched=false;}else if(target&&!target.disabled&&!latched){if(holdId!==target.id){hold=0;holdId=target.id;}hold+=dt/target.duration;if(hold>=1){latched=!(target.id==='ladder'&&!round.repaired&&round.installed<3);if(net?net.interact(target.id):interactRound(round,target.id)){if(!net)encounter.interaction?.(player,target.id);if(target.id==='flashlight'){torchOn=true;el('[data-action="torch"]').setAttribute('aria-pressed','true');el('.br-toast').textContent='Flashlight recovered. Left click toggles the beam.';}if(!net&&target.id==='ladder'&&round.climbing){player.x=round.ladder.x;player.z=round.ladder.z+.45;}if(round.phase==='won'){keys.clear();setPause(true);}}hold=0;}}else if(!target){hold=0;holdId=null;}el('.br-interaction i').style.width=`${Math.min(1,hold)*100}%`;
   }else{el('.br-interaction').hidden=true;hold=0;holdId=null;latched=false;}
   const bob=reduced.matches?0:Math.sin(distance*7)*.018;camera.position.set(player.x,player.y+(player.crouch?1.05:1.68)+bob,player.z);
   const balance=player.balance,lean=Number(keys.has('KeyE'))-Number(keys.has('KeyQ'));
@@ -107,8 +102,8 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
   const meter=el('.br-balance');meter.hidden=paused||!balance?.active;meter.setAttribute('aria-valuenow',String(Math.round((balance?.angle??0)*100)));meter.classList.toggle('br-balance-danger',Math.abs(balance?.angle??0)>.6);meter.style.setProperty('--balance',String(Math.max(-1,Math.min(1,balance?.angle??0))));
   survivor.update(player,paused?0:dt,{yaw,pitch,thirdPerson});
   if(thirdPerson&&survivor.model){let d=.3;for(let k=.3;k<=3;k+=.1){if(!canMoveRound(round,player.x+Math.sin(yaw)*k,player.z+Math.cos(yaw)*k,world.canMove,player))break;d=k;}camera.position.set(player.x+Math.sin(yaw)*d,player.y+1.95-pitch*.6,player.z+Math.cos(yaw)*d);camera.lookAt(player.x,player.y+1.4,player.z);}
-  heldFlashlight?.setState({hasTorch:round.hasTorch,torchOn,inThirdPerson:thirdPerson});const beamOrigin=m2&&heldFlashlight?heldFlashlight.emitterWorldPosition(new T.Vector3()):camera.position;beam.visible=torchOn&&(m2?round.hasTorch:true)&&!captured;beam.position.copy(beamOrigin);const aim=camera.getWorldDirection(new T.Vector3());beamTarget.position.copy(beamOrigin).addScaledVector(aim,m2?23:8);if(beamSpill){beamSpill.visible=beam.visible;beamSpill.position.copy(beamOrigin);}
-  if(!captured&&round.phase==='playing'){const result=net&&!net.host?encounter.replicate(net.monsters,time,player,yaw,paused,dt):encounter.update(dt,time,player,yaw,{paused:net?!net.connected:paused,targets:net?Object.values(net.state.players):null,voices:m2&&net?net.voiceLevels():null,pitch});if(m2&&result.downedIds?.length&&(!net||net.host)){if(net)net.hit(result.downedIds);else player.downed=true;}if(result.scare){scareLeft=.65;root.classList.add('br-ambush');}if(result.caught&&(!net||net.host)){if(net)net.finish(result.caughtBy);caughtBy=result.caughtBy;captured=true;round.phase='dead';keys.clear();document.exitPointerLock?.();}}
+  beam.visible=torchOn&&!captured;beam.position.copy(camera.position);const aim=camera.getWorldDirection(new T.Vector3());beamTarget.position.copy(camera.position).addScaledVector(aim,8);
+  if(!captured&&round.phase==='playing'){const result=net&&!net.host?encounter.replicate(net.monsters,time,player,yaw,paused,dt):encounter.update(dt,time,player,yaw,{paused:net?!net.connected:paused,targets:net?Object.values(net.state.players):null,voices:m2&&net?net.voiceLevels():null,pitch});if(m2&&result.downedIds?.length&&(!net||net.host)){if(net)net.hit(result.downedIds,result.downs);else{player.downed=true;player.downedBy=result.downs?.[0]?.by??null;}}if(result.scare){scareLeft=.65;root.classList.add('br-ambush');}if(result.caught&&(!net||net.host)){if(net)net.finish(result.caughtBy);caughtBy=result.caughtBy;captured=true;round.phase='dead';keys.clear();document.exitPointerLock?.();}}
   if(!paused&&scareLeft>0){scareLeft=Math.max(0,scareLeft-dt);if(!scareLeft)root.classList.remove('br-ambush');}
   if(captured&&!paused){captureElapsed+=dt;root.style.setProperty('--capture',String(Math.min(1,captureElapsed/1.1)));root.classList.add('br-captured');if(captureElapsed>=(m2?m2layer.scareSeconds+.35:1.3))setPause(true);}
   if(net)net.publish(encounter);
@@ -118,8 +113,8 @@ export function startBackrooms(container,{client=null,session=null,variant=null,
   objectives.update(time,dt,{targetId:focusTarget,progress:hold});const [title,hint]=roundObjective(round,player);el('[data-objective]').textContent=title;el('.br-objective small').textContent=net?.player.ropeClimb?'Climbing rescue rope…':net?.player.exitReady?'Waiting for the rest of the team at the exit…':hint;
   world.update(time,player,reduced.matches);const scareShown=m2&&m2layer.frame({dt,player,voice:net?.voiceLevels?.()[client.id]??0,distance:encounter.telegraphDistance,mode:encounter.mode,paused});if(scareShown)m2layer.renderScare(renderer);else post.render(world.scene,camera,time,{vhs,reduced:reduced.matches});const seconds=Math.floor(time);el('[data-clock]').textContent=`${String(Math.floor(seconds/3600)).padStart(2,'0')}:${String(Math.floor(seconds/60)%60).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
  });
- function dispose(){if(disposed)return;disposed=true;lobby?.dispose();net?.dispose();team?.dispose();chat?.dispose();if(net){client.voice?.dispose();void client.close();document.body.classList.remove('br-network','br-coop-game');}renderer.setAnimationLoop(null);for(const remove of listeners)remove();for(const n of audioNodes){n.stop?.();n.disconnect();}encounter.dispose();m2layer?.dispose();interactionAudio?.dispose();objectives.dispose();survivor.dispose();heldFlashlight?.dispose();beam.removeFromParent();beamTarget.removeFromParent();beamSpill?.removeFromParent();void context?.close();post.dispose();world.dispose();renderer.dispose();renderer.domElement.remove();root.remove();}
+ function dispose(){if(disposed)return;disposed=true;lobby?.dispose();net?.dispose();team?.dispose();chat?.dispose();if(net){client.voice?.dispose();void client.close();document.body.classList.remove('br-network','br-coop-game');}renderer.setAnimationLoop(null);for(const remove of listeners)remove();for(const n of audioNodes){n.stop?.();n.disconnect();}encounter.dispose();m2layer?.dispose();interactionAudio?.dispose();objectives.dispose();survivor.dispose();beam.removeFromParent();beamTarget.removeFromParent();void context?.close();post.dispose();world.dispose();renderer.dispose();renderer.domElement.remove();root.remove();}
  on(window,'pagehide',dispose,{once:true});el('[data-action="start"]').focus();
  if(net)setPause(false);else if(new URLSearchParams(location.search).has('join'))setTimeout(()=>{if(!disposed)multiplayer();},0);
- return {net,team,m2layer,heldFlashlight,beam,variant,get lobby(){return lobby;},world,camera,renderer,player,round,objectives,survivor,encounter,get paused(){return paused;},get vhs(){return vhs;},dispose};
+ return {net,team,m2layer,variant,get lobby(){return lobby;},world,camera,renderer,player,round,objectives,survivor,encounter,get paused(){return paused;},get vhs(){return vhs;},dispose};
 }
