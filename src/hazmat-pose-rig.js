@@ -27,16 +27,16 @@ export const HAZMAT_POSE_TUNING=Object.freeze({
   run:Object.freeze({elbow:.285,wristBack:.32,wristFront:.23,from:.1,to:.42,keep:.2})
  }),
  /** Fist: target flexion per joint in degrees [proximal, middle, distal]. */
- fingerFist:Object.freeze({index:[78,102,64],middle:[84,104,64],ring:[88,104,62],pinky:[90,102,58]}),
+ fingerFist:Object.freeze({index:[68,90,48],middle:[72,94,50],ring:[76,94,48],pinky:[78,92,44]}),
  /** Relaxed open hand: a soft cascade of curl, a little more toward the little finger. */
  fingerRelax:Object.freeze({index:[16,20,10],middle:[22,26,12],ring:[28,30,14],pinky:[34,32,14]}),
  /** Thumb flexion [carpometacarpal, knuckle, tip] in degrees. */
- thumbFist:[28,44,34],
+ thumbFist:[24,38,28],
  /** Direction (authored T-pose, left hand) the thumb folds toward: along and across the palm (tuned by eye on the fist). */
  thumbAcross:[.5,0,-.5],
  thumbRelax:[8,12,8],
  /** How strongly the clip's finger fan is closed up (0 = leave it, 1 = parallel fingers). */
- splay:Object.freeze({relax:.65,fist:.95}),
+ splay:Object.freeze({relax:.65,fist:.6}),
  /** Share of the clip's own finger pose kept when relaxed (the rest is the relaxed hand above). */
  relaxBlend:.6
 });
@@ -86,7 +86,7 @@ export function createHazmatPoseRig(root,model,tuning=HAZMAT_POSE_TUNING){
    s.curl.set(joint,curlAxis(joint,joint,next));s.rest.set(joint,joint.quaternion.clone());
   });
   // Thumb: it flexes across the palm, towards the little-finger side and down, not straight down.
-  const across=new T.Vector3(...tuning.thumbAcross).normalize();
+  const across=new T.Vector3(...tuning.thumbAcross);across.x*=s.sign;across.normalize(); // authored for the left hand; mirror it for the right
   s.thumb.forEach((joint,i)=>{
    const next=i<2?s.thumb[i+1]:s.tips.thumb,f=restPos(next).sub(restPos(joint)).normalize(),p=across.clone().addScaledVector(f,-across.dot(f)).normalize();
    s.curl.set(joint,new T.Vector3().crossVectors(f,p).normalize().applyQuaternion(restQuat(joint).invert()));
@@ -136,11 +136,12 @@ export function createHazmatPoseRig(root,model,tuning=HAZMAT_POSE_TUNING){
    // 1) Close the fan of the fingers: swing each finger's base toward the middle finger within the palm plane.
    s.hand.updateWorldMatrix(true,false);
    const palm=s.palmLocal.clone().applyQuaternion(s.hand.getWorldQuaternion(new T.Quaternion())).normalize();
-   const dirOf=f=>{const a=s.fingers[f][0].getWorldPosition(new T.Vector3()),b=s.fingers[f][1].getWorldPosition(new T.Vector3());return b.sub(a);};
+   // A finger's curl axis is unaffected by how far it is curled, so it measures the fan without jitter.
+   const axisOf=f=>{const joint=s.fingers[f][0];return s.curl.get(joint).clone().applyQuaternion(joint.getWorldQuaternion(new T.Quaternion())).normalize();};
    const flat=v=>v.addScaledVector(palm,-v.dot(palm)).normalize();
-   const middle=flat(dirOf('middle'));
+   const middle=flat(axisOf('middle'));
    for(const f of ['index','ring','pinky']){
-    const base=s.fingers[f][0],dir=flat(dirOf(f)),angle=Math.atan2(new T.Vector3().crossVectors(dir,middle).dot(palm),dir.dot(middle));
+    const base=s.fingers[f][0],axis=flat(axisOf(f)),angle=Math.atan2(new T.Vector3().crossVectors(axis,middle).dot(palm),axis.dot(middle));
     Q1.setFromAxisAngle(palm,angle*closing);base.parent.getWorldQuaternion(Q2).invert();
     base.getWorldQuaternion(Q3);Q3.premultiply(Q1);base.quaternion.copy(Q2).multiply(Q3);base.updateWorldMatrix(false,true);
    }
