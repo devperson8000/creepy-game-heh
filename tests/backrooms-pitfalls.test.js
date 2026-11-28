@@ -9,19 +9,18 @@ test('a fall has real vertical travel, survives into the lower layer, and cannot
  for(let i=0;i<150;i++)advanceRoundPhysics(r,p,.025);assert.equal(p.y,PITFALLS.floorY);assert.equal(r.phase,'playing');assert.equal(r.fell,true);
  assert.equal(canWalkPit(49.2,-27.2,-1),false);assert.equal(canWalkPit(49.2,-27.2,PITFALLS.floorY),true);
 });
-test('lower route has a separate exit, requires navigation, and includes a stair ascent',()=>{
- const r=createBackroomsRound();r.doorOpen=true;assert.equal(r.altVent.id,'alt-vent');assert.equal(canWalkPit(41,-25,PITFALLS.floorY),true);assert.equal(pitFloor(29,-30,-6.4),-4.65);
+test('the lower route climbs a stairwell to the east landing; the old alternate vent is no longer an exit',()=>{
+ const r=createBackroomsRound();r.doorOpen=true;assert.equal(canWalkPit(41,-25,PITFALLS.floorY),true);assert.equal(pitFloor(29,-30,-6.4),-4.65);
  assert.ok(pitMoveSpeed(47.6,-27.2,0,false)<pitMoveSpeed(40,-16,0,false));
- assert.equal(roundTarget(r,{x:29,z:-30,y:0},0)?.id==='alt-vent',false);
- const target=roundTarget(r,{x:PITFALLS.altVent.x,z:PITFALLS.altVent.z,y:-4.4,crouch:true},0);assert.equal(target?.id,'alt-vent');assert.equal(interactRound(r,'alt-vent'),true);assert.equal(r.phase,'won');
+ const target=roundTarget(r,{x:PITFALLS.altVent.x,z:PITFALLS.altVent.z,y:-4.4,crouch:true},0);assert.notEqual(target?.id,'alt-vent');assert.equal(interactRound(r,'alt-vent'),false);assert.equal(r.phase,'playing');
+ assert.equal(pitFloor(70.2,-28,-6.4),-6.4);assert.ok(Math.abs(pitFloor(70.2,-16.8,-3)-0)<1e-9);assert.ok(pitFloor(70.2,-22,-6.4)>-6.4&&pitFloor(70.2,-22,-6.4)<0);
 });
-test('every shaft lands clear of lower walls and has a route to the lower exit door',async()=>{
- const {createNavigator}=await import('../src/navigation.js');const nav=createNavigator((x,z)=>canWalkPit(x,z,PITFALLS.floorY),{minX:27.2,maxX:73.8,minZ:-31.8,maxZ:-2.6,spacing:.4}),g=PITFALLS.grid;
- for(let i=0;i<g.columns;i++)for(let j=0;j<g.rows;j++){const p={x:g.minX+(i+.5)*g.cell,z:g.minZ+(j+.5)*g.cell};assert.equal(canWalkPit(p.x,p.z,PITFALLS.floorY),true);assert.ok(nav.findPath(p,{x:43,z:-25}).length>0);}
-});
-test('the alternate vent cannot be used from the bottom floor beside the staircase',()=>{
- const r=createBackroomsRound();r.doorOpen=true;assert.notEqual(roundTarget(r,{x:29,z:-28.5,y:PITFALLS.floorY},0)?.id,'alt-vent');
+test('every shaft lands clear of lower walls and has a walkable route to the foot of the stairwell and to the flashlight',async()=>{
+ const {fallSites,lowerRoute,flashlightDistance,STAIR_FOOT}=await import('../src/backrooms-lower-route.js');
+ const sites=fallSites();assert.ok(sites.length>=50);
+ for(const p of sites){assert.equal(canWalkPit(p.x,p.z,PITFALLS.floorY),true);const route=lowerRoute(p);assert.ok(route,'no route from '+JSON.stringify(p));assert.ok(route.distance<60,'route too long '+route.distance);assert.ok(flashlightDistance(p)<45);}
+ assert.ok(lowerRoute(PITFALLS.flashlight));assert.equal(canWalkPit(STAIR_FOOT.x,STAIR_FOOT.z,PITFALLS.floorY),true);
 });
 test('the far door and white-lit passage remain interactable while facing them at the threshold',()=>{
- const r=createBackroomsRound();r.doorOpen=true;const p={x:73.65,z:-16,y:0};assert.equal(roundTarget(r,p,-Math.PI/2)?.id,'pit-exit-door');interactRound(r,'pit-exit-door');assert.notEqual(roundTarget(r,p,-Math.PI/2)?.id,'vent');p.x=PITFALLS.upperVent.x-.5;p.crouch=true;assert.equal(roundTarget(r,p,-Math.PI/2)?.id,'vent');
+ const r=createBackroomsRound();r.doorOpen=true;const p={x:73.65,z:-16,y:0};assert.equal(roundTarget(r,p,-Math.PI/2)?.id,'pit-exit-door');interactRound(r,'pit-exit-door');assert.notEqual(roundTarget(r,p,-Math.PI/2)?.id,'vent');Object.assign(p,{x:PITFALLS.ventButton.x,z:PITFALLS.ventButton.z+.7,crouch:false});assert.equal(roundTarget(r,p,0)?.id,'vent-button');interactRound(r,'vent-button');Object.assign(p,{x:PITFALLS.upperVent.x-.5,z:-16});assert.equal(roundTarget(r,p,-Math.PI/2)?.id,'vent');
 });

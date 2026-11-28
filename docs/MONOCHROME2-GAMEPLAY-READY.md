@@ -1,3 +1,5 @@
+> **Updated:** the pit room, dark route, exit sequence, rope and downed poses changed. See [MONOCHROME2-PIT-AND-EXIT.md](MONOCHROME2-PIT-AND-EXIT.md).
+
 # Monochrome 2 — Gameplay foundation
 
 ## Current boundary

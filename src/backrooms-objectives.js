@@ -22,11 +22,14 @@ export function createBackroomsObjectives(world,round){
  const x=round.ladder.x,z=-19.8;
  box(1.05,.62,.06,x,2.46,z,dark);box(.07,.66,.58,x-.54,2.46,z+.24,wall);box(.07,.66,.58,x+.54,2.46,z+.24,wall);box(1.15,.06,.58,x,2.16,z+.24,wall);box(1.15,.05,.58,x,2.78,z+.24,wall);
  const key=new T.Group();key.position.set(round.key.x,2.23,round.key.z);key.rotation.x=-Math.PI/2;root.add(key);const ring=new T.TorusGeometry(.045,.009,8,20);resources.add(ring);key.add(new T.Mesh(ring,gold));box(.015,.13,.018,0,-.09,0,gold,key);box(.04,.018,.02,.012,-.14,0,gold,key);
- const doorPivot=new T.Group();doorPivot.position.set(42,0,-16.82);root.add(doorPivot);box(.12,2.5,1.64,0,1.25,.82,wood,doorPivot);box(.16,.12,.07,-.08,1.1,1.45,gold,doorPivot);let doorAngle=0;
+ // The pit door fills its whole 2 m doorway (2 cm reveal), under a lintel and inside a casing, and opens into the pit room.
+ const doorPivot=new T.Group();doorPivot.position.set(42,0,-16.98);root.add(doorPivot);box(.1,2.38,1.96,-.05,1.2,.98,wood,doorPivot);for(const sx of [-1,1])box(.035,.12,.07,-.05+sx*.066,1.05,1.8,gold,doorPivot);
+ paperWall(.22,.4,2,42,2.6,-16);for(const side of [-1,1]){const x=42+side*.135;box(.05,2.5,.11,x,1.25,-17.055,wood);box(.05,2.5,.11,x,1.25,-14.945,wood);box(.05,.11,2.22,x,2.455,-16,wood);}
+ let doorAngle=0;
  const pit=createPitfallView(world,round,{root,resources,mat,box,carpet,paperWall,label,wall,wood,paper,steel,dark});
- function update(time,dt=.016,{targetId=null,progress=0}={}){for(const p of round.parts){const v=views.get(p.id);v.group.visible=!p.taken;v.outline.visible=targetId===p.id;}
+ function update(time,dt=.016,{targetId=null,progress=0,exit=null,climbing=null}={}){for(const p of round.parts){const v=views.get(p.id);v.group.visible=!p.taken;v.outline.visible=targetId===p.id;}
   const built=round.installed??0;stubs.visible=built===0;sections.forEach((s,i)=>{const target=built>i?1:0;s.userData.amount=ease(s.userData.amount,target,9,dt);const a=s.userData.amount;s.visible=a>.005;if(s.visible){s.position.set((1-a)*-.3,i*.64+.32+(1-a)*.12,(1-a)*.5);s.rotation.z=(1-a)*-.18;}});
-  key.visible=!round.hasKey;pit.update(dt);doorAngle=ease(doorAngle,round.doorOpen?-Math.PI/2:0,5,dt);doorPivot.rotation.y=doorAngle;
+  key.visible=!round.hasKey;pit.update(dt,{exit,climbing});doorAngle=ease(doorAngle,round.doorOpen?Math.PI/2:0,5,dt);doorPivot.rotation.y=doorAngle;
   if(targetId==='ladder'&&!round.repaired&&progress>0&&built<4){const s=sections[built];s.visible=true;s.position.set(-.3*(1-progress),built*.64+.32,.5*(1-progress));s.rotation.z=-.18*(1-progress);}
  }
  function dispose(){root.removeFromParent();for(const r of resources)r.dispose();}

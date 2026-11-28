@@ -11,7 +11,8 @@ export const MONSTER_MODES=Object.freeze(['dormant','patrol','investigate','chas
  * Senses: hears footsteps, sprinting, interactions and microphone noise (walls soften it);
  * sees only along a direct, unobstructed line. States: patrol, investigate, chase, search.
  */
-export function createMonochromeMonster(space,{spawn,waypoints,seed=1}){
+export function createMonochromeMonster(space,{spawn,waypoints,seed=1,profile={}}){
+ const speedScale=profile.speedScale??1,sightScale=profile.sightScale??1,hearingScale=profile.hearingScale??1;
  if(!space.canStand(spawn.x,spawn.z))throw new RangeError('Monochrome spawn is not standable');
  const rng=randomSource(seed),m={
   x:spawn.x,z:spawn.z,yaw:0,mode:'dormant',path:[],repath:0,lastSeen:null,lastHeard:null,lostFor:0,
@@ -36,7 +37,7 @@ export function createMonochromeMonster(space,{spawn,waypoints,seed=1}){
  function visibleTargets(players,tierSight,time){
   const out=[];
   for(const p of players){
-   const dx=p.x-m.x,dz=p.z-m.z,d=Math.hypot(dx,dz),range=MONSTER.sight.range*tierSight*(p.crouch?MONSTER.sight.crouchFactor:1);
+   const dx=p.x-m.x,dz=p.z-m.z,d=Math.hypot(dx,dz),range=MONSTER.sight.range*sightScale*tierSight*(p.crouch?MONSTER.sight.crouchFactor:1);
    if(d>=range)continue;
    const facing=Math.cos(Math.atan2(dx,dz)-m.yaw)>MONSTER.sight.facingCos;
    if(!(facing||d<MONSTER.sight.closeAllRound))continue;
@@ -60,7 +61,7 @@ export function createMonochromeMonster(space,{spawn,waypoints,seed=1}){
    if(!m.staggerLeft){startSearch(m.attackAt??m,MONSTER.postCatchSearch);m.attackId=null;}
    return result;
   }
-  const seen=visibleTargets(players,scale.sight,time),heard=strongestHeard(m,noises,space,{scale:scale.hearing});
+  const seen=visibleTargets(players,scale.sight,time),heard=strongestHeard(m,noises,space,{scale:scale.hearing*hearingScale});
   result.heard=heard;
   if(seen.length){
    const t=seen[0].player;
@@ -136,7 +137,7 @@ export function createMonochromeMonster(space,{spawn,waypoints,seed=1}){
   follow(dt,tier,m.mode);
  }
  function follow(dt,tier,kind){
-  const base=tierSpeed(kind==='attack'?'chase':kind,tier),factor=space.onBeam(m.x,m.z)?MONSTER.beamSpeedFactor:1;
+  const base=tierSpeed(kind==='attack'?'chase':kind,tier)*speedScale,factor=space.onBeam(m.x,m.z)?MONSTER.beamSpeedFactor:1;
   let travel=dt*base*factor;m.speed=base*factor;
   while(m.path.length&&travel>0){
    const next=m.path[0],dx=next.x-m.x,dz=next.z-m.z,d=Math.hypot(dx,dz);

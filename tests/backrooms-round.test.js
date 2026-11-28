@@ -8,7 +8,7 @@ test('ladder fragments, repair, climb, key, door and vent must happen in order',
  for(const p of r.parts){assert.ok(canWalkLevelZero(m,p.x,p.z));assert.equal(roundTarget(r,p,0).id,p.id);assert.equal(interactRound(r,p.id),true);assert.equal(interactRound(r,p.id),false);}
  for(let i=0;i<4;i++)assert.equal(interactRound(r,'ladder'),true);assert.equal(r.repaired,true);assert.equal(interactRound(r,'ladder'),true);assert.equal(r.climbing,true);
  assert.equal(interactRound(r,'key'),false);const player={...r.ladder,y:0};for(let i=0;i<100;i++)advanceRoundPhysics(r,player,.025);assert.ok(player.y>.75);
- assert.equal(interactRound(r,'key'),true);assert.equal(interactRound(r,'vent'),false);assert.equal(interactRound(r,'door'),true);assert.equal(interactRound(r,'vent'),false);assert.equal(interactRound(r,'pit-exit-door'),true);assert.equal(interactRound(r,'vent'),true);assert.equal(r.phase,'won');
+ assert.equal(interactRound(r,'key'),true);assert.equal(interactRound(r,'vent'),false);assert.equal(interactRound(r,'door'),true);assert.equal(interactRound(r,'vent'),false);assert.equal(interactRound(r,'pit-exit-door'),true);assert.equal(interactRound(r,'vent'),false,'the vent stays shut until its button is pressed');assert.equal(interactRound(r,'vent-button'),true);assert.equal(interactRound(r,'vent-button'),false);assert.equal(interactRound(r,'vent'),true);assert.equal(r.phase,'won');
 });
 test('a missed beam falls into a recoverable lower route, while the beam supports walking',()=>{
  const r=createBackroomsRound();r.doorOpen=true;assert.equal(roundFloor(r,52,-16),0);assert.equal(roundFloor(r,52,-18),PITFALLS.floorY);
@@ -18,7 +18,7 @@ test('a missed beam falls into a recoverable lower route, while the beam support
 });
 test('movement retains the requested faster player speeds',()=>{assert.ok(BACKROOMS_SPEED.walk>=5);assert.ok(BACKROOMS_SPEED.sprint>=9);});
 test('a fallen player passes underneath transverse beams and cannot climb the staircase from its high side',()=>{
- const r=createBackroomsRound();r.doorOpen=true;const p={x:47,z:-18,y:PITFALLS.floorY};
+ const r=createBackroomsRound();r.doorOpen=true;const p={x:47,z:-12,y:PITFALLS.floorY};
  for(let x=47;x<=55;x+=.1){assert.equal(canMoveRound(r,x,p.z,()=>false,p),true);p.x=x;advanceRoundPhysics(r,p,.02);assert.equal(p.y,PITFALLS.floorY);}
  assert.equal(canMoveRound(r,29,-30,()=>false,p),false);
 });

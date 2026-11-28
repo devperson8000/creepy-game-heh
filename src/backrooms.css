@@ -22,3 +22,13 @@
 .br-rig-test-controls [hidden]{display:none}
 @media(pointer:coarse){.br-rig-test-controls{top:74px;right:20px;width:190px}}
 @media(max-width:480px){.br-rig-test-controls{top:90px;right:16px;width:170px;padding:7px}.br-rig-test-controls button{font-size:8px;padding:8px}}
+
+/* --- exit cutscenes and the flashlight battery --- */
+.br-ui.br-cinematic .br-interaction,.br-ui.br-cinematic .br-objective,.br-ui.br-cinematic .br-balance,.br-ui.br-cinematic .br-team-roster,.br-ui.br-cinematic .br-toast{opacity:0;pointer-events:none;transition:opacity .25s;}
+.br-battery{position:absolute;left:50%;bottom:3.1rem;transform:translateX(-50%);width:min(11rem,38vw);display:flex;flex-direction:column;gap:.25rem;align-items:stretch;pointer-events:none;font:600 .62rem/1 ui-monospace,monospace;letter-spacing:.18em;color:#d8d3b1;text-align:center;text-shadow:0 0 4px #000;z-index:4;}
+.br-battery[hidden]{display:none;}
+.br-battery i{display:block;height:.42rem;border:1px solid rgba(216,211,177,.7);background:linear-gradient(90deg,#d8d3b1 calc(var(--charge,1)*100%),rgba(0,0,0,.55) 0);}
+.br-battery.br-battery-low i{background:linear-gradient(90deg,#e0603c calc(var(--charge,1)*100%),rgba(0,0,0,.55) 0);animation:br-battery-blink .9s steps(2,jump-none) infinite;}
+.br-battery.br-battery-low span{color:#e0603c;}
+@keyframes br-battery-blink{50%{opacity:.35;}}
+@media (prefers-reduced-motion:reduce){.br-battery.br-battery-low i{animation:none;}}

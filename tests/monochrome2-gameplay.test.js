@@ -55,7 +55,7 @@ test('he is audible before he is visible',()=>{
  assert.ok(telegraphMix({distance:10,mode:'chase'}).whineHz>telegraphMix({distance:10,mode:'patrol'}).whineHz);
 });
 test('slots: the Bacteria is the live monster of the level and Monochrome keeps his own slot',()=>{
- assert.deepEqual(activeEntities().map(e=>e.id).sort(),['bacteria','monochrome']);
+ assert.deepEqual(activeEntities().map(e=>e.id).sort(),['bacteria','monochrome','monochrome-lower']);
  assert.deepEqual(reservedEntities().map(e=>e.id),[]);
  assert.ok(MONOCHROME2_ENTITIES.bacteria.modelUrl.endsWith('/bacteria.glb'));assert.equal(MONOCHROME_SLOT.modelUrl,null);
  assert.ok(MONOCHROME_SLOT.height<map.height);assert.ok(MONOCHROME2_ENTITIES.bacteria.height<map.height);
@@ -191,7 +191,7 @@ test('revives are limited and bleed-out is final',()=>{
 });
 test('ending is harder: everyone left must exit, a recoverable teammate blocks it, a lost one does not',()=>{
  const s=team(3),[a,b,c]=Object.values(s.players);
- s.round.doorOpen=true;s.round.upperExitOpen=true;
+ s.round.doorOpen=true;s.round.upperExitOpen=true;s.round.ventOpen=true;
  const exit=p=>{p.x=s.round.vent.x-.5;p.z=-15.8;p.y=0;p.yaw=-Math.PI/2;p.crouch=true;return interactBackroomsCoop(s,p.id,'vent',()=>true);};
  downPlayer(s,c);assert.ok(exit(a).ok);assert.ok(exit(b).ok);assert.equal(s.round.phase,'playing','downed-but-recoverable teammate blocks the exit');
  c.lost=true;assert.equal(teamWon(s),true);

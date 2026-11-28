@@ -29,9 +29,9 @@ export async function createMonochrome2Actor(scene,slot,{onError=()=>{}}={}){
   root,get imported(){return !!imported;},
   /** A click from the telegraph snaps the jaw. */
   clack(){jawPulse=1;},
-  update({x,z,yaw,mode,visible=true},delta){
+  update({x,z,y=0,yaw,mode,visible=true},delta){
    if(disposed)return;
-   root.visible=visible&&mode!=='dormant';root.position.set(x,0,z);root.rotation.y=yaw;
+   root.visible=visible&&mode!=='dormant';root.position.set(x,y,z);root.rotation.y=yaw;
    const dt=Math.max(0,Math.min(.2,delta||0)),gait=motion.update({x,z},mode,dt,mode!=='dormant'&&mode!=='attack');
    time+=dt;jawPulse=Math.max(0,jawPulse-dt*7);
    const jaw=mode==='attack'?1:Math.max(jawPulse*.7,mode==='chase'?.12:0);

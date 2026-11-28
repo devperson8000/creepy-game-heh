@@ -16,8 +16,8 @@ export const MONSTER={
  // Chase starts a hair above sprint and climbs with progress (see `tierCount`).
  speed:Object.freeze({
   patrol:{base:+(M1_SPEEDS.patrol*LEVEL0_SCALE).toFixed(2),max:5.0},
-  investigate:{base:+(M1_SPEEDS.investigate*LEVEL0_SCALE).toFixed(2),max:7.4},
-  chase:{base:+(M1_SPEEDS.chase*LEVEL0_SCALE).toFixed(2),max:10.6}
+  investigate:{base:+(M1_SPEEDS.investigate*LEVEL0_SCALE).toFixed(2),max:7.0},
+  chase:{base:+(M1_SPEEDS.chase*LEVEL0_SCALE).toFixed(2),max:10.3}
  }),
  /** On the pitfall beams he is cautious; players wobble there, he does not fall. */
  beamSpeedFactor:.5,
@@ -28,7 +28,7 @@ export const MONSTER={
  /** Seconds he keeps following a lost target before he starts searching. */
  chaseMemory:5,
  /** How long a search lasts, and how many probe points he checks. */
- search:{seconds:7,probes:3,probeRadius:6},
+ search:{seconds:6,probes:3,probeRadius:6},
  /** After a catch he stands over the player, then searches that spot: reviving is a gamble. */
  catchStagger:2.2,
  postCatchSearch:8,
@@ -47,39 +47,39 @@ export const BACTERIA={
  /** Seconds of play before it first appears (the documented three minutes). */
  spawnDelay:180,
  /** It starts this far from every player and out of their line of sight, as close as it can manage. */
- spawnMinDistance:18,relocateMinDistance:26,
+ spawnMinDistance:20,relocateMinDistance:28,
  /** Knocks it makes on arrival (to lure players off route), and the gap between them. */
  arrivalKnocks:3,knockGap:1.1,knockLinger:2.2,
  /** While roaming it stops now and then to knock again. */
- roamKnockEvery:Object.freeze([14,24]),roamKnockSeconds:3.2,
- speed:Object.freeze({roam:{base:2.0,max:2.6},investigate:{base:3.4,max:4.4},chase:{base:7.6,max:8.7}}),
+ roamKnockEvery:Object.freeze([18,30]),roamKnockSeconds:3.2,
+ speed:Object.freeze({roam:{base:2.0,max:2.6},investigate:{base:3.4,max:4.4},chase:{base:7.4,max:8.2}}),
  beamSpeedFactor:.5,radius:.4,catchRadius:1.5,
  /** Shorter sight than Monochrome, keener ears: it is the sound that gives you away. */
  sight:{range:16,crouchFactor:.5,closeAllRound:3,facingCos:.05},hearingScale:1.2,
  /** The screech as it notices you: a head start for anyone who reacts at once. */
- noticeSeconds:1.15,
+ noticeSeconds:1.3,
  /** During a chase only a nearby or urgent noise keeps it on you; distance and corners shake it. */
- trackRadius:14,chaseMemory:5.5,
+ trackRadius:12,chaseMemory:5,
  /** Reaching your last known position with nobody there makes it give up this many times faster. */
  deadEndGiveUp:3,
  search:{seconds:5,probes:2,probeRadius:5},
  /** After giving up it vanishes and returns somewhere else. */
- relocateDelay:Object.freeze([4,8]),
+ relocateDelay:Object.freeze([10,18]),
  catchStagger:1.6,postCatchSearch:5
 };
 /**
  * Monochrome is rare in Monochrome 2: he visits twice at most, for under a minute, with long
  * quiet gaps, and withdraws to his room afterwards. The Bacteria is the monster of the level.
  */
-export const MONOCHROME_VISITS={first:Object.freeze([300,390]),length:Object.freeze([45,60]),gap:Object.freeze([240,330]),max:2};
+export const MONOCHROME_VISITS={first:Object.freeze([300,390]),length:Object.freeze([40,55]),gap:Object.freeze([240,330]),max:2};
 /** How many progress steps raise his stats: 4 ladder sections, key, door, exit door. */
 export const tierCount=7;
 
 export const NOISE={
- walk:12,sprint:30,crouch:2.5,
+ walk:12,sprint:26,crouch:2.5,
  wobble:{threshold:.55,radius:16,every:1.2},
  fall:{radius:32},
- interact:Object.freeze({part:8,ladder:22,key:6,door:24,'pit-exit-door':34,flashlight:8,rope:10,'alt-door':14,revive:10,vent:5,'alt-vent':5}),
+ interact:Object.freeze({part:8,ladder:22,key:6,door:24,'pit-exit-door':34,flashlight:8,rope:10,'alt-door':14,revive:10,vent:5,'vent-button':8}),
  /** Existing microphone tiers (5/12/24/36 for M1's 2.6 m cells) rescaled for Level 0 rooms. */
  voiceScale:1.5,
  stride:{walk:1.1,sprint:1.25,crouch:.9}
@@ -98,11 +98,11 @@ export const TEAM={
  reviveReach:2,
  /** Not in the original brief: a downed player bleeds out, otherwise a downed teammate can stall the exit forever. */
  bleedOutSeconds:75,
- reviveGrace:2.5
+ reviveGrace:3.5
 };
 
 /** Hold-to-interact lengths (seconds). Longer holds mean longer exposure at every objective. */
-export const HOLD={ladder:1.4,key:.9,door:1.5,'pit-exit-door':2.2,vent:1.2,'alt-vent':1.2,part:.7};
+export const HOLD={ladder:1.4,key:.9,door:1.5,'pit-exit-door':2.2,vent:1.2,'vent-button':.5,part:.7};
 
 export function tierFromRound(r){
  if(!r)return 0;

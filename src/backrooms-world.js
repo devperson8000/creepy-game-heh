@@ -70,13 +70,13 @@ export function createBackroomsWorld(){
  const dustMap=texture((c,s)=>{c.clearRect(0,0,s,s);const g=c.createRadialGradient(s/2,s/2,0,s/2,s/2,s/2);g.addColorStop(0,'rgba(255,248,216,.7)');g.addColorStop(.25,'rgba(255,248,216,.25)');g.addColorStop(1,'rgba(255,248,216,0)');c.fillStyle=g;c.fillRect(0,0,s,s);},64);
  const dustMaterial=new T.PointsMaterial({map:dustMap,color:0xd2c393,size:.025,transparent:true,opacity:.28,depthTest:true,depthWrite:false,sizeAttenuation:true});resources.add(dustMaterial);
  const dust=new T.Points(dustGeometry,dustMaterial);dust.name='level-zero-world-dust';dustGeometry.computeBoundingSphere();scene.add(dust);
- const upperFog=new T.Color(0xa39b79),lowerFog=new T.Color(0x514d3b);
+ const upperFog=new T.Color(0xa39b79),lowerFog=new T.Color(0x030302);
  let lastX=Infinity,lastZ=Infinity,lastLayer=null,near=[];
  function update(time,player,reduced=false,mapPower=1,cinematicFlicker=false){
-  const lower=(player.y??0)<-.25,drop=T.MathUtils.clamp((-(player.y??0)-.3)/3.2,0,1),power=T.MathUtils.clamp(Number.isFinite(mapPower)?mapPower:1,.08,1);ambient.intensity=(1.25-.96*drop)*power;dustMaterial.opacity=.28*power;scene.fog.density=.008+.014*drop;scene.fog.color.lerpColors(upperFog,lowerFog,drop);
+  const lower=(player.y??0)<-.25,drop=T.MathUtils.clamp((-(player.y??0)-.3)/3.2,0,1),power=T.MathUtils.clamp(Number.isFinite(mapPower)?mapPower:1,.08,1);ambient.intensity=(1.25-1.22*drop)*power;dustMaterial.opacity=.28*power;scene.fog.density=.008+.05*drop;scene.fog.color.lerpColors(upperFog,lowerFog,drop);
   sampleDustField(dustBase,reduced?0:time,dustPositions);dustGeometry.attributes.position.needsUpdate=true;
   if(lower!==lastLayer||Math.hypot(player.x-lastX,player.z-lastZ)>.7){near=lights.filter(f=>((f.y??(map.height-.19))<0)===lower).sort((a,b)=>Math.hypot(a.x-player.x,a.z-player.z)-Math.hypot(b.x-player.x,b.z-player.z)).slice(0,pool.length);lastX=player.x;lastZ=player.z;lastLayer=lower;}
   pool.forEach((l,i)=>{const f=near[i];if(!f){l.intensity=0;return;}const flicker=reduced||cinematicFlicker?1:1-.018*Math.sin(time*97+f.phase)-.012*Math.sin(time*131+f.phase);l.color.set(f.color??0xffedb5);l.position.set(f.x,f.y??(map.height-.19),f.z);l.intensity=17*f.base*flicker*power;});
  }
- return {scene,map,update,registerLight(sample){lights.push({base:1,phase:0,...sample});},surfaces:{wall:paper,carpetTexture:carpet,ceilingTexture:ceiling},canMove:(x,z)=>canWalkLevelZero(map,x,z),dispose(){for(const r of resources)r.dispose();scene.clear();}};
+ return {scene,map,update,registerLight(sample){const light={base:1,phase:0,...sample};lights.push(light);return light;},surfaces:{wall:paper,carpetTexture:carpet,ceilingTexture:ceiling},canMove:(x,z)=>canWalkLevelZero(map,x,z),dispose(){for(const r of resources)r.dispose();scene.clear();}};
 }

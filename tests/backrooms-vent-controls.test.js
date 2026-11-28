@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import {createBackroomsRound,roundTarget,canMoveRound,backroomsMoveSpeed} from '../src/backrooms-round.js';
 import {createBackroomsCoopState,backroomsCoopTarget,interactBackroomsCoop,stepBackroomsPlayer} from '../src/backrooms-coop-state.js';
 
-test('a standing player sees crouch instruction at a vent and cannot exit through host interaction',()=>{
+test('the vent is opened by its release button first; only then can anyone crawl in, standing or not',()=>{
  const s=createBackroomsCoopState([{id:'a'}]);Object.assign(s.round,{doorOpen:true,upperExitOpen:true});
- const p=s.players.a;Object.assign(p,{x:s.round.vent.x-.7,z:s.round.vent.z,y:0,yaw:-Math.PI/2,crouch:false});
- assert.equal(backroomsCoopTarget(s,'a').disabled,true);
- assert.equal(interactBackroomsCoop(s,'a','vent').ok,false);
- assert.equal(s.round.phase,'playing');p.crouch=true;
- assert.equal(backroomsCoopTarget(s,'a').disabled,false);
+ const p=s.players.a;Object.assign(p,{x:s.round.ventButton.x,z:s.round.ventButton.z+.7,y:0,yaw:0,crouch:false});
+ assert.equal(backroomsCoopTarget(s,'a').id,'vent-button');assert.equal(interactBackroomsCoop(s,'a','vent').ok,false,'the vent cannot be entered while shut');
+ assert.equal(interactBackroomsCoop(s,'a','vent-button').ok,true);assert.equal(s.round.ventOpen,true);assert.equal(s.round.phase,'playing');
+ Object.assign(p,{x:s.round.vent.x-.7,z:s.round.vent.z,yaw:-Math.PI/2,crouch:false});
+ assert.equal(backroomsCoopTarget(s,'a').id,'vent');assert.equal(backroomsCoopTarget(s,'a').disabled,false);
  assert.equal(interactBackroomsCoop(s,'a','vent').ok,true);
 });
 test('the white-lit exit passage is traversable only after its door opens',()=>{
